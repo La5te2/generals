@@ -1,0 +1,15 @@
+Terrain icons
+
+The mountain, obstacle, city and crown artwork is by generals.io.
+Website: https://generals.io/
+Original files:
+https://generals.io/mountain.png
+https://generals.io/obstacle.png
+https://generals.io/city.png
+https://generals.io/crown.png
+
+src/interface/icons.inc contains simplified triangle meshes adapted from
+these images. The project author reported permission from the site
+administrator to use the artwork with attribution on 2026-10-05.
+This attribution accompanies source and binary distributions.
+The artwork retains its separate permission terms and generals.io credit.
