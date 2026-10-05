@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <span>
 #include <string_view>
 
 namespace PixelFont {
@@ -157,6 +158,39 @@ namespace PixelFont {
             case '_': return {0, 0, 0, 0, 0, 0, 0, 0, 0b111111};
             default: return {0b011110, 0b110011, 0b000011, 0b000110, 0b001100, 0b001100, 0, 0b001100, 0b001100};
         }
+    }
+
+    struct Stroke { std::uint8_t col, row, length; };
+    struct Shape {
+        // alternating filled and empty pixels give the maximum number of horizontal segments per row.
+        std::array<Stroke, (width + 1) / 2 * (height + 2)> segments{};
+        std::size_t count = 0;
+    };
+
+    // convert printable ASCII glyphs into horizontal rectangles at compile time, in the original drawing order.
+    inline constexpr auto shapes = [] {
+        std::array<Shape, '~' - ' ' + 1> result{};
+        for (int code = ' '; code <= '~'; ++code) {
+            auto rows = glyph(static_cast<char>(code));
+            Shape& shape = result[code - ' '];
+            for (int row = 0; row < static_cast<int>(rows.size()); ++row) {
+                int col = 0;
+                while (col < width) {
+                    if ((rows[row] & (1 << (width - 1 - col))) == 0) { ++col; continue; }
+                    int start = col++;
+                    while (col < width && (rows[row] & (1 << (width - 1 - col)))) ++col;
+                    shape.segments[shape.count++] = {static_cast<std::uint8_t>(start),
+                        static_cast<std::uint8_t>(row), static_cast<std::uint8_t>(col - start)};
+                }
+            }
+        }
+        return result;
+    }();
+
+    constexpr std::span<const Stroke> strokes(char letter) {
+        auto code = static_cast<unsigned char>(letter);
+        const Shape& shape = shapes[(code >= ' ' && code <= '~' ? code : '?') - ' '];
+        return {shape.segments.data(), shape.count};
     }
 
     // measure in font pixels, including the gaps between letters and excluding the final gap.

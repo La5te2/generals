@@ -122,22 +122,11 @@ void Renderer::line(Point a, Point b, float thickness, Color color) {
     triangle(p, r, s, color);
 }
 
-// each glyph is a bit grid from font.hpp. filled bits become rectangles at the requested scale.
+// glyph rectangles are prepared in font.hpp. drawing only applies position, scale and color.
 void Renderer::text(std::string_view value, float x, float y, float scale, Color color) {
     for (char letter : value) {
-        auto rows = PixelFont::glyph(letter);
-        for (int row = 0; row < static_cast<int>(rows.size()); ++row) {
-            // adjacent filled pixels share a rectangle, keeping thick strokes continuous.
-            int col = 0;
-            while (col < PixelFont::width) {
-                if ((rows[row] & (1 << (PixelFont::width - 1 - col))) == 0) {
-                    ++col;
-                    continue;
-                }
-                int start = col++;
-                while (col < PixelFont::width && (rows[row] & (1 << (PixelFont::width - 1 - col)))) ++col;
-                rectangle({x + start * scale, y + row * scale, (col - start) * scale, scale}, color);
-            }
+        for (const auto& stroke : PixelFont::strokes(letter)) {
+            rectangle({x + stroke.col * scale, y + stroke.row * scale, stroke.length * scale, scale}, color);
         }
         x += PixelFont::advance * scale;
     }
@@ -459,6 +448,6 @@ void Renderer::flush(int width, int height) {
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)), vertices.data(), GL_STREAM_DRAW);
-    // this submits drawing commands. redraw() in nebula.cpp presents the frame with glfwSwapBuffers().
+    // this submits drawing commands. drawWindow() in nebula.cpp presents the frame with glfwSwapBuffers().
     glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
 }

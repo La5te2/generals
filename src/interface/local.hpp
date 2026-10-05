@@ -5,11 +5,20 @@
 #include "engine/engine.hpp"
 #include "process.hpp"
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <thread>
 
 namespace NEBULA {
     enum class LocalState { Empty, Active, Finished };
+
+    struct LocalSnapshot {
+        // all three perspectives belong to the same completed half-turn. readers keep them alive while drawing.
+        std::shared_ptr<const std::array<Observation, 3>> views;
+        LocalState state = LocalState::Empty;
+        bool running = false;
+        std::string error;
+    };
 
     class LocalMatch {
     public:
@@ -20,18 +29,18 @@ namespace NEBULA {
         void resume();
         // change future half-turn lengths while preserving the current deadline or paused remainder.
         bool setInterval(int milliseconds);
-        bool running() const;
         // manually settle one half-turn while paused, using replies available at the time of this call.
         bool advance();
-        Observation view(int perspective) const;
-        LocalState state() const;
-        std::string error() const;
+        // read the latest published board and status, independently of rule updates and strategy communication.
+        LocalSnapshot snapshot() const;
 
     private:
         void run();
         bool settle(Clock::Time cutoff);
         void request();
         void finish();
+        void updateViews();
+        void publish();
 
         mutable std::mutex mutex;
         std::condition_variable changed;
@@ -41,5 +50,9 @@ namespace NEBULA {
         LocalState phase = LocalState::Empty;
         std::array<std::unique_ptr<StrategyProcess>, 2> strategies;
         std::string failure;
+        std::shared_ptr<const std::array<Observation, 3>> views = std::make_shared<const std::array<Observation, 3>>();
+        // hold this separate lock only while exchanging the small snapshot, never while computing or stopping processes.
+        mutable std::mutex snapshotMutex;
+        LocalSnapshot published{views};
     };
 }

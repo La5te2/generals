@@ -38,7 +38,7 @@ if(NEBULA_BUILD_INTERFACE)
     add_executable(interface src/interface/nebula.cpp src/interface/renderer.cpp src/interface/console.cpp src/interface/dialog.cpp)
     target_link_libraries(interface PRIVATE local glad::glad glfw)
     if(WIN32)
-        target_link_libraries(interface PRIVATE user32 comdlg32)
+        target_link_libraries(interface PRIVATE user32 comdlg32 comctl32 dwmapi)
     endif()
     set_target_properties(interface PROPERTIES OUTPUT_NAME nebula)
     add_custom_command(TARGET interface POST_BUILD

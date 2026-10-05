@@ -11,9 +11,9 @@ namespace NEBULA {
         if (worker.joinable()) worker.join();
         lock.lock();
         failure.clear();
-        if (milliseconds <= 0) { failure = "Half-turn milliseconds must be positive"; return false; }
+        if (milliseconds <= 0) { failure = "Half-turn milliseconds must be positive"; publish(); return false; }
         Engine next;
-        if (!next.reset(0, 0, seed)) { failure = "Map generation failed"; return false; }
+        if (!next.reset(0, 0, seed)) { failure = "Map generation failed"; publish(); return false; }
         std::array<std::unique_ptr<StrategyProcess>, 2> players;
         for (int player = 0; player < 2; ++player) {
             players[player] = std::make_unique<StrategyProcess>();
@@ -21,6 +21,7 @@ namespace NEBULA {
             Protocol::Init init{player, view.rows, view.cols};
             if (!players[player]->start(commands[player], init)) {
                 failure = std::string(player == 0 ? "Red: " : "Blue: ") + players[player]->error();
+                publish();
                 return false;
             }
         }
@@ -29,8 +30,10 @@ namespace NEBULA {
         phase = LocalState::Active;
         clock.interval = std::chrono::milliseconds(milliseconds);
         clock.reset();
+        updateViews();
         request();
         clock.resume();
+        publish();
         worker = std::thread([this] { run(); });
         return true;
     }
@@ -40,7 +43,6 @@ namespace NEBULA {
             std::lock_guard lock(mutex);
             finish();
         }
-        changed.notify_all();
         if (worker.joinable()) worker.join();
     }
 
@@ -48,18 +50,23 @@ namespace NEBULA {
     void LocalMatch::finish() {
         clock.pause();
         if (phase == LocalState::Active) phase = LocalState::Finished;
+        publish();
+        // wake the paused worker when manual stepping ends the match, so a later start() can join it.
+        changed.notify_all();
         for (auto& strategy : strategies) if (strategy) strategy->stop();
     }
 
     void LocalMatch::pause() {
         std::lock_guard lock(mutex);
         clock.pause();
+        publish();
         changed.notify_all();
     }
 
     void LocalMatch::resume() {
         std::lock_guard lock(mutex);
         if (phase == LocalState::Active) clock.resume();
+        publish();
         changed.notify_all();
     }
 
@@ -70,12 +77,20 @@ namespace NEBULA {
         return true;
     }
 
-    bool LocalMatch::running() const { std::lock_guard lock(mutex); return clock.running(); }
-    LocalState LocalMatch::state() const { std::lock_guard lock(mutex); return phase; }
-    std::string LocalMatch::error() const { std::lock_guard lock(mutex); return failure; }
+    LocalSnapshot LocalMatch::snapshot() const {
+        std::lock_guard lock(snapshotMutex);
+        return published;
+    }
+
+    // callers hold the session lock. the display lock covers only this already-prepared value.
+    void LocalMatch::publish() {
+        LocalSnapshot next{views, phase, clock.running(), failure};
+        std::lock_guard lock(snapshotMutex);
+        published = std::move(next);
+    }
 
     void LocalMatch::request() {
-        for (int player = 0; player < 2; ++player) strategies[player]->request(*engine.observe(player));
+        for (int player = 0; player < 2; ++player) strategies[player]->request((*views)[player]);
     }
 
     // window event processing can stall while dragging. this thread keeps half-turn deadlines independent of drawing.
@@ -102,7 +117,7 @@ namespace NEBULA {
 
     bool LocalMatch::settle(Clock::Time cutoff) {
         if (phase != LocalState::Active) return false;
-        auto tick = engine.snapshot()->tick;
+        auto tick = (*views)[0].tick;
         std::array<Action, 2> actions;
         // an absent or late reply becomes Pass. each reply is tied to the observation it was computed from.
         for (int player = 0; player < 2; ++player) {
@@ -115,17 +130,20 @@ namespace NEBULA {
             actions[player] = strategies[player]->action(tick, cutoff);
         }
         engine.step(actions);
-        if (engine.snapshot()->result != Phases::Ongoing) finish();
-        else request();
+        updateViews();
+        if ((*views)[0].result != Phases::Ongoing) finish();
+        else { publish(); request(); }
         return true;
     }
 
-    Observation LocalMatch::view(int perspective) const {
-        std::lock_guard lock(mutex);
-        if (phase == LocalState::Empty) return {};
-        if (perspective == 0 || perspective == 1) return *engine.observe(perspective);
-        Observation observation = *engine.observe(0);
+    // prepare visibility once per position. full-board inspection shares public totals with the red observation.
+    void LocalMatch::updateViews() {
         auto state = engine.snapshot();
+        auto next = std::make_shared<std::array<Observation, 3>>();
+        (*next)[0] = observe(*state, 0);
+        (*next)[1] = observe(*state, 1);
+        (*next)[2] = (*next)[0];
+        auto& observation = (*next)[2];
         for (int row = 0; row < observation.rows; ++row) {
             for (int col = 0; col < observation.cols; ++col) {
                 const Cell& cell = state->board.at(row, col);
@@ -140,6 +158,6 @@ namespace NEBULA {
                 shown.army = cell.army;
             }
         }
-        return observation;
+        views = std::move(next);
     }
 }
