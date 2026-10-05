@@ -13,15 +13,17 @@ namespace NEBULA {
             letter = static_cast<char>(std::tolower(static_cast<unsigned char>(letter)));
         }
         if (name == "help") return Command::Help;
+        if (name == "start") return Command::Start;
+        if (name == "stop") return Command::Stop;
+        if (name == "back") return Command::Back;
         if (name == "pause") return Command::Pause;
         if (name == "resume") return Command::Resume;
         if (name == "step") return Command::Step;
-        if (name == "restart") return Command::Restart;
         if (name == "quit") return Command::Quit;
         return Command::Invalid;
     }
 
-    bool Console::insert(std::string_view text) {
+    bool TextInput::insert(std::string_view text) {
         if (text.size() > 256 - input.size()) {
             feedback = "Input limit: 256 characters";
             return false;
@@ -35,10 +37,12 @@ namespace NEBULA {
         }
         input.insert(cursor, text);
         cursor += text.size();
+        feedback.clear();
         return true;
     }
 
-    void Console::edit(Edit key) {
+    void TextInput::edit(Edit key) {
+        feedback.clear();
         switch (key) {
             case Edit::Left: if (cursor > 0) --cursor; break;
             case Edit::Right: if (cursor < input.size()) ++cursor; break;

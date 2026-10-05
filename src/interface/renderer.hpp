@@ -2,21 +2,14 @@
 
 #include "engine/observe.hpp"
 #include "console.hpp"
+#include "scene.hpp"
 #include <glad/glad.h>
 #include <string_view>
 #include <vector>
 
-struct Rect {
-    float x, y, width, height;
-
-    bool contains(double px, double py) const {
-        return px >= x && px < x + width && py >= y && py < y + height;
-    }
-};
-
 // drawing and mouse input use the same logical window coordinates.
-inline Rect viewButton(int view) { return {16.0f + view * 76.0f, 12, 76, 28}; }
-enum class Tool { None, Playback, Step, Reset };
+inline Rect viewButton(int view) { return {60.0f + view * 64.0f, 12, 64, 28}; }
+enum class Tool { None, Playback, Step, Stop };
 
 inline Rect toolButton(Tool tool, int width) {
     float offset = tool == Tool::Playback ? 116.0f : tool == Tool::Step ? 80.0f : 44.0f;
@@ -32,8 +25,9 @@ public:
 
     // create GPU resources after GLAD loads. destroy them before the window closes.
     bool init();
-    void draw(const Observation& view, int perspective, int width, int height, bool running, Tool hover,
+    void draw(const Observation& view, int perspective, int width, int height, bool running, bool active, Tool hover,
               const NEBULA::Console& console);
+    void drawSetup(const NEBULA::Setup& setup, int width, int height, const NEBULA::Console& console);
 
 private:
     struct Color { float r, g, b, a = 1; };
@@ -46,6 +40,11 @@ private:
     void text(std::string_view value, float x, float y, float scale, Color color);
     void icon(ViewTerrain terrain, Rect bounds, Color color);
     void drawConsole(const NEBULA::Console& console, int width, int height);
+    void label(std::string_view value, Rect bounds, Color color, float scale = 1.5f);
+    void button(std::string_view value, Rect bounds, bool selected = false, bool enabled = true);
+    void input(const NEBULA::TextInput& field, Rect bounds, bool focused, bool masked = false);
+    void back();
+    void flush(int width, int height);
 
     GLuint program = 0, vao = 0, vbo = 0;
     GLint canvas = -1;

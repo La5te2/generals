@@ -195,7 +195,115 @@ void Renderer::drawConsole(const NEBULA::Console& console, int width, int height
     rectangle({cursor, top + 9, 1.5f, 18}, accent);
 }
 
-void Renderer::draw(const Observation& view, int perspective, int width, int height, bool running, Tool hover,
+void Renderer::label(std::string_view value, Rect bounds, Color color, float scale) {
+    float length = PixelFont::measure(value);
+    if (length > 0) scale = std::min(scale, (bounds.width - 12) / length);
+    text(value, bounds.x + (bounds.width - length * scale) / 2,
+         bounds.y + (bounds.height - PixelFont::height * scale) / 2, scale, color);
+}
+
+void Renderer::button(std::string_view value, Rect bounds, bool selected, bool enabled) {
+    rectangle(bounds, selected ? Color{.16f, .40f, .34f} : Color{.20f, .23f, .25f});
+    if (selected) rectangle({bounds.x, bounds.y + bounds.height - 2, bounds.width, 2}, {.40f, .82f, .68f});
+    label(value, bounds, enabled ? Color{.95f, .96f, .97f} : Color{.43f, .46f, .48f});
+}
+
+void Renderer::input(const NEBULA::TextInput& field, Rect bounds, bool focused, bool masked) {
+    rectangle(bounds, {.06f, .08f, .09f});
+    if (focused) rectangle({bounds.x, bounds.y + bounds.height - 2, bounds.width, 2}, {.40f, .82f, .68f});
+    auto columns = static_cast<std::size_t>(std::max(1.0f, (bounds.width - 24) / 12));
+    std::size_t start = field.cursor >= columns ? field.cursor - columns + 1 : 0;
+    std::string shown = masked ? std::string(field.input.size(), '*') : field.input;
+    text(std::string_view(shown).substr(start, columns), bounds.x + 10, bounds.y + 11, 1.5f, {.95f, .96f, .97f});
+    if (focused) rectangle({bounds.x + 10 + static_cast<float>(field.cursor - start) * 12,
+                            bounds.y + 9, 1.5f, 18}, {.40f, .82f, .68f});
+}
+
+void Renderer::back() {
+    Rect bounds = NEBULA::backButton();
+    Color white{.95f, .96f, .97f};
+    line({bounds.x + 6, bounds.y + 14}, {bounds.x + 23, bounds.y + 14}, 2, white);
+    line({bounds.x + 6, bounds.y + 14}, {bounds.x + 13, bounds.y + 7}, 2, white);
+    line({bounds.x + 6, bounds.y + 14}, {bounds.x + 13, bounds.y + 21}, 2, white);
+}
+
+void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, const NEBULA::Console& console) {
+    using namespace NEBULA;
+    if (width <= 0 || height <= 0) return;
+    vertices.clear();
+    glClearColor(.12f, .14f, .15f, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    Color white{.95f, .96f, .97f}, muted{.62f, .66f, .68f};
+    if (setup.scene == Scene::Home) {
+        label("PLAY", menuTitle(width, height), white, 3);
+        const std::array<std::string_view, 3> names{"LOCAL", "ONLINE", "REPLAY"};
+        const std::array<ViewTerrain, 3> symbols{ViewTerrain::General, ViewTerrain::City, ViewTerrain::Mountain};
+        for (int index = 0; index < 3; ++index) {
+            Rect bounds = menuButton(index, width, height);
+            rectangle(bounds, white);
+            label(names[index], bounds, {.12f, .14f, .15f});
+            icon(symbols[index], {bounds.x + 16, bounds.y + 12, 28, 28}, index == 0
+                 ? Color{.72f, .23f, .26f} : index == 1 ? Color{.16f, .40f, .34f} : Color{.55f, .44f, .16f});
+        }
+    } else {
+        rectangle({0, 0, static_cast<float>(width), 52}, {.09f, .10f, .11f});
+        back();
+        std::string_view title = setup.scene == Scene::Local ? "LOCAL" : setup.scene == Scene::Online ? "ONLINE" : "REPLAY";
+        text(title, 64, 19, 1.5f, white);
+
+        Rect start = startButton(width);
+        Color action = setup.scene == Scene::Local ? white : muted;
+        std::string_view command = setup.scene == Scene::Local ? "START MATCH" : setup.scene == Scene::Online ? "CONNECT" : "PLAY";
+        text(command, start.x + start.width - 36 - PixelFont::measure(command) * 1.5f, 19, 1.5f, action);
+        float right = start.x + start.width - 5, middle = start.y + start.height / 2;
+        line({right - 18, middle}, {right, middle}, 2, action);
+        line({right - 7, middle - 7}, {right, middle}, 2, action);
+        line({right - 7, middle + 7}, {right, middle}, 2, action);
+
+        auto group = [&](std::string_view name, int index) {
+            Rect row = formControl(setup.scene, index, width, height);
+            text(name, row.x, row.y - 24, 1.5f, muted);
+            return row;
+        };
+        auto choices = [&](Rect row) {
+            button("BUILTIN", choiceButton(row, 0, 3), true);
+            button("HUMAN", choiceButton(row, 1, 3), false, false);
+            button("AGENT FILE", choiceButton(row, 2, 3), false, false);
+        };
+        if (setup.scene == Scene::Local) {
+            choices(group("PLAYER A", 0));
+            choices(group("PLAYER B", 1));
+        } else if (setup.scene == Scene::Online) {
+            Rect server = group("SERVER", 0);
+            button("BOT", choiceButton(server, 0, 2), !setup.mainServer);
+            button("MAIN", choiceButton(server, 1, 2), setup.mainServer);
+            choices(group("PARTICIPANT", 1));
+            input(setup.fields[0], group("USERNAME", 2), setup.focus == 0);
+            input(setup.fields[1], group("USER ID", 3), setup.focus == 1, true);
+        } else {
+            input(setup.fields[2], group("REPLAY FILE", 0), setup.focus == 2);
+        }
+    }
+    std::string_view message = setup.message;
+    Rect row = formRow(0, width);
+    auto columns = static_cast<std::size_t>(std::max(1.0f, row.width / 10));
+    float top = height - 64.0f;
+    while (!message.empty()) {
+        std::size_t length = std::min(columns, message.size());
+        if (length < message.size()) {
+            auto space = message.rfind(' ', length);
+            if (space != std::string_view::npos && space > 0) length = space;
+        }
+        text(message.substr(0, length), row.x, top, 1.25f, muted);
+        message.remove_prefix(length);
+        while (!message.empty() && message.front() == ' ') message.remove_prefix(1);
+        top += 18;
+    }
+    if (console.opened) drawConsole(console, width, height);
+    flush(width, height);
+}
+
+void Renderer::draw(const Observation& view, int perspective, int width, int height, bool running, bool active, Tool hover,
                     const NEBULA::Console& console) {
     if (width <= 0 || height <= 0) return;
     vertices.clear();
@@ -204,6 +312,7 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     const Color white{.95f, .96f, .97f}, ink{.12f, .14f, .16f};
     const Color red{.82f, .23f, .26f}, blue{.20f, .38f, .73f};
     rectangle({0, 0, static_cast<float>(width), 52}, {.09f, .10f, .11f});
+    back();
     const std::array<std::string_view, 3> labels{"RED", "BLUE", "ALL"};
     for (int mode = 0; mode < 3; ++mode) {
         Rect button = viewButton(mode);
@@ -214,32 +323,26 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
         text(labels[mode], button.x + (button.width - length * 1.5f) / 2,
              button.y + (button.height - PixelFont::height * 1.5f) / 2, 1.5f, white);
     }
-    bool ongoing = view.result == Phases::Ongoing;
-    for (Tool tool : {Tool::Playback, Tool::Step, Tool::Reset}) {
-        if (hover == tool) rectangle(toolButton(tool, width), {.24f, .28f, .30f});
-    }
-    Color enabled = ongoing ? white : Color{.40f, .43f, .45f};
-    Rect playback = toolButton(Tool::Playback, width);
-    if (running) {
-        rectangle({playback.x + 7, playback.y + 6, 5, 16}, enabled);
-        rectangle({playback.x + 16, playback.y + 6, 5, 16}, enabled);
-    } else {
-        triangle({playback.x + 9, playback.y + 5}, {playback.x + 9, playback.y + 23},
-                 {playback.x + 22, playback.y + 14}, enabled);
-    }
-    Rect single = toolButton(Tool::Step, width);
-    Color stepColor = ongoing && !running ? white : Color{.40f, .43f, .45f};
-    triangle({single.x + 5, single.y + 6}, {single.x + 5, single.y + 22},
-             {single.x + 17, single.y + 14}, stepColor);
-    rectangle({single.x + 19, single.y + 6, 3, 16}, stepColor);
-    Rect reset = toolButton(Tool::Reset, width);
-    Point center{reset.x + 14, reset.y + 14};
-    for (int section = 0; section < 16; ++section) {
-        float a = .5f + section * .30f, b = a + .30f;
-        line({center.x + 8 * std::cos(a), center.y + 8 * std::sin(a)},
-             {center.x + 8 * std::cos(b), center.y + 8 * std::sin(b)}, 2, white);
-    }
-    triangle({center.x + 1, center.y - 12}, {center.x + 7, center.y - 8}, {center.x, center.y - 5}, white);
+    if (active) {
+        for (Tool tool : {Tool::Playback, Tool::Step, Tool::Stop}) {
+            if (hover == tool) rectangle(toolButton(tool, width), {.24f, .28f, .30f});
+        }
+        Rect playback = toolButton(Tool::Playback, width);
+        if (running) {
+            rectangle({playback.x + 7, playback.y + 6, 5, 16}, white);
+            rectangle({playback.x + 16, playback.y + 6, 5, 16}, white);
+        } else {
+            triangle({playback.x + 9, playback.y + 5}, {playback.x + 9, playback.y + 23},
+                     {playback.x + 22, playback.y + 14}, white);
+        }
+        Rect single = toolButton(Tool::Step, width);
+        Color stepColor = !running ? white : Color{.40f, .43f, .45f};
+        triangle({single.x + 5, single.y + 6}, {single.x + 5, single.y + 22},
+                 {single.x + 17, single.y + 14}, stepColor);
+        rectangle({single.x + 19, single.y + 6, 3, 16}, stepColor);
+        Rect stop = toolButton(Tool::Stop, width);
+        rectangle({stop.x + 7, stop.y + 7, 14, 14}, white);
+    } else button("SETUP", NEBULA::setupButton(width));
 
     if (view.rows > 0 && view.cols > 0 && height > 100 && width > 40) {
         float size = std::min((width - 32.0f) / view.cols, (height - 100.0f) / view.rows);
@@ -281,14 +384,14 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
         }
     }
     text("TURN " + std::to_string(view.tick / 2), 16, height - 24.0f, 1.5f, white);
-    std::string_view status = running ? "RUNNING" : "PAUSED";
+    std::string_view status = active ? (running ? "RUNNING" : "PAUSED") : "STOPPED";
     if (view.result == Phases::RedWin) status = "RED WINS";
     else if (view.result == Phases::BlueWin) status = "BLUE WINS";
     else if (view.result == Phases::Draw) status = "DRAW";
     text(status, width - 16.0f - PixelFont::measure(status) * 1.5f, height - 24.0f, 1.5f, white);
-    if (hover != Tool::None) {
+    if (active && hover != Tool::None) {
         std::string_view label = hover == Tool::Playback ? (running ? "PAUSE" : "PLAY")
-                              : hover == Tool::Step ? "HALF TURN" : "NEW MAP";
+                              : hover == Tool::Step ? "HALF TURN" : "STOP";
         Rect button = toolButton(hover, width);
         float length = PixelFont::measure(label) * 1.5f;
         float left = std::min(button.x, width - length - 32.0f);
@@ -297,7 +400,10 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     }
 
     if (console.opened) drawConsole(console, width, height);
+    flush(width, height);
+}
 
+void Renderer::flush(int width, int height) {
     // all rectangles, glyph pixels and icons share one vertex buffer and one draw call.
     glUseProgram(program);
     glUniform2f(canvas, static_cast<float>(width), static_cast<float>(height));
