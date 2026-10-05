@@ -26,8 +26,10 @@ namespace NEBULA {
         Scene scene = Scene::Home;
         bool mainServer = false;
         // online fields stay in memory. the user ID is masked while drawing.
-        std::array<TextInput, 3> fields; // username, user ID, replay path.
+        std::array<TextInput, 6> fields; // username, user ID, replay path, red command, blue command, online command.
+        int milliseconds = 500; // local half-turn duration, retained between games.
         int focus = -1;
+        int fileHover = -1;
         std::string message;
         Timer::time_point messageTime{};
 
@@ -61,7 +63,8 @@ namespace NEBULA {
     inline Rect menuTitle(int width, int height) {
         float scale = contentScale(width, height);
         float span = 400 * scale;
-        return {(width - span) / 2, (height - 252 * scale) / 2, span, 36 * scale};
+        // the middle button's center sits 158 scaled pixels below the title's top.
+        return {(width - span) / 2, height / 2.0f - 158 * scale, span, 36 * scale};
     }
 
     inline Rect menuButton(int index, int width, int height) {
@@ -85,8 +88,34 @@ namespace NEBULA {
         return {row.x + (span + gap) * choice, row.y, span, row.height};
     }
 
+    inline bool hasFileButton(Scene scene, int index) {
+        return (scene == Scene::Local && (index == 3 || index == 4)) ||
+               (scene == Scene::Online && index == 5) || (scene == Scene::Replay && index == 2);
+    }
+
+    inline Rect fieldRow(Scene scene, int index, int width, int height) {
+        int group = scene == Scene::Local ? index - 3 : scene == Scene::Replay ? 0 : index == 5 ? 1 : index + 2;
+        return formControl(scene, group, width, height);
+    }
+
+    // a file button occupies one square at the row's right edge, separated from the input by 8 scaled pixels.
     inline Rect inputField(Scene scene, int index, int width, int height) {
-        return formControl(scene, scene == Scene::Replay ? 0 : index + 2, width, height);
+        Rect row = fieldRow(scene, index, width, height);
+        if (hasFileButton(scene, index)) row.width -= row.height + 8 * contentScale(width, height);
+        return row;
+    }
+
+    inline Rect fileButton(Scene scene, int index, int width, int height) {
+        Rect row = fieldRow(scene, index, width, height);
+        return {row.x + row.width - row.height, row.y, row.height, row.height};
+    }
+
+    // the same order drives mouse focus and Tab navigation.
+    inline std::array<int, 3> inputOrder(Scene scene) {
+        if (scene == Scene::Local) return {3, 4, -1};
+        if (scene == Scene::Online) return {5, 0, 1};
+        if (scene == Scene::Replay) return {2, -1, -1};
+        return {-1, -1, -1};
     }
 
     inline Rect startButton(int width) { return {width - 196.0f, 8, 180, 36}; }

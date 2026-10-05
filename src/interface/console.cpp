@@ -1,26 +1,30 @@
 #include "console.hpp"
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <sstream>
 
 namespace NEBULA {
-    Command parseCommand(std::string_view line) {
+    ParsedCommand parseCommand(std::string_view line) {
         std::istringstream stream{std::string(line)};
         std::string name, extra;
-        if (!(stream >> name)) return Command::None;
-        if (stream >> extra) return Command::Invalid;
+        if (!(stream >> name)) return {};
         for (char& letter : name) {
             letter = static_cast<char>(std::tolower(static_cast<unsigned char>(letter)));
         }
-        if (name == "help") return Command::Help;
-        if (name == "start") return Command::Start;
-        if (name == "stop") return Command::Stop;
-        if (name == "back") return Command::Back;
-        if (name == "pause") return Command::Pause;
-        if (name == "resume") return Command::Resume;
-        if (name == "step") return Command::Step;
-        if (name == "quit") return Command::Quit;
-        return Command::Invalid;
+        if (name == "turn") {
+            std::string number;
+            int milliseconds = 0;
+            if (!(stream >> number) || stream >> extra) return {Command::Invalid};
+            auto [end, error] = std::from_chars(number.data(), number.data() + number.size(), milliseconds);
+            if (error != std::errc{} || end != number.data() + number.size() || milliseconds <= 0) return {Command::Invalid};
+            return {Command::Turn, milliseconds};
+        }
+        if (stream >> extra) return {Command::Invalid};
+        if (name == "help") return {Command::Help};
+        if (name == "back") return {Command::Back};
+        if (name == "quit") return {Command::Quit};
+        return {Command::Invalid};
     }
 
     bool TextInput::insert(std::string_view text) {
@@ -61,8 +65,8 @@ namespace NEBULA {
         }
     }
 
-    Command Console::submit() {
-        Command command = parseCommand(input);
+    ParsedCommand Console::submit() {
+        ParsedCommand command = parseCommand(input);
         edit(Edit::Clear);
         return command;
     }

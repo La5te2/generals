@@ -5,14 +5,13 @@
 #include <string_view>
 
 namespace PixelFont {
-    // original 6 x 9 pixel lettering for the board and its controls.
+    // original pixel lettering with a 6 x 9 body and two extra rows for lowercase descenders.
     // each binary row reads left to right. 1 fills a pixel, 0 leaves it empty.
     inline constexpr int width = 6, height = 9, advance = 8;
-    using Glyph = std::array<std::uint8_t, height>;
+    // height measures the body through its baseline. the last two rows extend below that baseline.
+    using Glyph = std::array<std::uint8_t, height + 2>;
 
     constexpr Glyph glyph(char letter) {
-        // lowercase input shares the uppercase shapes in this small display font.
-        if (letter >= 'a' && letter <= 'z') letter = static_cast<char>(letter - 'a' + 'A');
         switch (letter) {
             case '0': return {0b011110, 0b110011, 0b110011, 0b110011, 0b110011,
                               0b110011, 0b110011, 0b110011, 0b011110};
@@ -86,7 +85,62 @@ namespace PixelFont {
                               0b001100, 0b001100, 0b001100, 0b001100};
             case 'Z': return {0b111111, 0b000011, 0b000110, 0b000110, 0b001100,
                               0b011000, 0b011000, 0b110000, 0b111111};
+            // lowercase bodies start at row 3. tall stems reach upward, and g/j/p/q/y extend below row 8.
+            case 'a': return {0, 0, 0, 0b011110, 0b000011, 0b011111,
+                              0b110011, 0b110011, 0b011111};
+            case 'b': return {0b110000, 0b110000, 0b110000, 0b111110, 0b110011, 0b110011,
+                              0b110011, 0b110011, 0b111110};
+            case 'c': return {0, 0, 0, 0b011110, 0b110011, 0b110000,
+                              0b110000, 0b110011, 0b011110};
+            case 'd': return {0b000011, 0b000011, 0b000011, 0b011111, 0b110011, 0b110011,
+                              0b110011, 0b110011, 0b011111};
+            case 'e': return {0, 0, 0, 0b011110, 0b110011, 0b111111,
+                              0b110000, 0b110000, 0b011110};
+            case 'f': return {0b001110, 0b011011, 0b011000, 0b111110, 0b011000, 0b011000,
+                              0b011000, 0b011000, 0b011000};
+            case 'g': return {0, 0, 0, 0b011111, 0b110011, 0b110011,
+                              0b110011, 0b011111, 0b000011, 0b110011, 0b011110};
+            case 'h': return {0b110000, 0b110000, 0b110000, 0b111110, 0b110011, 0b110011,
+                              0b110011, 0b110011, 0b110011};
+            case 'i': return {0, 0b001100, 0, 0b011100, 0b001100, 0b001100,
+                              0b001100, 0b001100, 0b011110};
+            case 'j': return {0, 0b000110, 0, 0b001110, 0b000110, 0b000110,
+                              0b000110, 0b000110, 0b000110, 0b110110, 0b011100};
+            case 'k': return {0b110000, 0b110000, 0b110000, 0b110011, 0b110110, 0b111100,
+                              0b111100, 0b110110, 0b110011};
+            case 'l': return {0b011100, 0b001100, 0b001100, 0b001100, 0b001100, 0b001100,
+                              0b001100, 0b001100, 0b001110};
+            case 'm': return {0, 0, 0, 0b110110, 0b111111, 0b101101,
+                              0b101101, 0b101101, 0b101101};
+            case 'n': return {0, 0, 0, 0b111110, 0b110011, 0b110011,
+                              0b110011, 0b110011, 0b110011};
+            case 'o': return {0, 0, 0, 0b011110, 0b110011, 0b110011,
+                              0b110011, 0b110011, 0b011110};
+            case 'p': return {0, 0, 0, 0b111110, 0b110011, 0b110011,
+                              0b110011, 0b110011, 0b111110, 0b110000, 0b110000};
+            case 'q': return {0, 0, 0, 0b011111, 0b110011, 0b110011,
+                              0b110011, 0b110011, 0b011111, 0b000011, 0b000011};
+            case 'r': return {0, 0, 0, 0b110110, 0b111011, 0b110000,
+                              0b110000, 0b110000, 0b110000};
+            case 's': return {0, 0, 0, 0b011111, 0b110000, 0b011110,
+                              0b000011, 0b000011, 0b111110};
+            case 't': return {0, 0b011000, 0b011000, 0b111110, 0b011000, 0b011000,
+                              0b011000, 0b011011, 0b001110};
+            case 'u': return {0, 0, 0, 0b110011, 0b110011, 0b110011,
+                              0b110011, 0b110011, 0b011111};
+            case 'v': return {0, 0, 0, 0b110011, 0b110011, 0b110011,
+                              0b110011, 0b011110, 0b001100};
+            case 'w': return {0, 0, 0, 0b110011, 0b110011, 0b101101,
+                              0b101101, 0b111111, 0b010010};
+            case 'x': return {0, 0, 0, 0b110011, 0b011110, 0b001100,
+                              0b001100, 0b011110, 0b110011};
+            case 'y': return {0, 0, 0, 0b110011, 0b110011, 0b110011,
+                              0b110011, 0b011111, 0b000011, 0b000110, 0b111100};
+            case 'z': return {0, 0, 0, 0b111111, 0b000110, 0b001100,
+                              0b011000, 0b110000, 0b111111};
             case ' ': return {};
+            case '\'': return {0b001100, 0b001100, 0b001000, 0b010000, 0, 0, 0, 0, 0};
+            case '"': return {0b110011, 0b110011, 0b110011};
             case '.': return {0, 0, 0, 0, 0, 0, 0, 0b001100, 0b001100};
             case ',': return {0, 0, 0, 0, 0, 0b001100, 0b001100, 0b001000, 0b010000};
             case ':': return {0, 0b001100, 0b001100, 0, 0, 0, 0b001100, 0b001100, 0};

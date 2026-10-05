@@ -7,11 +7,12 @@ namespace NEBULA {
     public:
         using Source = std::chrono::steady_clock;
         using Time = Source::time_point;
-        static constexpr auto interval = std::chrono::milliseconds(500);
+        std::chrono::milliseconds interval{500};
 
         bool running() const { return active; }
+        Time expires() const { return deadline; }
 
-        // reset() pauses the timer and restores the full 500 ms interval.
+        // reset() pauses the timer and restores a full half-turn interval.
         void reset() {
             active = false;
             remaining = interval;

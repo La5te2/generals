@@ -5,11 +5,16 @@
 #include <string_view>
 
 namespace NEBULA {
-    enum class Command { None, Help, Start, Stop, Back, Pause, Resume, Step, Quit, Invalid };
+    enum class Command { None, Help, Back, Quit, Turn, Invalid };
     enum class Edit { Left, Right, Home, End, Backspace, Delete, Clear };
 
+    struct ParsedCommand {
+        Command type = Command::None;
+        int milliseconds = 0;
+    };
+
     // translate one line into a command. the caller decides how to execute it.
-    Command parseCommand(std::string_view line);
+    ParsedCommand parseCommand(std::string_view line);
 
     struct TextInput {
         std::string input;
@@ -23,6 +28,6 @@ namespace NEBULA {
 
     struct Console : TextInput {
         bool opened = false;
-        Command submit();
+        ParsedCommand submit();
     };
 }

@@ -126,7 +126,7 @@ void Renderer::line(Point a, Point b, float thickness, Color color) {
 void Renderer::text(std::string_view value, float x, float y, float scale, Color color) {
     for (char letter : value) {
         auto rows = PixelFont::glyph(letter);
-        for (int row = 0; row < PixelFont::height; ++row) {
+        for (int row = 0; row < static_cast<int>(rows.size()); ++row) {
             // adjacent filled pixels share a rectangle, keeping thick strokes continuous.
             int col = 0;
             while (col < PixelFont::width) {
@@ -285,23 +285,36 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
             text(name, row.x, row.y - 24 * scale, 1.5f * scale, muted);
             return row;
         };
-        auto choices = [&](Rect row) {
-            button("BUILTIN", choiceButton(row, 0, 3), true, true, scale);
-            button("HUMAN", choiceButton(row, 1, 3), false, false, scale);
-            button("AGENT FILE", choiceButton(row, 2, 3), false, false, scale);
+        auto fileInput = [&](std::string_view name, int field, int index) {
+            group(name, index);
+            input(setup.fields[field], inputField(setup.scene, field, width, height), setup.focus == field, false, scale);
+            Rect bounds = fileButton(setup.scene, field, width, height);
+            rectangle(bounds, {.06f, .08f, .09f});
+            Color symbol = setup.fileHover == field ? Color{.40f, .82f, .68f} : white;
+            // the folder outline uses the same scaled coordinates as the surrounding controls.
+            std::array<Point, 7> outline{{{8, 10}, {15, 10}, {18, 14}, {28, 14}, {28, 26}, {8, 26}, {8, 10}}};
+            for (std::size_t point = 1; point < outline.size(); ++point) {
+                line({bounds.x + outline[point - 1].x * scale, bounds.y + outline[point - 1].y * scale},
+                     {bounds.x + outline[point].x * scale, bounds.y + outline[point].y * scale}, 1.5f * scale, symbol);
+            }
+            if (setup.fileHover == field && !console.opened) {
+                Rect tooltip{bounds.x + bounds.width - 120 * scale, bounds.y - 30 * scale, 120 * scale, 24 * scale};
+                rectangle(tooltip, {.06f, .07f, .08f});
+                label("SELECT FILE", tooltip, white, 1.25f * scale);
+            }
         };
         if (setup.scene == Scene::Local) {
-            choices(group("PLAYER A", 0));
-            choices(group("PLAYER B", 1));
+            fileInput("RED PLAYER", 3, 0);
+            fileInput("BLUE PLAYER", 4, 1);
         } else if (setup.scene == Scene::Online) {
             Rect server = group("SERVER", 0);
             button("BOT", choiceButton(server, 0, 2), !setup.mainServer, true, scale);
             button("MAIN", choiceButton(server, 1, 2), setup.mainServer, true, scale);
-            choices(group("PARTICIPANT", 1));
+            fileInput("PLAYER", 5, 1);
             input(setup.fields[0], group("USERNAME", 2), setup.focus == 0, false, scale);
             input(setup.fields[1], group("USER ID", 3), setup.focus == 1, true, scale);
         } else {
-            input(setup.fields[2], group("REPLAY FILE", 0), setup.focus == 2, false, scale);
+            fileInput("REPLAY FILE", 2, 0);
         }
     }
     // show operation feedback below the top bar at a fixed text size, wrapping at word boundaries.
@@ -334,6 +347,7 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     glClear(GL_COLOR_BUFFER_BIT);
     const Color white{.95f, .96f, .97f}, ink{.12f, .14f, .16f};
     const Color red{.82f, .23f, .26f}, blue{.20f, .38f, .73f};
+    const Color darkRed{.53f, .12f, .15f}, darkBlue{.11f, .23f, .48f};
     rectangle({0, 0, static_cast<float>(width), 52}, {.09f, .10f, .11f});
     back();
     const std::array<std::string_view, 3> labels{"RED", "BLUE", "ALL"};
@@ -375,18 +389,18 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
         for (int row = 0; row < view.rows; ++row) {
             for (int col = 0; col < view.cols; ++col) {
                 const ViewCell& cell = view.cells[row * view.cols + col];
+                bool structure = cell.terrain == ViewTerrain::City || cell.terrain == ViewTerrain::General;
                 Color fill{.88f, .89f, .88f};
                 if (cell.terrain == ViewTerrain::Fog) fill = {.27f, .29f, .31f};
                 else if (cell.terrain == ViewTerrain::Obstacle) fill = {.43f, .46f, .48f};
-                else if (cell.owner == 0) fill = red;
-                else if (cell.owner == 1) fill = blue;
+                else if (cell.owner == 0) fill = structure ? darkRed : red;
+                else if (cell.owner == 1) fill = structure ? darkBlue : blue;
                 else if (cell.terrain == ViewTerrain::Mountain) fill = {.70f, .72f, .72f};
                 else if (cell.terrain == ViewTerrain::City) fill = {.49f, .52f, .54f};
                 // an inset fill exposes the dark tile beneath as the grid border.
                 Rect tile{left + col * size, top + row * size, size, size};
                 rectangle(tile, {.10f, .12f, .13f});
                 rectangle({tile.x + .5f, tile.y + .5f, size - 1, size - 1}, fill);
-                bool structure = cell.terrain == ViewTerrain::City || cell.terrain == ViewTerrain::General;
                 Rect symbol{tile.x + size * .16f, tile.y + size * .16f, size * .68f, size * .68f};
                 icon(cell.terrain, symbol, ink);
 
