@@ -180,20 +180,21 @@ namespace NEBULA {
         // select an action by testing the mouse position against the rectangles used for drawing.
         void click(GLFWwindow* window, double x, double y, int width, int height) {
             if (console.opened) return;
-            if (setup.scene != Scene::Home && backButton().contains(x, y)) { back(); return; }
+            float scale = barScale(height);
+            if (setup.scene != Scene::Home && backButton(scale).contains(x, y)) { back(); return; }
             if (showingBoard) {
                 for (int mode = 0; mode < 3; ++mode) {
-                    if (viewButton(mode).contains(x, y)) { perspective = mode; update(); }
+                    if (viewButton(mode, scale).contains(x, y)) { perspective = mode; update(); }
                 }
                 if (!active()) {
-                    if (setupButton(width).contains(x, y)) showingBoard = false;
+                    if (setupButton(width, scale).contains(x, y)) showingBoard = false;
                     return;
                 }
-                if (toolButton(Tool::Playback, width).contains(x, y)) {
+                if (toolButton(Tool::Playback, width, scale).contains(x, y)) {
                     playback();
                 }
-                if (toolButton(Tool::Step, width).contains(x, y)) step();
-                if (toolButton(Tool::Stop, width).contains(x, y)) stop();
+                if (toolButton(Tool::Step, width, scale).contains(x, y)) step();
+                if (toolButton(Tool::Stop, width, scale).contains(x, y)) stop();
                 return;
             }
             if (setup.scene == Scene::Home) {
@@ -223,7 +224,7 @@ namespace NEBULA {
                 if (field >= 0 && inputField(setup.scene, field, width, height).contains(x, y)) setup.focus = field;
             }
             if (setup.focus >= 0) setup.fields[setup.focus].edit(Edit::End);
-            if (startButton(width).contains(x, y)) start();
+            if (startButton(width, scale).contains(x, y)) start();
         }
 
         // keyboard text goes to the console while open, otherwise to the focused configuration field.
@@ -320,7 +321,7 @@ namespace NEBULA {
             glfwGetWindowSize(target, &width, &height);
             if (state.showingBoard && state.active() && !state.console.opened) {
                 for (Tool tool : {Tool::Playback, Tool::Step, Tool::Stop}) {
-                    if (toolButton(tool, width).contains(x, y)) hover = tool;
+                    if (toolButton(tool, width, barScale(height)).contains(x, y)) hover = tool;
                 }
             } else if (!state.showingBoard && !state.console.opened) {
                 for (int field : inputOrder(state.setup.scene)) {

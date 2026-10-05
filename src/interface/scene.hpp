@@ -56,9 +56,12 @@ namespace NEBULA {
 
     // drawing and mouse input share these dimensions in logical window coordinates.
     inline float contentScale(int width, int height) {
-        // 960 x 800 is the reference size. keep the central controls between 75% and 175%.
-        return std::clamp(std::min(width / 960.0f, height / 800.0f), .75f, 1.75f);
+        // 960 x 800 is the reference size. keep the central controls between 90% and 175%.
+        return std::clamp(std::min(width / 960.0f, height / 800.0f), .9f, 1.75f);
     }
+
+    // top and bottom controls scale with window height, between 100% and 150% of their reference size.
+    inline float barScale(int height) { return std::clamp(height / 800.0f, 1.0f, 1.5f); }
 
     inline Rect menuTitle(int width, int height) {
         float scale = contentScale(width, height);
@@ -118,10 +121,13 @@ namespace NEBULA {
         return {-1, -1, -1};
     }
 
-    inline Rect startButton(int width) { return {width - 196.0f, 8, 180, 36}; }
-    inline Rect backButton() { return {16, 12, 28, 28}; }
-    inline Rect setupButton(int width) { return {width - 172.0f, 12, 156, 28}; }
+    inline Rect startButton(int width, float scale) {
+        return {width - 16.0f - 180 * scale, 12 - 4 * scale, 180 * scale, 36 * scale};
+    }
+    inline Rect backButton(float scale) { return {16, 12, 28 * scale, 28 * scale}; }
+    // the setup button occupies the same right-hand area as the three playback tools.
+    inline Rect setupButton(int width, float scale) { return {width - 16.0f - 100 * scale, 12, 100 * scale, 28 * scale}; }
 
     // operation feedback sits below the top bar, independently of the centered form.
-    inline Rect messageArea(int width) { return {16, 68, width - 32.0f, 36}; }
+    inline Rect messageArea(int width, float scale) { return {16, 40 + 28 * scale, width - 32.0f, 36 * scale}; }
 }
