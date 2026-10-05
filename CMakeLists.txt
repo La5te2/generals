@@ -26,8 +26,8 @@ target_compile_features(engine INTERFACE cxx_std_20)
 add_library(agents STATIC src/agents/builtin.cpp)
 target_link_libraries(agents PUBLIC engine)
 
-add_library(local_match STATIC src/interface/match.cpp)
-target_link_libraries(local_match PUBLIC agents)
+add_library(match STATIC src/interface/match.cpp)
+target_link_libraries(match PUBLIC agents)
 
 option(NEBULA_BUILD_INTERFACE "Build the interface application" ON)
 if(NEBULA_BUILD_INTERFACE)
@@ -35,7 +35,10 @@ if(NEBULA_BUILD_INTERFACE)
     find_package(glfw3 CONFIG REQUIRED)
 
     add_executable(interface src/interface/nebula.cpp src/interface/renderer.cpp src/interface/console.cpp)
-    target_link_libraries(interface PRIVATE local_match glad::glad glfw)
+    target_link_libraries(interface PRIVATE match glad::glad glfw)
+    if(WIN32)
+        target_link_libraries(interface PRIVATE user32)
+    endif()
     set_target_properties(interface PROPERTIES OUTPUT_NAME nebula)
     add_custom_command(TARGET interface POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different

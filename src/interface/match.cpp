@@ -20,7 +20,7 @@ namespace NEBULA {
     bool Match::advance() {
         if (phase != MatchState::Active) return false;
         std::array<Action, 2> actions;
-        // both strategies see the position before either action is executed.
+        // both agents see the position before either action is executed.
         for (int player = 0; player < 2; ++player) {
             actions[player] = Agents::builtin(*engine.observe(player), random[player]);
         }

@@ -41,8 +41,8 @@ private:
     void icon(ViewTerrain terrain, Rect bounds, Color color);
     void drawConsole(const NEBULA::Console& console, int width, int height);
     void label(std::string_view value, Rect bounds, Color color, float scale = 1.5f);
-    void button(std::string_view value, Rect bounds, bool selected = false, bool enabled = true);
-    void input(const NEBULA::TextInput& field, Rect bounds, bool focused, bool masked = false);
+    void button(std::string_view value, Rect bounds, bool selected = false, bool enabled = true, float scale = 1);
+    void input(const NEBULA::TextInput& field, Rect bounds, bool focused, bool masked = false, float scale = 1);
     void back();
     void flush(int width, int height);
 
