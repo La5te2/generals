@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/observe.hpp"
-#include "controller.hpp"
+#include "human.hpp"
 #include "console.hpp"
 #include "scene.hpp"
 #include <glad/glad.h>
@@ -29,7 +29,7 @@ public:
     bool init();
     void draw(const Observation& view, int perspective, int width, int height,
               const NEBULA::BoardControls& controls, const NEBULA::Setup& setup,
-              const NEBULA::Console& console, const NEBULA::Controller& controller, std::span<const Action> queued,
+              const NEBULA::Console& console, const NEBULA::Human& human, std::span<const Action> queued,
               const std::array<std::string, 2>& names, std::string_view sessionStatus);
     void drawSetup(const NEBULA::Setup& setup, int width, int height, const NEBULA::Console& console);
 
@@ -43,7 +43,7 @@ private:
     void line(Point a, Point b, float thickness, Color color);
     void text(std::string_view value, float x, float y, float scale, Color color);
     void icon(ViewTerrain terrain, Rect bounds, Color color);
-    void drawSelection(const NEBULA::Controller& controller, std::span<const Action> queued, Rect board, int cols);
+    void drawSelection(const NEBULA::Human& human, std::span<const Action> queued, Rect board, int cols);
     void drawConsole(const NEBULA::Console& console, int width, int height, float textScale);
     void drawMessage(const NEBULA::Setup& setup, int width, int height, bool board = false);
     void drawScores(const Observation& view, const std::array<std::string, 2>& names, int width, int height);

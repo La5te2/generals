@@ -26,7 +26,7 @@ namespace NEBULA {
         int player = -1; // online account's seat, assigned when the server starts the game.
     };
 
-    // the human controller submits or cancels queued moves through the active session.
+    // human input submits or cancels queued moves through the active session.
     class PlayerInput {
     public:
         virtual ~PlayerInput() = default;

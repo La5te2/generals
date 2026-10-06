@@ -28,7 +28,7 @@ namespace NEBULA {
         Replay replay;
         Clock replayClock;
         bool replayActive = false;
-        Controller controller;
+        Human human; // keyboard and mouse controls for the player's selected cell and queued moves.
         Renderer renderer;
         Console console;
         Setup setup;
@@ -44,10 +44,11 @@ namespace NEBULA {
 
         bool active() const { return displayed.state == MatchState::Active; }
         bool running() const { return displayed.running; }
-        bool human() const { return active() && controller.player() >= 0; }
+        // true while an unfinished match has a keyboard-and-mouse player, including a paused local match.
+        bool hasHuman() const { return active() && human.player() >= 0; }
         PlayerInput& inputSession() { return setup.scene == Scene::Online ? static_cast<PlayerInput&>(online) : local; }
         BoardControls controls() const {
-            return {setup.scene, active(), running(), human(), hover, setup.scene == Scene::Replay && replay.cursor() > 0};
+            return {setup.scene, active(), running(), hasHuman(), hover, setup.scene == Scene::Replay && replay.cursor() > 0};
         }
         const Observation& view() const { return (*displayed.views)[perspective]; }
         void update() {
@@ -60,11 +61,11 @@ namespace NEBULA {
             } else displayed = setup.scene == Scene::Online ? online.snapshot() : static_cast<MatchSnapshot>(local.snapshot());
             if (setup.scene == Scene::Online && displayed.player >= 0) {
                 perspective = displayed.player;
-                if (setup.humanPlayer(5) && controller.player() < 0 && view().cols > 0 && active()) {
-                    controller.reset(perspective, view());
+                if (setup.humanPlayer(5) && human.player() < 0 && view().cols > 0 && active()) {
+                    human.reset(perspective, view());
                 }
             }
-            controller.sync(displayed);
+            human.sync(displayed);
         }
 
         void report(std::string message) {
@@ -127,7 +128,7 @@ namespace NEBULA {
                     setup.fields[0].input, setup.fields[1].input,
                     setup.humanPlayer(5) ? "" : setup.fields[5].input, setup.fields[7].input, setup.fields[8].input};
                 if (!online.start(config)) { setup.notify(online.snapshot().error); return; }
-                controller.reset(-1, view());
+                human.reset(-1, view());
                 perspective = 0;
                 showingBoard = observingMatch = true;
                 setup.message.clear();
@@ -153,7 +154,7 @@ namespace NEBULA {
                 observingMatch = false;
                 perspective = 2;
                 hover = Tool::None;
-                controller.reset(-1, view());
+                human.reset(-1, view());
                 update();
                 if (!replayActive) { report("Replay ended"); scheduleReset(); }
                 return;
@@ -189,7 +190,7 @@ namespace NEBULA {
             perspective = player >= 0 ? player : 2;
             hover = Tool::None;
             update();
-            controller.reset(player, view());
+            human.reset(player, view());
         }
 
         // stop keeps the final position on screen. reset starts another session with the current configuration.
@@ -204,7 +205,7 @@ namespace NEBULA {
                 if (displayed.error.empty()) scheduleReset();
             }
             observingMatch = false;
-            controller.deselect();
+            human.deselect();
             hover = Tool::None;
         }
 
@@ -229,7 +230,7 @@ namespace NEBULA {
             if (showingBoard) {
                 stop();
                 showingBoard = false;
-                controller.reset(-1, view());
+                human.reset(-1, view());
             } else { setup.scene = Scene::Home; setup.message.clear(); }
             resetAt.reset();
             setup.focus = -1;
@@ -425,8 +426,8 @@ namespace NEBULA {
                 for (Tool tool : tools) {
                     if (toolButton(tool, width, scale).contains(x, y)) { useTool(tool); return; }
                 }
-                if (human()) {
-                    controller.click(inputSession(), displayed, x, y, width, height);
+                if (hasHuman()) {
+                    human.click(inputSession(), displayed, x, y, width, height);
                     update();
                     return;
                 }
@@ -549,9 +550,9 @@ namespace NEBULA {
         glViewport(0, 0, pixelsWide, pixelsHigh);
         if (app.showingBoard) {
             std::span<const Action> queued;
-            if (app.controller.player() >= 0) queued = app.displayed.queued[app.controller.player()];
+            if (app.human.player() >= 0) queued = app.displayed.queued[app.human.player()];
             app.renderer.draw(app.view(), app.perspective, width, height, app.controls(), app.setup,
-                              app.console, app.controller, queued, app.displayed.names, app.displayed.status);
+                              app.console, app.human, queued, app.displayed.names, app.displayed.status);
         } else app.renderer.drawSetup(app.setup, width, height, app.console);
         // draw() or drawSetup() fills the back buffer, then this swap presents the completed frame.
         glfwSwapBuffers(window);
@@ -628,8 +629,8 @@ namespace NEBULA {
         glfwSetMouseButtonCallback(window, [](GLFWwindow* target, int button, int action, int) {
             if (action != GLFW_PRESS) return;
             auto& state = *static_cast<WindowState*>(glfwGetWindowUserPointer(target));
-            if (button == GLFW_MOUSE_BUTTON_RIGHT && state.human() && !state.console.opened) {
-                state.controller.deselect();
+            if (button == GLFW_MOUSE_BUTTON_RIGHT && state.hasHuman() && !state.console.opened) {
+                state.human.deselect();
                 redraw(target);
                 return;
             }
@@ -696,11 +697,11 @@ namespace NEBULA {
                     editInput(target, *input, key, action, mods);
                     state.setup.notify(input->feedback);
                 }
-            } else if (state.human()) {
+            } else if (state.hasHuman()) {
                 state.refresh();
                 if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) state.back();
                 else if (key == GLFW_KEY_SPACE) { if (action == GLFW_PRESS) state.playback(); }
-                else { state.controller.key(state.inputSession(), state.displayed, key, action, mods); state.update(); }
+                else { state.human.key(state.inputSession(), state.displayed, key, action, mods); state.update(); }
             } else if (action == GLFW_PRESS) {
                 if (state.controls().spectator() && key >= GLFW_KEY_1 && key <= GLFW_KEY_3) {
                     state.perspective = key - GLFW_KEY_1;

@@ -24,7 +24,7 @@ namespace NEBULA {
     class LocalMatch : public PlayerInput {
     public:
         ~LocalMatch();
-        // an empty command leaves that player's actions to the caller, for example the window's controller.
+        // an empty command leaves that player's actions to the caller, for example the window's human input handler.
         bool start(const std::array<std::string, 2>& commands, std::uint32_t seed, int milliseconds = 500,
                    const std::filesystem::path& directory = {});
         void stop();

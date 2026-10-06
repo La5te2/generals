@@ -26,6 +26,7 @@ namespace NEBULA {
     // drawing, mouse input and shortcuts share the same availability rules.
     struct BoardControls {
         Scene scene = Scene::Local;
+        // human is true while an unfinished match has a keyboard-and-mouse player.
         bool active = false, running = false, human = false;
         Tool hover = Tool::None;
         bool previous = false; // the replay reader supplies whether an earlier position is available.
@@ -65,7 +66,8 @@ namespace NEBULA {
         std::string message;
         Timer::time_point messageTime{};
 
-        // empty player fields select keyboard control, including the single online player field.
+        // a blank or whitespace-only player command selects keyboard and mouse control.
+        // fields 3 and 4 select the local red and blue players. field 5 selects the online player.
         bool humanPlayer(int field) const {
             return (field == 3 || field == 4 || field == 5) &&
                 fields[field].input.find_first_not_of(" \t\r\n") == std::string::npos;

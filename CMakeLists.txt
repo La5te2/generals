@@ -90,7 +90,7 @@ if(NEBULA_BUILD_INTERFACE)
     find_package(glad CONFIG REQUIRED)
     find_package(glfw3 CONFIG REQUIRED)
 
-    add_executable(interface WIN32 src/interface/interface.cpp src/interface/renderer.cpp src/interface/controller.cpp
+    add_executable(interface WIN32 src/interface/interface.cpp src/interface/renderer.cpp src/interface/human.cpp
         src/interface/console.cpp src/interface/dialog.cpp)
     target_link_libraries(interface PRIVATE local online glad::glad glfw)
     if(WIN32)

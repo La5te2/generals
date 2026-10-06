@@ -414,7 +414,7 @@ void Renderer::drawScores(const Observation& view, const std::array<std::string,
 // draw the supplied observation. selecting and updating that observation belongs to WindowState.
 void Renderer::draw(const Observation& view, int perspective, int width, int height,
                     const NEBULA::BoardControls& controls, const NEBULA::Setup& setup,
-                    const NEBULA::Console& console, const NEBULA::Controller& controller, std::span<const Action> queued,
+                    const NEBULA::Console& console, const NEBULA::Human& human, std::span<const Action> queued,
                     const std::array<std::string, 2>& names, std::string_view sessionStatus) {
     if (width <= 0 || height <= 0) return;
     vertices.clear();
@@ -426,7 +426,7 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     float textScale = NEBULA::barScale(height);
     back(textScale);
     float font = 1.5f * textScale;
-    bool human = controls.human, active = controls.active, running = controls.running;
+    bool hasHuman = controls.human, active = controls.active, running = controls.running;
     const std::array<std::string_view, 3> labels{"RED", "BLUE", "ALL"};
     for (int mode = 0; controls.spectator() && mode < 3; ++mode) {
         Rect button = viewButton(mode, textScale);
@@ -479,12 +479,12 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
                 }
             }
         }
-        if (human) drawSelection(controller, queued, board, view.cols);
+        if (hasHuman) drawSelection(human, queued, board, view.cols);
     }
     // two half-turns form one displayed turn. bottom text shares the top bar's limited scaling.
     float bottom = height - 10.5f - PixelFont::height * font;
     text("TURN " + std::to_string(view.tick / 2), 16, bottom, font, white);
-    if (human && controller.half()) {
+    if (hasHuman && human.half()) {
         label("50%", {width / 2.0f - 40 * textScale, bottom - 4, 80 * textScale, 24 * textScale},
               {.98f, .80f, .32f}, font);
     }
@@ -512,7 +512,7 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     flush(width, height);
 }
 
-void Renderer::drawSelection(const NEBULA::Controller& controller, std::span<const Action> queued, Rect board, int cols) {
+void Renderer::drawSelection(const NEBULA::Human& human, std::span<const Action> queued, Rect board, int cols) {
     float size = board.width / cols;
     Color white{.97f, .98f, .99f}, gold{.98f, .80f, .32f}, outline{.06f, .08f, .09f};
     // place queue arrows across tile edges, leaving the centered army numbers visible.
@@ -536,12 +536,12 @@ void Renderer::drawSelection(const NEBULA::Controller& controller, std::span<con
             line({edge.x + dy * size * .12f, edge.y - dx * size * .12f}, to, thickness, color);
         }
     }
-    int cell = controller.selection();
+    int cell = human.selection();
     if (cell < 0) return;
     float inset = size * .06f, thickness = size * .055f;
     float left = board.x + (cell % cols) * size + inset, top = board.y + (cell / cols) * size + inset;
     float span = size - inset * 2;
-    Color color = controller.half() ? gold : white;
+    Color color = human.half() ? gold : white;
     rectangle({left, top, span, thickness}, color);
     rectangle({left, top + span - thickness, span, thickness}, color);
     rectangle({left, top, thickness, span}, color);
