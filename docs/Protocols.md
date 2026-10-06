@@ -1,6 +1,6 @@
 # Protocols
 
-This document defines the external strategy protocol, interface console commands, supported online messages, and the GRF replay format. Each section specifies the data exchanged, its meaning, and the order of communication.
+This document defines the external strategy protocol, interface console commands, supported online messages, and the GIOR replay format. Each section specifies the data exchanged, its meaning, and the order of communication.
 
 ## External Strategies
 
@@ -233,48 +233,66 @@ Board updates describe the account's perspective, while scores provide both play
 
 `game_won` and `game_lost` describe victory and defeat relative to the account.
 
-## Local Replays
+## Replays
 
 ### File Structure
 
-GRF uses ASCII text with LF line endings. A filename consists of an eight-character lowercase hexadecimal digest followed by `.grf`. The file contains a header, one record per frame, and a final digest line:
+Local recordings and downloaded games share the `.gior` format used by generals.io. The file contains a positional JSON array compressed with LZ-String's `compressToUint8Array`. Compressed 16-bit words appear as two bytes each, high byte first. Text decoding follows UTF-16 semantics, preserving Unicode player names.
+
+The current writer emits format revision `19`. The reader accepts revisions `15` through `19` for mainstream 1v1. These revisions share the movement priorities used by the local engine. Supported games contain two opposing players, plains, mountains, cities and generals.
+
+The initial array fields are:
 
 ```text
-rows cols frame_count
-tick idle result board | red_action | blue_action
-...
-digest
+0   format revision
+1   replay ID
+2   width
+3   height
+4   player names
+5   player stars
+6   city indices
+7   city armies
+8   general indices, in player order
+9   mountain indices
+10  moves
+11  surrender events
+12  teams
+13  map metadata
+14  initial army override indices
+15  initial army override values
 ```
 
-`frame_count` includes the initial frame. Its `tick` is `0`, and subsequent ticks increase by one. The two actions use the five-integer format described above, in red/blue order. Both initial actions are Pass. Each later frame stores the board after settling its submitted actions and applying growth.
+An index addresses a cell in row-major order. City indices and armies have matching lengths. Generals start with one soldier, and the army override arrays replace the initial army on their listed cells.
 
-`idle` stores the engine's inactivity counter in half-turns. `result` encodes `0` for ongoing, `1` for red victory, `2` for blue victory, and `3` for a draw. A recording stopped manually can end with result `0`, preserving the game's status at that point.
+Later fields carry special terrain, chat, colors, settings, modifiers, transforms, pings, general trades and clock metadata. The field layout follows the [generals.io replay serializer](https://generals.io/generals-main-prod-v31.4.3-485dbf55.js). Mainstream recordings use empty arrays for special terrain and modifiers. Format revision `19` occupies 38 array positions.
 
-### Board Encoding
+### Moves
 
-The first frame stores the full board in row-major order. Each cell consists of a terrain character, an ownership character, and a base-36 army count:
+Each replay move has five integer fields:
 
 ```text
-<terrain><owner><army36>
+[player, from, to, half, tick]
 ```
 
-Terrain uses `1` for plain, `2` for mountain, `3` for city, and `4` for general. Replay ownership is absolute: `0` for neutral, `1` for red, and `2` for blue. Strategy observations use relative ownership instead. Base-36 digits are `0` through `9` followed by `a` through `z`.
+`player` selects `0` for red or `1` for blue. `from` and `to` identify adjacent cells, and `half` selects `0` for a full move or `1` for a half move. `tick` identifies the position before the move executes, beginning at `0`. Records appear in increasing tick order, with at most one move per player per half-turn. A half-turn with an empty move list represents both players passing.
 
-Dots separate cell tokens. Consecutive identical cells use `count*cell`, with the count also in base 36. For example:
+The strategy protocol also contains five integers, with a different purpose and field order:
 
 ```text
-a*100.200.411
+kind row column direction split
 ```
 
-This fragment represents ten neutral plains with zero soldiers, one mountain, and a red general with one soldier.
+The replay reader translates between cell indices and the engine's coordinates and direction. Player identity and tick come from the recording session. Existing strategy replies retain their original format.
 
-Later frames store changed cells as `index:newcell`, separated by dots. Indices use base 36, follow row-major order, and appear in strictly increasing order. For example, `0:412.b:32z` updates index `0` to a red general with two soldiers and index `11` to a blue city with thirty-five soldiers. A single `-` marks a board identical to the previous frame.
+### Endings
 
-Actions preserve the submitted values, while boards preserve the actual results.
+General captures and time limits derive their results from the game rules. A surrender event has the form `[player, tick]`. It ends that player's participation before the moves at `tick`, and the half-turn completes its scheduled growth. In 1v1, the remaining player wins.
 
-### Digest
+Stopping an ongoing local human match records the human player's surrender. With two programs, Stop compares army totals, then land totals, with blue winning an exact tie. The losing player surrenders at the next unresolved half-turn. The resulting file uses the existing surrender event.
 
-The digest is 32-bit FNV-1a over the file body, from the first header byte through the LF ending the last frame. For body bytes $b_0, \ldots, b_{n-1}$, the calculation is
+### Filenames
+
+Local filenames consist of an eight-character lowercase hexadecimal digest followed by `.gior`. Downloaded files keep their original names. The local digest is 32-bit FNV-1a over the compressed file bytes $b_0, \ldots, b_{n-1}$:
 
 $$
 h_0 = 2166136261,
@@ -282,6 +300,4 @@ h_0 = 2166136261,
 h_{k+1} = \bigl((h_k \mathbin{\oplus} b_k) \times 16777619\bigr) \bmod 2^{32}.
 $$
 
-Here, $\oplus$ denotes bitwise XOR. The final value $h_n$ becomes eight lowercase hexadecimal characters, padded with leading zeroes. Both the filename and the final line use this value for content identification and accidental-change detection.
-
-The digest line also ends with LF. A valid file has matching dimensions, sequential ticks, valid cell and action encodings, and a digest matching its body. Each frame before the final frame has result `0`.
+Here, $\oplus$ denotes bitwise XOR. The final value $h_n$ becomes eight lowercase hexadecimal characters, padded with leading zeroes. The filename identifies the local recording, while the binary contents retain the GIOR structure.

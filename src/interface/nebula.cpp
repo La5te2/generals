@@ -54,6 +54,7 @@ namespace NEBULA {
             if (setup.scene == Scene::Replay && replay.loaded()) {
                 displayed = {};
                 displayed.views = std::make_shared<const std::array<Observation, 3>>(matchViews(replay.state()));
+                displayed.names = replay.names();
                 displayed.state = replayActive ? MatchState::Active : MatchState::Finished;
                 displayed.running = replayClock.running();
             } else displayed = setup.scene == Scene::Online ? online.snapshot() : static_cast<MatchSnapshot>(local.snapshot());
@@ -77,7 +78,7 @@ namespace NEBULA {
             if (!displayed.error.empty()) std::cerr << message << '\n';
         }
 
-        // replay time changes the playback cursor. each position comes directly from its stored board snapshot.
+        // replay time changes the playback cursor. the reader reconstructs the requested position.
         void seekReplay(std::size_t halfTurn) {
             if (!replay.seek(halfTurn)) return;
             if (halfTurn == replay.length()) {

@@ -13,3 +13,24 @@ these images. The project author reported permission from the site
 administrator to use the artwork with attribution on 2026-10-05.
 This attribution accompanies source and binary distributions.
 The artwork retains its separate permission terms and generals.io credit.
+
+Replay compression
+
+src/interface/lz.hpp adapts the LZ-String 1.4.4 compression algorithm.
+Copyright (c) 2013 Pieroxy <pieroxy@pieroxy.net>
+Source: https://github.com/pieroxy/lz-string/tree/1.4.4
+License: WTFPL, Version 2
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+                    Version 2, December 2004
+
+ Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+
+ Everyone is permitted to copy and distribute verbatim or modified
+ copies of this license document, and changing it is allowed as long
+ as the name is changed.
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. You just DO WHAT THE FUCK YOU WANT TO.

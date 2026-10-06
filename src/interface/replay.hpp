@@ -1,4 +1,4 @@
-// local replays: record snapshots and submitted actions, and encode their differences for compact file storage.
+// replay storage and playback: share .gior files between local recordings and downloaded games.
 #pragma once
 
 #include "engine/engine.hpp"
@@ -7,20 +7,19 @@
 #include <vector>
 
 namespace NEBULA {
-    struct ReplayFrame {
-        std::string board;
-        std::array<Action, 2> actions{};
-        std::uint64_t tick = 0;
-        std::uint32_t idle = 0;
-        Phases result = Phases::Ongoing;
+    struct ReplayMove {
+        std::uint64_t tick;
+        int player;
+        Action action;
     };
 
     struct Recording {
-        int rows, cols;
-        std::vector<ReplayFrame> frames;
+        States initial, previous;
+        std::vector<ReplayMove> moves;
+        std::optional<int> surrendered;
 
-        explicit Recording(const States& initial);
-        // record the position after both submitted actions have been settled, including scheduled growth.
+        explicit Recording(const States& state) : initial(state), previous(state) {}
+        // store moves against the position where they were submitted. empty half-turns are implicit.
         void append(const States& state, const std::array<Action, 2>& actions);
     };
 
@@ -31,17 +30,27 @@ namespace NEBULA {
 
     class Replay {
     public:
-        // replace the current replay only after the whole file has passed validation.
+        // validate and reconstruct a candidate before replacing the currently loaded replay.
         bool load(const std::filesystem::path& path, std::string& error);
         bool seek(std::size_t halfTurn);
         const States& state() const { return *position; }
+        const std::array<std::string, 2>& names() const { return players; }
         bool loaded() const { return position.has_value(); }
-        std::size_t cursor() const { return current; }
-        std::size_t length() const { return frames.empty() ? 0 : frames.size() - 1; }
+        std::size_t cursor() const { return position ? static_cast<std::size_t>(position->tick) : 0; }
+        std::size_t length() const { return turns.size(); }
 
     private:
-        std::vector<ReplayFrame> frames;
+        struct Turn {
+            std::array<Action, 2> actions{};
+            std::array<bool, 2> surrendered{};
+        };
+        // sparse checkpoints bound backward-seek work while keeping complete boards out of the file.
+        static constexpr std::size_t checkpointInterval = 128;
+        std::vector<Turn> turns;
+        std::vector<States> checkpoints;
         std::optional<States> position;
-        std::size_t current = 0;
+        std::array<std::string, 2> players{"RED", "BLUE"};
+
+        void advance(States& state) const;
     };
 }

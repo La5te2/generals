@@ -45,7 +45,7 @@ namespace NEBULA {
         void run();
         bool settle(Clock::Time cutoff);
         void request();
-        void finish();
+        void finish(int surrender = -1);
         void updateViews();
         void publish();
         bool saveRecording();

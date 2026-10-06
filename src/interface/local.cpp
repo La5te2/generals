@@ -53,15 +53,36 @@ namespace NEBULA {
     void LocalMatch::stop() {
         {
             std::lock_guard lock(mutex);
-            finish();
+            int human = !strategies[0] && strategies[1] ? 0 : strategies[0] && !strategies[1] ? 1 : -1;
+            finish(human);
         }
         if (worker.joinable()) worker.join();
     }
 
     // the session lock covers all state changes, including manual stepping and process shutdown.
-    void LocalMatch::finish() {
+    void LocalMatch::finish(int surrender) {
         clock.pause();
-        if (phase == MatchState::Active) phase = MatchState::Finished;
+        if (phase == MatchState::Active) {
+            auto state = engine.snapshot();
+            if (state->result == Phases::Ongoing) {
+                // stop surrenders the human player. two programs use the timeout comparison instead.
+                // finish that half-turn with two passes so the recorded surrender has the same final position.
+                auto score = engine.observe(0);
+                int winner = score->armies[0] > score->armies[1] ||
+                    (score->armies[0] == score->armies[1] && score->land[0] > score->land[1]) ? 0 : 1;
+                if (surrender >= 0) winner = 1 - surrender;
+                engine.step({});
+                state = engine.snapshot();
+                state->result = winner == 0 ? Phases::RedWin : Phases::BlueWin;
+                engine.load(*state);
+                if (recording) {
+                    recording->append(*state, {});
+                    recording->surrendered = 1 - winner;
+                }
+                updateViews();
+            }
+            phase = MatchState::Finished;
+        }
         for (auto& input : inputs) input.clear();
         saveRecording();
         publish();

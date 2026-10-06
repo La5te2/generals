@@ -67,7 +67,7 @@ namespace NEBULA {
         dialog.lpstrFile = path.data();
         dialog.nMaxFile = static_cast<DWORD>(path.size());
         dialog.lpstrTitle = program ? L"Select player program" : L"Select replay file";
-        dialog.lpstrFilter = program ? L"Programs (*.exe)\0*.exe\0All files\0*.*\0" : L"Replay files (*.grf)\0*.grf\0All files\0*.*\0";
+        dialog.lpstrFilter = program ? L"Programs (*.exe)\0*.exe\0All files\0*.*\0" : L"Replay files (*.gior)\0*.gior\0All files\0*.*\0";
         dialog.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
         if (!GetOpenFileNameW(&dialog)) {
             DWORD code = CommDlgExtendedError();

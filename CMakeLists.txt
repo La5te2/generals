@@ -27,13 +27,13 @@ add_executable(simpleG src/agents/simpleG.cpp)
 target_link_libraries(simpleG PRIVATE engine)
 
 find_package(Threads REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 add_library(process STATIC src/interface/process.cpp)
 target_link_libraries(process PUBLIC engine Threads::Threads)
 add_library(local STATIC src/interface/local.cpp src/interface/replay.cpp)
-target_link_libraries(local PUBLIC process)
+target_link_libraries(local PUBLIC process PRIVATE nlohmann_json::nlohmann_json)
 
 find_package(LibDataChannel CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
 add_library(online STATIC src/interface/online.cpp)
 target_link_libraries(online PUBLIC process PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
 

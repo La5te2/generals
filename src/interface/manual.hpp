@@ -35,7 +35,7 @@ Your territory reveals nearby tiles. Expand to discover the map and locate your 
 LOCAL
 RED PLAYER and BLUE PLAYER accept strategy programs and their arguments. A blank player field selects human control. At least one player uses an external program. The folder button selects an executable.
 
-DIRECTORY selects where completed or interrupted games are recorded as .grf files. An empty directory field leaves recording disabled. The top-right arrow starts the match.
+DIRECTORY selects where games are recorded as .gior files. An empty directory field leaves recording disabled. The top-right arrow starts the match.
 
 ONLINE
 SERVER selects BOT or MAIN. Use the account registered on that server. Main-server automated play requires authorization for that account.
@@ -64,10 +64,12 @@ In local program-versus-program play and replay, keys 1, 2 and 3 select red, blu
 
 Stop ends the match, connection or playback while keeping the last position visible. Reset becomes available after Stop or completion. It starts a fresh local game, reconnects online, or restarts the selected replay.
 
+Stopping an ongoing local match with a human player surrenders the human player. With two programs, Stop compares army totals, then land totals, with blue winning an exact tie. The losing player surrenders, and the final half-turn completes its scheduled growth.
+
 The back arrow or Escape returns one scene, first to configuration and then to the home page. Leaving a local match saves its recording when DIRECTORY is set.
 
 REPLAY
-REPLAY FILE selects a local .grf recording. The folder button opens a file picker, and the top-right arrow starts playback. The console's turn command adjusts playback speed.
+REPLAY FILE selects a .gior recording from local play or a downloaded mainstream 1v1 game. The folder button opens a file picker, and the top-right arrow starts playback. The console's turn command adjusts playback speed.
 
 CONSOLE
 F1 toggles the console. Escape closes it while open. The game keeps its current running or paused state while reading this manual.
