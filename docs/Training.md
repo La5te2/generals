@@ -81,13 +81,13 @@ CPU execution checks establish functional correctness. Reproducing the reported 
 
 ## Deployment
 
-The Python strategy reads the existing initialization and observation protocol and writes five-integer actions. In the graphical application's Player field, a command can be:
+The Python agent reads the existing initialization and observation protocol and writes five-integer actions. In the graphical application's Player field, a command can be:
 
 ```text
 python src/agents/nebula/agent.py runs/nebula/checkpoint.pt
 ```
 
-Quote each executable or file path that contains spaces. Relative paths resolve from the application's working directory. An explicit `--library PATH` selects an arena library in a custom build directory. The model input size determines the largest supported board for its checkpoint, and the strategy reports larger boards through `stderr`.
+Quote each executable or file path that contains spaces. Relative paths resolve from the application's working directory. An explicit `--library PATH` selects an arena library in a custom build directory. The model input size determines the largest supported board for its checkpoint, and the agent reports larger boards through `stderr`.
 
 For C++ inference, export the EMA model:
 

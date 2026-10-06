@@ -1,4 +1,4 @@
-// observation memory gives training and deployed strategies the same spatial and temporal inputs.
+// observation memory gives training and deployed agents the same spatial and temporal inputs.
 #pragma once
 
 #include "engine/observe.hpp"

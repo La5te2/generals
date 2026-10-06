@@ -13,9 +13,9 @@
 #include <string>
 
 namespace Protocol {
-    // one process corresponds to one player. initialization precedes observations, and EOF ends the game.
-    // each observation receives one action in response. stdout carries protocol data, stderr diagnostics.
-    // a slow strategy receives the latest pending observation after replying. its next tick can therefore skip ahead.
+    // the agent first reads one initialization line: player rows cols.
+    // player identifies its side (0 for red, 1 for blue), while rows and cols give the board dimensions.
+    // the agent uses these dimensions when reading each later observation.
     struct Init {
         int player = 0, rows = 0, cols = 0;
     };
@@ -59,10 +59,14 @@ namespace Protocol {
         return init;
     }
 
-    // sends tick, own land and army, enemy land and army, then type, owner and army grids.
-    // tick counts half-turns. owner codes are 0 for neutral or hidden, 1 for self and 2 for enemy.
-    // returns false for a terminal observation, invalid data or an output failure.
-    // after the game ends, the caller closes the strategy's input pipe to signal EOF.
+    // write one player's observation to output as space-separated integers.
+    // the first line contains: tick own_land own_army enemy_land enemy_army.
+    // tick counts elapsed half-turns. land is the player's total cell count, and army is their total troop count.
+    // own refers to view.player, and enemy refers to the other player.
+    // the next view.rows lines describe terrain types, followed by view.rows lines of owners,
+    // then view.rows lines of troop counts. each line contains view.cols values, one per cell from left to right.
+    // owner values are 0 for neutral or hidden cells, 1 for own cells, and 2 for enemy cells.
+    // return false if the game has ended, observation validation fails, or writing to output fails.
     inline bool writeObservation(std::ostream& output, const Observation& view) {
         if (view.result != Phases::Ongoing) return false;
         if (view.player != 0 && view.player != 1) return false;
@@ -74,7 +78,7 @@ namespace Protocol {
         message << view.tick << ' ' << view.land[player] << ' ' << view.armies[player] << ' '
                 << view.land[opponent] << ' ' << view.armies[opponent] << '\n';
 
-        // assemble a complete observation before writing it to the strategy's stream.
+        // assemble a complete observation before writing it to the agent's stream.
         for (int grid = 0; grid < 3; ++grid) {
             for (int row = 0; row < view.rows; ++row) {
                 for (int col = 0; col < view.cols; ++col) {
@@ -173,7 +177,7 @@ namespace Protocol {
     }
 
     // reads exactly one line containing kind, row, col, direction and split.
-    // move uses kind 0 and pass uses kind 1. pass ignores the other four integer values.
+    // "Move" uses kind 0 and "Pass" uses kind 1. pass ignores the other four integer values.
     // returns std::nullopt for a malformed or unsupported action, EOF or an input failure.
     // malformed lines are consumed, so the next call starts with the next reply.
     // the caller supplies a Pass for a rejected reply. rules.hpp checks move legality on the board.

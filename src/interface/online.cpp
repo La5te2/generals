@@ -124,7 +124,7 @@ namespace NEBULA::OnlineProtocol {
         Observation view;
         bool received = false;
 
-        // apply every diff, including repeated-turn updates. only a new turn requests another strategy action.
+        // apply every diff, including repeated-turn updates. only a new turn requests another agent action.
         bool update(const Json& data, int player) {
             rules(data);
             auto tick = static_cast<std::uint64_t>(integer(field(data, "turn"), 1, maxInteger));
@@ -212,7 +212,7 @@ namespace NEBULA::OnlineProtocol {
         return cell;
     }
 
-    // human routes and strategy replies share the same numbered queue and ordered outgoing messages.
+    // human routes and agent replies share the same numbered queue and ordered outgoing messages.
     struct Moves {
         struct Pending { Action action; std::int64_t index; };
         std::deque<Pending> pending;
@@ -556,7 +556,7 @@ namespace NEBULA {
                         std::lock_guard lock(mail->mutex);
                         if (mail->closing || !mail->frames.empty()) continue;
                         if (strategyStarted && !acted && mail->moves.pending.empty()) {
-                            // keep one strategy move pending. replies to older observations expire when the board advances.
+                            // keep one agent move pending. replies to older observations expire when the board advances.
                             if (auto action = strategy.reply(board.view.tick, Time::now())) {
                                 acted = true;
                                 if (action->type == ActionType::Move) mail->moves.append(board.view, *action);
@@ -576,7 +576,7 @@ namespace NEBULA {
             catch (const std::exception&) { state.error = "Online transport or strategy operation failed"; }
             if (!state.error.empty()) state.error = state.status + ": " + state.error;
 
-            // leave before closing the socket. failure here still releases the connection and its strategy process.
+            // leave before closing the socket. failure here still releases the connection and its agent process.
             try {
                 if (joined && socket.isOpen()) emit(Json::array({started ? "leave_game" : "cancel"}));
                 if (socket.isOpen()) { send("41"); socket.close(); }

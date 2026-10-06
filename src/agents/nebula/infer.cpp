@@ -1,4 +1,4 @@
-// standalone inference connects a trained TorchScript model to the strategy protocol through shared observation memory.
+// standalone inference connects a trained TorchScript model to the agent protocol through shared observation memory.
 #include "features.hpp"
 #include "engine/protocol.hpp"
 #ifdef _MSC_VER

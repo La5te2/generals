@@ -15,7 +15,7 @@ namespace NEBULA {
         constexpr std::size_t maxFileBytes = 16 * 1024 * 1024;
         constexpr std::size_t maxTurns = tickLimit + 2;
 
-        // array positions belong to the .gior file format, independently of the strategy action protocol.
+        // array positions belong to the .gior file format, independently of the agent action protocol.
         enum Field : std::size_t {
             Format, Identity, Width, Height, Players, Stars, Cities, CityArmies, Generals, Mountains,
             Moves, Afks, Teams, Map, Neutrals, NeutralArmies, Swamps, Chat, Colors, Lights, Settings,

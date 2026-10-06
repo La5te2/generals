@@ -38,7 +38,7 @@ namespace NEBULA {
         bool enqueue(int player, const Action& action) override;
         // cancel the last queued move, or the entire queue. return the first removed move for cursor placement.
         std::optional<Action> cancel(int player, bool all) override;
-        // read the latest published board and status, independently of rule updates and strategy communication.
+        // read the latest published board and status, independently of rule updates and agent communication.
         LocalSnapshot snapshot() const;
 
     private:

@@ -1,4 +1,4 @@
-// a C boundary lets Python batch the header-only engine and reuse the deployed strategy's observation memory.
+// a C boundary lets Python batch the header-only engine and reuse the deployed agent's observation memory.
 #include "features.hpp"
 #include "engine/initial.hpp"
 #include "engine/rules.hpp"

@@ -1,4 +1,4 @@
-// standalone strategy: exchange observations and planned actions through the standard streams.
+// standalone agent: exchange observations and planned actions through the standard streams.
 #include "simple.hpp"
 #include "engine/protocol.hpp"
 #include <iostream>

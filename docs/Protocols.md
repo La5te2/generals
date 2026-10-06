@@ -1,14 +1,14 @@
 # Protocols
 
-This document defines the external strategy protocol, interface console commands, supported online messages, and the GIOR replay format. Each section specifies the data exchanged, its meaning, and the order of communication.
+This document defines the external agent protocol, interface console commands, supported online messages, and the GIOR replay format. Each section specifies the data exchanged, its meaning, and the order of communication.
 
-## External Strategies
+## External Agents
 
 ### Streams and Lifecycle
 
-A strategy receives initialization and observations through `stdin`, sends actions through `stdout`, and writes diagnostics to `stderr`.
+An agent receives initialization and observations through `stdin`, sends actions through `stdout`, and writes diagnostics to `stderr`.
 
-An action is one line of integers followed by a newline. The strategy flushes `stdout` immediately after each reply so that the session can read it before the half-turn deadline. Strategy commands are `Move` and `Pass`. Interface commands such as `help` and `back` belong to the GUI console.
+An action is one line of integers followed by a newline. The agent flushes `stdout` immediately after each reply so that the session can read it before the half-turn deadline. Agent commands are `Move` and `Pass`. Interface commands such as `help` and `back` belong to the GUI console.
 
 Each connection serves one game. Initialization appears once, followed by observations and replies. EOF on `stdin` signals the end of the game.
 
@@ -20,13 +20,13 @@ The first line contains three decimal integers:
 player rows cols
 ```
 
-`player` is the strategy's seat, with `0` for red and `1` for blue. Let $H$ denote `rows` and $W$ denote `cols`. Both dimensions remain fixed throughout the game and satisfy
+`player` is the agent's seat, with `0` for red and `1` for blue. Let $H$ denote `rows` and $W$ denote `cols`. Both dimensions remain fixed throughout the game and satisfy
 
 $$
 1 \le H \le 40, \qquad 1 \le W \le 40.
 $$
 
-For example, `1 20 23` assigns the strategy to blue on a board with 20 rows and 23 columns.
+For example, `1 20 23` assigns the agent to blue on a board with 20 rows and 23 columns.
 
 ### Observations
 
@@ -41,7 +41,7 @@ tick my_land my_army opp_land opp_army
 
 `tick` counts half-turns. LOCAL starts at `0`, while ONLINE uses the server's `turn` value, starting from `1`.
 
-`my_land` and `my_army` give the strategy's total land and army. `opp_land` and `opp_army` give the opponent's public totals. These statistics cover each player's entire territory, while the matrices describe the strategy's current field of view.
+`my_land` and `my_army` give the agent's total land and army. `opp_land` and `opp_army` give the opponent's public totals. These statistics cover each player's entire territory, while the matrices describe the agent's current field of view.
 
 Terrain codes are:
 
@@ -52,11 +52,11 @@ Terrain codes are:
 - `4`: visible general.
 - `5`: a hidden obstacle, representing a mountain or city under fog.
 
-Ownership is relative to the receiving strategy: `0` means neutral or hidden, `1` means self, and `2` means opponent. Thus, both red and blue programs identify their own cells using `owner == 1` on the wire.
+Ownership is relative to the receiving agent: `0` means neutral or hidden, `1` means self, and `2` means opponent. Thus, both red and blue programs identify their own cells using `owner == 1` on the wire.
 
 Army counts use signed 64-bit integers in the range $0 \le A \le 2^{63}-1$. Cells with terrain code `0` or `5` carry zero ownership and army values as placeholders for hidden information. On visible cells, an army value of `0` represents an actual empty garrison.
 
-The following observation describes a three-by-three board. The strategy's general is at `(0, 0)` with five soldiers, and its other cell has one soldier. The opponent's public totals are three tiles and twelve soldiers.
+The following observation describes a three-by-three board. The agent's general is at `(0, 0)` with five soldiers, and its other cell has one soldier. The opponent's public totals are three tiles and twelve soldiers.
 
 ```text
 8 2 6 3 12
@@ -73,7 +73,7 @@ The following observation describes a three-by-three board. The strategy's gener
 
 ### Actions
 
-The strategy replies to each observation with exactly five decimal integers:
+The agent replies to each observation with exactly five decimal integers:
 
 ```text
 kind row col direction split
@@ -105,19 +105,19 @@ Move legality is determined by the board at execution time. A legal move starts 
 
 ### Timing and Failures
 
-The exchange follows a request/reply sequence. The strategy reads one complete observation, replies with exactly one action, and then reads the next observation. Each reply belongs to the tick of the preceding observation.
+The exchange follows a request/reply sequence. The agent reads one complete observation, replies with exactly one action, and then reads the next observation. Each reply belongs to the tick of the preceding observation.
 
-For LOCAL, a matching reply received by the deadline participates in that half-turn. If the deadline arrives while the session is still waiting, the action for that half-turn becomes Pass. A slow strategy may receive observations with gaps in their tick values.
+For LOCAL, a matching reply received by the deadline participates in that half-turn. If the deadline arrives while the session is still waiting, the action for that half-turn becomes Pass. A slow agent may receive observations with gaps in their tick values.
 
 For ONLINE, a move is eligible for submission while its observation tick matches the latest received board. Pass waits for the next observation, and replies to older ticks expire. Submitted moves remain pending until server confirmation. The server checks move legality at execution time and advances the processed index for both executed and discarded moves. Malformed replies, oversized lines, and premature process exit end the session.
 
 Each action line allows up to 255 bytes before LF. With CRLF endings, CR counts toward that limit. Fields are whitespace-separated integers, and each line follows the field count specified above.
 
-LOCAL deadlines follow the configured half-turn duration. ONLINE action timing follows server updates. A strategy sends its reply as soon as its decision is ready.
+LOCAL deadlines follow the configured half-turn duration. ONLINE action timing follows server updates. An agent sends its reply as soon as its decision is ready.
 
-### Minimal Strategy
+### Minimal Agent
 
-This Python program consumes complete observations and replies with Pass. A strategy can replace the final output with a calculated action while retaining the same input sequence and immediate flush.
+This Python program consumes complete observations and replies with Pass. An agent can replace the final output with a calculated action while retaining the same input sequence and immediate flush.
 
 ```python
 import sys
@@ -276,13 +276,13 @@ Each replay move has five integer fields:
 
 `player` selects `0` for red or `1` for blue. `from` and `to` identify adjacent cells, and `half` selects `0` for a full move or `1` for a half move. `tick` identifies the position before the move executes, beginning at `0`. Records appear in increasing tick order, with at most one move per player per half-turn. A half-turn with an empty move list represents both players passing.
 
-The strategy protocol also contains five integers, with a different purpose and field order:
+The agent protocol also contains five integers, with a different purpose and field order:
 
 ```text
 kind row column direction split
 ```
 
-The replay reader translates between cell indices and the engine's coordinates and direction. Player identity and tick come from the recording session. Existing strategy replies retain their original format.
+The replay reader translates between cell indices and the engine's coordinates and direction. Player identity and tick come from the recording session. Existing agent replies retain their original format.
 
 ### Endings
 

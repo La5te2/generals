@@ -20,7 +20,7 @@ namespace NEBULA {
         OnlineMatch(const OnlineMatch&) = delete;
         OnlineMatch& operator=(const OnlineMatch&) = delete;
 
-        // validate locally, then connect on a worker. each start uses a fresh connection and strategy process.
+        // validate locally, then connect on a worker. each start uses a fresh connection and agent process.
         bool start(const OnlineConfig& config);
         void stop();
         MatchSnapshot snapshot() const;

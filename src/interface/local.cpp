@@ -1,4 +1,4 @@
-// local session: combine submitted moves and external strategy replies into timed engine steps.
+// local session: combine submitted moves and external agent replies into timed engine steps.
 #include "local.hpp"
 
 namespace NEBULA {

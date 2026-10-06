@@ -42,7 +42,7 @@ public:
         return ::observe(*state, player);
     }
 
-    // returns a copy of the full state for replay and inspection. strategy input comes from observe().
+    // returns a copy of the full state for replay and inspection. agent input comes from observe().
     // returns std::nullopt before reset() or load() provides a state.
     std::optional<States> snapshot() const {
         return state;

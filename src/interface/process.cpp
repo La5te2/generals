@@ -1,4 +1,4 @@
-// external strategy/agents communication: start a strategy process, exchange observations and actions through pipes, and close it after the game.
+// external agent communication: start an agent process, exchange observations and actions through pipes, and close it after the game.
 // a worker thread handles blocking reads and writes, keeping game updates and drawing responsive while waiting for a reply.
 #include "process.hpp"
 #include <array>
@@ -132,7 +132,7 @@ namespace NEBULA {
                 }
             }
 
-            // inherit only these streams so a second strategy cannot keep the first strategy's pipes open.
+            // give each agent only its own streams, so its pipe lifetime is independent of other agents.
             SIZE_T size = 0;
             InitializeProcThreadAttributeList(nullptr, 1, 0, &size);
             std::vector<std::byte> storage(size);
@@ -231,7 +231,7 @@ namespace NEBULA {
 
         bool read(std::string& line) {
             line.clear();
-            // bound an untrusted reply even when a strategy prints an unterminated line.
+            // limit the reply size even if an agent keeps writing without a newline.
             while (line.size() < 256) {
                 char letter = 0;
 #ifdef _WIN32
@@ -284,7 +284,7 @@ namespace NEBULA {
                 repliedTick = view.tick;
                 received = arrival;
             }
-            close(input); // EOF lets a cooperative strategy finish its game and exit.
+            close(input); // EOF lets a cooperative agent finish its game and exit.
             {
                 std::lock_guard lock(mutex);
                 done = true;
@@ -324,7 +324,7 @@ namespace NEBULA {
                     terminate();
                     while (waitpid(child, &status, 0) < 0 && errno == EINTR) {}
                 }
-                // stop any descendants that outlived their strategy parent.
+                // stop any descendants that outlived their agent parent.
                 kill(-child, SIGKILL);
                 child = -1;
             }
@@ -354,7 +354,7 @@ namespace NEBULA {
         std::lock_guard lock(process->mutex);
         if (process->closing || process->done) return;
         // exchange() waits for the current reply. newer requests replace the pending observation during that wait.
-        // after the reply arrives, the worker sends the latest observation so a slow strategy can catch up.
+        // after the reply arrives, the worker sends the latest observation so a slow agent can catch up.
         process->pending = view;
         process->changed.notify_one();
     }
