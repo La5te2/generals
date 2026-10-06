@@ -29,7 +29,8 @@ public:
     bool init();
     void draw(const Observation& view, int perspective, int width, int height,
               const NEBULA::BoardControls& controls, const NEBULA::Setup& setup,
-              const NEBULA::Console& console, const NEBULA::Controller& controller, std::span<const Action> queued);
+              const NEBULA::Console& console, const NEBULA::Controller& controller, std::span<const Action> queued,
+              const std::array<std::string, 2>& names, std::string_view sessionStatus);
     void drawSetup(const NEBULA::Setup& setup, int width, int height, const NEBULA::Console& console);
 
 private:
@@ -45,7 +46,7 @@ private:
     void drawSelection(const NEBULA::Controller& controller, std::span<const Action> queued, Rect board, int cols);
     void drawConsole(const NEBULA::Console& console, int width, int height, float textScale);
     void drawMessage(const NEBULA::Setup& setup, int width, int height, bool board = false);
-    void drawScores(const Observation& view, const NEBULA::Setup& setup, int width, int height);
+    void drawScores(const Observation& view, const std::array<std::string, 2>& names, int width, int height);
     void drawTools(const NEBULA::BoardControls& controls, int width, float scale);
     void label(std::string_view value, Rect bounds, Color color, float scale = 1.5f);
     void button(std::string_view value, Rect bounds, bool selected = false, bool enabled = true, float scale = 1);

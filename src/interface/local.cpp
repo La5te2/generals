@@ -7,7 +7,7 @@ namespace NEBULA {
     bool LocalMatch::start(const std::array<std::string, 2>& commands, std::uint32_t seed, int milliseconds,
                            const std::filesystem::path& destination) {
         std::unique_lock lock(mutex);
-        if (phase == LocalState::Active) return false;
+        if (phase == MatchState::Active) return false;
         lock.unlock();
         if (worker.joinable()) worker.join();
         lock.lock();
@@ -39,7 +39,7 @@ namespace NEBULA {
         if (!directory.empty()) recording.emplace(*engine.snapshot());
         strategies = std::move(players);
         for (auto& input : inputs) input.clear();
-        phase = LocalState::Active;
+        phase = MatchState::Active;
         clock.interval = std::chrono::milliseconds(milliseconds);
         clock.reset();
         updateViews();
@@ -61,7 +61,7 @@ namespace NEBULA {
     // the session lock covers all state changes, including manual stepping and process shutdown.
     void LocalMatch::finish() {
         clock.pause();
-        if (phase == LocalState::Active) phase = LocalState::Finished;
+        if (phase == MatchState::Active) phase = MatchState::Finished;
         for (auto& input : inputs) input.clear();
         saveRecording();
         publish();
@@ -89,7 +89,7 @@ namespace NEBULA {
 
     void LocalMatch::resume() {
         std::lock_guard lock(mutex);
-        if (phase == LocalState::Active) clock.resume();
+        if (phase == MatchState::Active) clock.resume();
         publish();
         changed.notify_all();
     }
@@ -112,7 +112,7 @@ namespace NEBULA {
 
     bool LocalMatch::enqueue(int player, const Action& action) {
         std::lock_guard lock(mutex);
-        if (phase != LocalState::Active || player < 0 || player > 1 || strategies[player]) return false;
+        if (phase != MatchState::Active || player < 0 || player > 1 || strategies[player]) return false;
         const auto& view = (*views)[player];
         if (action.type != ActionType::Move || action.row < 0 || action.row >= view.rows ||
             action.col < 0 || action.col >= view.cols) return false;
@@ -145,10 +145,14 @@ namespace NEBULA {
 
     // callers hold the session lock. the display lock covers only this already-prepared value.
     void LocalMatch::publish() {
-        LocalSnapshot next{views, phase, clock.running(), failure};
+        LocalSnapshot next;
+        next.views = views;
+        next.state = phase;
+        next.running = clock.running();
+        next.error = failure;
         if (!saveError.empty()) next.error += (next.error.empty() ? "" : ". ") + saveError;
         next.saved = saved;
-        next.unsaved = recording.has_value() && phase == LocalState::Finished;
+        next.unsaved = recording.has_value() && phase == MatchState::Finished;
         for (int player = 0; player < 2; ++player) {
             for (const auto& pending : inputs[player]) next.queued[player].push_back(pending.action);
         }
@@ -165,12 +169,12 @@ namespace NEBULA {
     // window event processing can stall while dragging. this thread keeps half-turn deadlines independent of drawing.
     void LocalMatch::run() {
         std::unique_lock lock(mutex);
-        while (phase == LocalState::Active) {
-            changed.wait(lock, [&] { return phase != LocalState::Active || clock.running(); });
-            if (phase != LocalState::Active) break;
+        while (phase == MatchState::Active) {
+            changed.wait(lock, [&] { return phase != MatchState::Active || clock.running(); });
+            if (phase != MatchState::Active) break;
             auto deadline = clock.expires();
             if (changed.wait_until(lock, deadline, [&] {
-                return phase != LocalState::Active || !clock.running() || clock.expires() != deadline;
+                return phase != MatchState::Active || !clock.running() || clock.expires() != deadline;
             })) continue;
             clock.consume();
             settle(deadline);
@@ -179,13 +183,13 @@ namespace NEBULA {
 
     bool LocalMatch::advance() {
         std::lock_guard lock(mutex);
-        if (phase != LocalState::Active || clock.running()) return false;
+        if (phase != MatchState::Active || clock.running()) return false;
         clock.reset();
         return settle(Clock::Source::now());
     }
 
     bool LocalMatch::settle(Clock::Time cutoff) {
-        if (phase != LocalState::Active) return false;
+        if (phase != MatchState::Active) return false;
         auto tick = (*views)[0].tick;
         std::array<Action, 2> actions;
         // an absent or late reply becomes Pass. each reply is tied to the observation it was computed from.

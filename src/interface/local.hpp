@@ -5,6 +5,7 @@
 #include "engine/engine.hpp"
 #include "process.hpp"
 #include "replay.hpp"
+#include "session.hpp"
 #include <condition_variable>
 #include <deque>
 #include <memory>
@@ -15,20 +16,12 @@
 
 namespace NEBULA {
     std::array<Observation, 3> matchViews(const States& state);
-    enum class LocalState { Empty, Active, Finished };
-
-    struct LocalSnapshot {
-        // all three perspectives belong to the same completed half-turn. readers keep them alive while drawing.
-        std::shared_ptr<const std::array<Observation, 3>> views;
-        LocalState state = LocalState::Empty;
-        bool running = false;
-        std::string error;
-        std::array<std::vector<Action>, 2> queued;
+    struct LocalSnapshot : MatchSnapshot {
         std::filesystem::path saved;
         bool unsaved = false;
     };
 
-    class LocalMatch {
+    class LocalMatch : public PlayerInput {
     public:
         ~LocalMatch();
         // an empty command leaves that player's actions to the caller, for example the window's controller.
@@ -42,9 +35,9 @@ namespace NEBULA {
         // manually settle one half-turn while paused, using replies available at the time of this call.
         bool advance();
         // queued moves execute in order, one per half-turn, with legality checked at execution time.
-        bool enqueue(int player, const Action& action);
+        bool enqueue(int player, const Action& action) override;
         // cancel the last queued move, or the entire queue. return the first removed move for cursor placement.
-        std::optional<Action> cancel(int player, bool all);
+        std::optional<Action> cancel(int player, bool all) override;
         // read the latest published board and status, independently of rule updates and strategy communication.
         LocalSnapshot snapshot() const;
 
@@ -62,7 +55,7 @@ namespace NEBULA {
         std::thread worker;
         Engine engine;
         Clock clock;
-        LocalState phase = LocalState::Empty;
+        MatchState phase = MatchState::Empty;
         std::array<std::unique_ptr<StrategyProcess>, 2> strategies;
         struct Pending { Action action; Clock::Time received; };
         std::array<std::deque<Pending>, 2> inputs;
@@ -72,6 +65,6 @@ namespace NEBULA {
         std::shared_ptr<const std::array<Observation, 3>> views = std::make_shared<const std::array<Observation, 3>>();
         // hold this separate lock only while exchanging the small snapshot, never while computing or stopping processes.
         mutable std::mutex snapshotMutex;
-        LocalSnapshot published{views};
+        LocalSnapshot published;
     };
 }

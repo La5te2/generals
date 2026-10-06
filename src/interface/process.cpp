@@ -3,6 +3,8 @@
 #include "process.hpp"
 #include <array>
 #include <condition_variable>
+#include <filesystem>
+#include <cstdlib>
 #include <mutex>
 #include <system_error>
 #include <thread>
@@ -24,7 +26,8 @@ extern char** environ;
 #endif
 
 namespace {
-    // parse arguments directly rather than passing user text through a command shell.
+    // single and double quotes group arguments containing spaces. backslashes remain literal characters.
+    // the resulting arguments go directly to process creation, independently of shell syntax.
     std::vector<std::string> arguments(std::string_view command) {
         std::vector<std::string> result;
         std::string word;
@@ -107,6 +110,7 @@ namespace NEBULA {
             if (!closing && failure.empty()) failure = std::move(message);
         }
 
+        // the child inherits the application's working directory, which determines relative path resolution.
         bool launch(const std::vector<std::string>& args) {
 #ifdef _WIN32
             SECURITY_ATTRIBUTES security{sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
@@ -349,15 +353,47 @@ namespace NEBULA {
     void StrategyProcess::request(const Observation& view) {
         std::lock_guard lock(process->mutex);
         if (process->closing || process->done) return;
-        // one in-flight observation and one latest pending observation bound memory for slow strategies.
+        // exchange() waits for the current reply. newer requests replace the pending observation during that wait.
+        // after the reply arrives, the worker sends the latest observation so a slow strategy can catch up.
         process->pending = view;
         process->changed.notify_one();
     }
 
     Action StrategyProcess::action(std::uint64_t tick, Time cutoff) const {
+        return reply(tick, cutoff).value_or(Action{});
+    }
+
+    std::optional<Action> StrategyProcess::reply(std::uint64_t tick, Time cutoff) const {
         std::lock_guard lock(process->mutex);
         if (process->reply && process->repliedTick == tick && process->received <= cutoff) return *process->reply;
-        return {};
+        return std::nullopt;
+    }
+
+    bool StrategyProcess::available(std::string_view command) {
+        auto args = arguments(command);
+        if (args.empty()) return false;
+#ifdef _WIN32
+        auto name = wide(args[0]);
+        if (name.empty()) return false;
+        std::array<wchar_t, 32768> found{};
+        DWORD size = SearchPathW(nullptr, name.c_str(), L".exe", static_cast<DWORD>(found.size()), found.data(), nullptr);
+        return size > 0 && size < found.size() && !(GetFileAttributesW(found.data()) & FILE_ATTRIBUTE_DIRECTORY);
+#else
+        auto executable = [](const std::filesystem::path& path) {
+            std::error_code error;
+            return std::filesystem::is_regular_file(path, error) && ::access(path.c_str(), X_OK) == 0;
+        };
+        if (args[0].find('/') != std::string::npos) return executable(args[0]);
+        const char* variable = std::getenv("PATH");
+        std::string_view paths = variable ? variable : "";
+        while (true) {
+            auto end = paths.find(':');
+            if (executable(std::filesystem::path(paths.substr(0, end)) / args[0])) return true;
+            if (end == std::string_view::npos) break;
+            paths.remove_prefix(end + 1);
+        }
+        return false;
+#endif
     }
 
     std::string StrategyProcess::error() const {

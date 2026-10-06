@@ -2,8 +2,10 @@
 // create the window and OpenGL context, handle page navigation, and route keyboard, mouse and console input.
 // coordinate session controls and display updates, then release resources when the application closes.
 #include "local.hpp"
+#include "online.hpp"
 #include "dialog.hpp"
 #include "renderer.hpp"
+#include "manual.hpp"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
@@ -22,6 +24,7 @@
 namespace NEBULA {
     struct WindowState {
         LocalMatch local;
+        OnlineMatch online;
         Replay replay;
         Clock replayClock;
         bool replayActive = false;
@@ -29,19 +32,20 @@ namespace NEBULA {
         Renderer renderer;
         Console console;
         Setup setup;
-        LocalSnapshot displayed = local.snapshot();
+        MatchSnapshot displayed = local.snapshot();
         bool showingBoard = false, closing = false;
         unsigned int repaintTimer = 0; // native repaint interval in milliseconds. zero means the timer is stopped.
         bool painting = false;
-        bool observingLocal = false;
+        bool observingMatch = false;
         bool automatic = false;
         std::optional<Clock::Time> resetAt;
         int perspective = 2; // 0 = red, 1 = blue, 2 = full board.
         Tool hover = Tool::None;
 
-        bool active() const { return displayed.state == LocalState::Active; }
+        bool active() const { return displayed.state == MatchState::Active; }
         bool running() const { return displayed.running; }
         bool human() const { return active() && controller.player() >= 0; }
+        PlayerInput& inputSession() { return setup.scene == Scene::Online ? static_cast<PlayerInput&>(online) : local; }
         BoardControls controls() const {
             return {setup.scene, active(), running(), human(), hover, setup.scene == Scene::Replay && replay.cursor() > 0};
         }
@@ -50,15 +54,22 @@ namespace NEBULA {
             if (setup.scene == Scene::Replay && replay.loaded()) {
                 displayed = {};
                 displayed.views = std::make_shared<const std::array<Observation, 3>>(matchViews(replay.state()));
-                displayed.state = replayActive ? LocalState::Active : LocalState::Finished;
+                displayed.state = replayActive ? MatchState::Active : MatchState::Finished;
                 displayed.running = replayClock.running();
-            } else displayed = local.snapshot();
+            } else displayed = setup.scene == Scene::Online ? online.snapshot() : static_cast<MatchSnapshot>(local.snapshot());
+            if (setup.scene == Scene::Online && displayed.player >= 0) {
+                perspective = displayed.player;
+                if (setup.humanPlayer(5) && controller.player() < 0 && view().cols > 0 && active()) controller.reset(perspective, view());
+            }
             controller.sync(displayed);
         }
 
         void report(std::string message) {
             if (!displayed.error.empty()) message = displayed.error;
-            else if (!displayed.saved.empty()) message += ". Saved " + displayed.saved.filename().string();
+            else if (setup.scene == Scene::Local) {
+                auto saved = local.snapshot().saved;
+                if (!saved.empty()) message += ". Saved " + saved.filename().string();
+            }
             setup.notify(message);
             console.feedback = message;
             if (!displayed.error.empty()) std::cerr << message << '\n';
@@ -84,14 +95,15 @@ namespace NEBULA {
                 seekReplay(replay.cursor() + 1);
                 return true;
             }
-            auto next = local.snapshot();
-            bool changed = next.views != displayed.views || next.state != displayed.state || next.running != displayed.running;
-            displayed = std::move(next);
-            controller.sync(displayed);
-            if (observingLocal && !active()) {
-                observingLocal = false;
+            auto previous = displayed;
+            update();
+            bool changed = previous.views != displayed.views || previous.state != displayed.state || previous.running != displayed.running ||
+                previous.status != displayed.status || previous.error != displayed.error;
+            if (observingMatch && !active()) {
+                observingMatch = false;
                 const std::string& error = displayed.error;
-                report(view().result == Phases::RedWin ? "Red wins" : view().result == Phases::BlueWin ? "Blue wins" : "Draw");
+                report(setup.scene == Scene::Online ? displayed.status :
+                    view().result == Phases::RedWin ? "Red wins" : view().result == Phases::BlueWin ? "Blue wins" : "Draw");
                 if (error.empty()) scheduleReset();
                 hover = Tool::None;
                 changed = true;
@@ -108,8 +120,17 @@ namespace NEBULA {
             // consume a pending reset before starting, so a failed attempt stays available for manual retry.
             resetAt.reset();
             if (setup.scene == Scene::Online) {
-                setup.notify(setup.fields[0].input.empty() || setup.fields[1].input.empty()
-                    ? "Username and user ID required" : "Online transport is unavailable");
+                OnlineConfig config{setup.mainServer ? Server::Main : Server::Bot,
+                    setup.fields[0].input, setup.fields[1].input,
+                    setup.humanPlayer(5) ? "" : setup.fields[5].input, setup.fields[7].input, setup.fields[8].input};
+                if (!online.start(config)) { setup.notify(online.snapshot().error); return; }
+                controller.reset(-1, view());
+                perspective = 0;
+                showingBoard = observingMatch = true;
+                setup.message.clear();
+                setup.focus = setup.fileHover = -1;
+                hover = Tool::None;
+                update();
                 return;
             }
             if (setup.scene == Scene::Replay) {
@@ -126,7 +147,7 @@ namespace NEBULA {
                 setup.message.clear();
                 setup.focus = setup.fileHover = -1;
                 showingBoard = true;
-                observingLocal = false;
+                observingMatch = false;
                 perspective = 2;
                 hover = Tool::None;
                 controller.reset(-1, view());
@@ -161,7 +182,7 @@ namespace NEBULA {
             setup.focus = -1;
             setup.fileHover = -1;
             showingBoard = true;
-            observingLocal = true;
+            observingMatch = true;
             perspective = player >= 0 ? player : 2;
             hover = Tool::None;
             update();
@@ -173,12 +194,13 @@ namespace NEBULA {
             if (!showingBoard) return;
             if (active()) {
                 if (setup.scene == Scene::Replay) { replayClock.pause(); replayActive = false; }
+                else if (setup.scene == Scene::Online) online.stop();
                 else local.stop();
                 update();
                 report(setup.scene == Scene::Replay ? "Replay stopped" : "Match stopped");
                 if (displayed.error.empty()) scheduleReset();
             }
-            observingLocal = false;
+            observingMatch = false;
             controller.deselect();
             hover = Tool::None;
         }
@@ -311,10 +333,14 @@ namespace NEBULA {
                 return;
             }
             if (command.type == Command::Help) {
-                console.feedback = "help  back  quit  turn MS  win 0-" + std::to_string(maxWindowLevel) + "  auto 0|1";
+                console.feedback = Manual::commands;
                 return;
             }
-            if (command.type == Command::Invalid) console.feedback = "Use help, back, quit, turn MS, win 0-" + std::to_string(maxWindowLevel) + " or auto 0|1";
+            if (command.type == Command::Man) {
+                console.manual = true;
+                return;
+            }
+            if (command.type == Command::Invalid) console.feedback = "Use help for commands or man for the game manual";
         }
 
         // board buttons and keyboard shortcuts control playback independently of console commands.
@@ -397,7 +423,7 @@ namespace NEBULA {
                     if (toolButton(tool, width, scale).contains(x, y)) { useTool(tool); return; }
                 }
                 if (human()) {
-                    controller.click(local, displayed, x, y, width, height);
+                    controller.click(inputSession(), displayed, x, y, width, height);
                     update();
                     return;
                 }
@@ -425,7 +451,7 @@ namespace NEBULA {
             if (setup.scene == Scene::Online) {
                 for (int server = 0; server < 2; ++server) {
                     if (choiceButton(formControl(setup.scene, 0, width, height), server, 2).contains(x, y)) {
-                        setup.mainServer = server == 1;
+                        setup.selectServer(server == 1);
                     }
                 }
             }
@@ -522,7 +548,7 @@ namespace NEBULA {
             std::span<const Action> queued;
             if (app.controller.player() >= 0) queued = app.displayed.queued[app.controller.player()];
             app.renderer.draw(app.view(), app.perspective, width, height, app.controls(), app.setup,
-                              app.console, app.controller, queued);
+                              app.console, app.controller, queued, app.displayed.names, app.displayed.status);
         } else app.renderer.drawSetup(app.setup, width, height, app.console);
         // draw() or drawSetup() fills the back buffer, then this swap presents the completed frame.
         glfwSwapBuffers(window);
@@ -612,6 +638,14 @@ namespace NEBULA {
             state.click(target, x, y, width, height);
             redraw(target);
         });
+        glfwSetScrollCallback(window, [](GLFWwindow* target, double, double vertical) {
+            auto& state = *static_cast<WindowState*>(glfwGetWindowUserPointer(target));
+            if (!state.console.opened || vertical == 0) return;
+            int width, height;
+            glfwGetWindowSize(target, &width, &height);
+            auto layout = consoleLayout(width, height);
+            if (state.console.scroll(vertical > 0 ? -3 : 3, layout.columns, layout.rows)) redraw(target);
+        });
         // GLFW's character callback supplies typed text after applying the keyboard layout.
         // editing keys and shortcuts are handled by the key callback below.
         glfwSetCharCallback(window, [](GLFWwindow* target, unsigned int codepoint) {
@@ -637,6 +671,13 @@ namespace NEBULA {
                 if (key == GLFW_KEY_ESCAPE) state.console.opened = false;
                 else if ((key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) && action == GLFW_PRESS) {
                     state.runCommand(target, state.console.submit());
+                } else if (key == GLFW_KEY_UP || key == GLFW_KEY_DOWN || key == GLFW_KEY_PAGE_UP || key == GLFW_KEY_PAGE_DOWN) {
+                    int width, height;
+                    glfwGetWindowSize(target, &width, &height);
+                    auto layout = consoleLayout(width, height);
+                    int amount = key == GLFW_KEY_UP || key == GLFW_KEY_DOWN ? 1 : static_cast<int>(std::max(std::size_t{1}, layout.rows - 1));
+                    if (key == GLFW_KEY_UP || key == GLFW_KEY_PAGE_UP) amount = -amount;
+                    state.console.scroll(amount, layout.columns, layout.rows);
                 } else editInput(target, state.console, key, action, mods);
             } else if (!state.showingBoard) {
                 if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) state.back();
@@ -656,7 +697,7 @@ namespace NEBULA {
                 state.refresh();
                 if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) state.back();
                 else if (key == GLFW_KEY_SPACE) { if (action == GLFW_PRESS) state.playback(); }
-                else { state.controller.key(state.local, state.displayed, key, action, mods); state.update(); }
+                else { state.controller.key(state.inputSession(), state.displayed, key, action, mods); state.update(); }
             } else if (action == GLFW_PRESS) {
                 if (state.controls().spectator() && key >= GLFW_KEY_1 && key <= GLFW_KEY_3) {
                     state.perspective = key - GLFW_KEY_1;
@@ -677,7 +718,7 @@ namespace NEBULA {
         // prepare the first frame at the chosen size before making the window visible.
         drawWindow(window);
         glfwShowWindow(window);
-        // observe the local session without advancing it. its clock runs independently of this window loop.
+        // observe session updates while each session handles its own timing and communication.
         while (!app.closing && !glfwWindowShouldClose(window)) {
             bool repaint = app.refresh();
             if (app.resetAt && Clock::Source::now() >= *app.resetAt) {
@@ -712,6 +753,7 @@ namespace NEBULA {
         glfwSetCursorPosCallback(window, nullptr);
         glfwSetCursorEnterCallback(window, nullptr);
         glfwSetMouseButtonCallback(window, nullptr);
+        glfwSetScrollCallback(window, nullptr);
         glfwSetCharCallback(window, nullptr);
         glfwSetKeyCallback(window, nullptr);
         glfwSetWindowUserPointer(window, nullptr);

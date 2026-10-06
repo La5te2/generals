@@ -27,8 +27,15 @@ add_executable(simpleG src/agents/simpleG.cpp)
 target_link_libraries(simpleG PRIVATE engine)
 
 find_package(Threads REQUIRED)
-add_library(local STATIC src/interface/local.cpp src/interface/process.cpp src/interface/replay.cpp)
-target_link_libraries(local PUBLIC engine Threads::Threads)
+add_library(process STATIC src/interface/process.cpp)
+target_link_libraries(process PUBLIC engine Threads::Threads)
+add_library(local STATIC src/interface/local.cpp src/interface/replay.cpp)
+target_link_libraries(local PUBLIC process)
+
+find_package(LibDataChannel CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+add_library(online STATIC src/interface/online.cpp)
+target_link_libraries(online PUBLIC process PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
 
 option(NEBULA_BUILD_INTERFACE "Build the interface application" ON)
 if(NEBULA_BUILD_INTERFACE)
@@ -37,7 +44,7 @@ if(NEBULA_BUILD_INTERFACE)
 
     add_executable(interface WIN32 src/interface/nebula.cpp src/interface/renderer.cpp src/interface/controller.cpp
         src/interface/console.cpp src/interface/dialog.cpp)
-    target_link_libraries(interface PRIVATE local glad::glad glfw)
+    target_link_libraries(interface PRIVATE local online glad::glad glfw)
     if(WIN32)
         target_link_libraries(interface PRIVATE user32 comdlg32 ole32 shell32 uuid)
     endif()

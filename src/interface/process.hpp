@@ -23,6 +23,9 @@ namespace NEBULA {
         void request(const Observation& view);
         // only a matching reply received by cutoff can supply this half-turn's action.
         Action action(std::uint64_t tick, Time cutoff) const;
+        // online sessions send a reply as soon as it arrives, including an explicit Pass.
+        std::optional<Action> reply(std::uint64_t tick, Time cutoff) const;
+        static bool available(std::string_view command);
         std::string error() const;
 
     private:

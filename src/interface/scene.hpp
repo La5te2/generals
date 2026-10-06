@@ -2,6 +2,7 @@
 #pragma once
 
 #include "console.hpp"
+#include "font.hpp"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -50,7 +51,14 @@ namespace NEBULA {
         Scene scene = Scene::Home;
         bool mainServer = false;
         // online fields stay in memory. the user ID is masked while drawing.
-        std::array<TextInput, 7> fields; // username, user ID, replay path, red command, blue command, online command, directory.
+        std::array<TextInput, 9> fields; // username, user ID, replay path, red command, blue command, online command, directory, room, proxy.
+        std::array<std::array<TextInput, 2>, 2> accounts;
+        void selectServer(bool main) {
+            accounts[mainServer ? 1 : 0] = {fields[0], fields[1]};
+            mainServer = main;
+            fields[0] = accounts[main ? 1 : 0][0];
+            fields[1] = accounts[main ? 1 : 0][1];
+        }
         int milliseconds = 500; // local and replay half-turn interval, retained between sessions.
         int focus = -1;
         int fileHover = -1;
@@ -92,6 +100,21 @@ namespace NEBULA {
 
     // top and bottom controls scale with window height, between 100% and 150% of their reference size.
     inline float barScale(int height) { return std::clamp(height / 800.0f, 1.0f, 1.5f); }
+
+    struct ConsoleLayout {
+        Rect input;
+        std::size_t columns, rows;
+    };
+
+    // drawing and scrolling use the same wrapping width and visible row count.
+    // the output fits between the top controls and the fixed input line above the turn counter.
+    inline ConsoleLayout consoleLayout(int width, int height) {
+        float scale = barScale(height);
+        float top = height - 44 - 36 * scale;
+        auto columns = static_cast<std::size_t>(std::max(1.0f, (width - 32 - 32 * scale) / (PixelFont::advance * 1.5f * scale)));
+        auto rows = static_cast<std::size_t>(std::max(1.0f, (top - 64 - 8 * scale) / (22 * scale)));
+        return {{16, top, width - 32.0f, 36 * scale}, columns, rows};
+    }
 
     // align the score table with the right edge of the playback controls.
     inline Rect scoreArea(int width, int height) {
@@ -138,11 +161,12 @@ namespace NEBULA {
     }
 
     inline Rect formControl(Scene scene, int index, int width, int height) {
-        int groups = scene == Scene::Online ? 4 : scene == Scene::Local ? 3 : 1;
-        // each group has a 24 px label area, a 36 px control and a 28 px gap to the next group.
+        int groups = scene == Scene::Online ? 6 : scene == Scene::Local ? 3 : 1;
+        // reserve 24 px for each label and 36 px for its control. six online rows use a tighter, uniform gap.
         float scale = contentScale(width, height);
-        float span = (groups * 88.0f - 28) * scale;
-        return {(width - 600 * scale) / 2, (height - span) / 2 + (index * 88 + 24) * scale,
+        float spacing = scene == Scene::Online ? 80.0f : 88.0f;
+        float span = ((groups - 1) * spacing + 60) * scale;
+        return {(width - 600 * scale) / 2, (height - span) / 2 + (index * spacing + 24) * scale,
                 600 * scale, 36 * scale};
     }
 
@@ -158,7 +182,7 @@ namespace NEBULA {
     }
 
     inline Rect fieldRow(Scene scene, int index, int width, int height) {
-        int group = scene == Scene::Local ? (index == 6 ? 2 : index - 3) : scene == Scene::Replay ? 0 : index == 5 ? 1 : index + 2;
+        int group = scene == Scene::Local ? (index == 6 ? 2 : index - 3) : scene == Scene::Replay ? 0 : index >= 7 ? index - 3 : index == 5 ? 1 : index + 2;
         return formControl(scene, group, width, height);
     }
 
@@ -175,11 +199,11 @@ namespace NEBULA {
     }
 
     // the same order drives mouse focus and Tab navigation.
-    inline std::array<int, 3> inputOrder(Scene scene) {
-        if (scene == Scene::Local) return {3, 4, 6};
-        if (scene == Scene::Online) return {5, 0, 1};
-        if (scene == Scene::Replay) return {2, -1, -1};
-        return {-1, -1, -1};
+    inline std::array<int, 5> inputOrder(Scene scene) {
+        if (scene == Scene::Local) return {3, 4, 6, -1, -1};
+        if (scene == Scene::Online) return {5, 0, 1, 7, 8};
+        if (scene == Scene::Replay) return {2, -1, -1, -1, -1};
+        return {-1, -1, -1, -1, -1};
     }
 
     inline Rect startButton(int width, float scale) {

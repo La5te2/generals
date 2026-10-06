@@ -1,6 +1,6 @@
 // human input: keep selection and movement controls separate from window navigation and game rules.
 #include "controller.hpp"
-#include "local.hpp"
+#include "session.hpp"
 #include "scene.hpp"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -23,19 +23,19 @@ namespace NEBULA {
         }
     }
 
-    void Controller::sync(const LocalSnapshot& snapshot) {
+    void Controller::sync(const MatchSnapshot& snapshot) {
         if (side < 0) return;
         const auto& view = (*snapshot.views)[side];
         // a planned endpoint can still be neutral. after the queue finishes, selection follows actual ownership.
-        if (snapshot.state != LocalState::Active || (selected >= 0 && snapshot.queued[side].empty() &&
+        if (snapshot.state != MatchState::Active || selected >= view.rows * view.cols || (selected >= 0 && snapshot.queued[side].empty() &&
             view.cells[selected].owner != side)) {
             selected = -1;
             halfArmy = false;
         }
     }
 
-    void Controller::move(LocalMatch& match, const LocalSnapshot& snapshot, Direction direction) {
-        if (side < 0 || selected < 0 || snapshot.state != LocalState::Active) return;
+    void Controller::move(PlayerInput& match, const MatchSnapshot& snapshot, Direction direction) {
+        if (side < 0 || selected < 0 || snapshot.state != MatchState::Active) return;
         const auto& view = (*snapshot.views)[side];
         int row = selected / view.cols, col = selected % view.cols;
         int nextRow = row, nextCol = col;
@@ -56,8 +56,8 @@ namespace NEBULA {
         }
     }
 
-    void Controller::click(LocalMatch& match, const LocalSnapshot& snapshot, double x, double y, int width, int height) {
-        if (side < 0 || snapshot.state != LocalState::Active) return;
+    void Controller::click(PlayerInput& match, const MatchSnapshot& snapshot, double x, double y, int width, int height) {
+        if (side < 0 || snapshot.state != MatchState::Active) return;
         const auto& view = (*snapshot.views)[side];
         Rect board = boardArea(view.rows, view.cols, width, height);
         if (!board.contains(x, y)) return;
@@ -76,24 +76,23 @@ namespace NEBULA {
         if (view.cells[cell].owner == side) { selected = cell; halfArmy = false; }
     }
 
-    void Controller::cancel(LocalMatch& match, bool all) {
+    void Controller::cancel(PlayerInput& match, const MatchSnapshot& snapshot, bool all) {
         if (auto removed = match.cancel(side, all)) {
-            const auto snapshot = match.snapshot();
             selected = removed->row * (*snapshot.views)[side].cols + removed->col;
         }
         halfArmy = false;
     }
 
-    void Controller::key(LocalMatch& match, const LocalSnapshot& snapshot, int key, int action, int mods) {
-        if (side < 0 || snapshot.state != LocalState::Active ||
+    void Controller::key(PlayerInput& match, const MatchSnapshot& snapshot, int key, int action, int mods) {
+        if (side < 0 || snapshot.state != MatchState::Active ||
             (action != GLFW_PRESS && action != GLFW_REPEAT) || (mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER | GLFW_MOD_ALT))) return;
         switch (key) {
             case GLFW_KEY_W: case GLFW_KEY_UP: move(match, snapshot, Direction::Up); break;
             case GLFW_KEY_S: case GLFW_KEY_DOWN: move(match, snapshot, Direction::Down); break;
             case GLFW_KEY_A: case GLFW_KEY_LEFT: move(match, snapshot, Direction::Left); break;
             case GLFW_KEY_D: case GLFW_KEY_RIGHT: move(match, snapshot, Direction::Right); break;
-            case GLFW_KEY_E: cancel(match, false); break;
-            case GLFW_KEY_Q: cancel(match, true); break;
+            case GLFW_KEY_E: cancel(match, snapshot, false); break;
+            case GLFW_KEY_Q: cancel(match, snapshot, true); break;
             case GLFW_KEY_G: general((*snapshot.views)[side]); break;
             case GLFW_KEY_LEFT_SHIFT: case GLFW_KEY_RIGHT_SHIFT:
                 if (action == GLFW_PRESS && selected >= 0) halfArmy = !halfArmy;

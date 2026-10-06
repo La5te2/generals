@@ -9,6 +9,7 @@
 
 namespace NEBULA {
     namespace {
+        // cap the file buffer before allocation. decoded frame strings also occupy memory during playback.
         constexpr std::size_t maxFileBytes = 512 * 1024 * 1024;
         constexpr int digestLength = 8;
 
@@ -211,6 +212,7 @@ namespace NEBULA {
     std::optional<std::filesystem::path> saveReplay(const Recording& record, const std::filesystem::path& directory,
                                                    std::string& error) {
         error = "Recording contains an invalid position or action";
+        // include frame zero and the last step, which can begin at tickLimit + 1 and finish at tickLimit + 2.
         if (!Protocol::valid({0, record.rows, record.cols}) || record.frames.empty() || record.frames.size() > tickLimit + 3) {
             return std::nullopt;
         }
@@ -245,6 +247,7 @@ namespace NEBULA {
         if (!replayDirectory(directory, error)) return std::nullopt;
         auto path = directory / (hash + ".grf");
         std::error_code status;
+        // compare the complete contents before reusing a filename, since two recordings can share a short digest.
         if (std::filesystem::exists(path, status)) {
             std::string existing;
             if (readFile(path, existing, error) && existing == bytes) return path;
@@ -295,7 +298,8 @@ namespace NEBULA {
             ReplayFrame frame;
             if (!std::getline(input, line) || !readFrame(line, frame) || frame.tick != index ||
                 (index + 1 < count && frame.result != Phases::Ongoing)) return false;
-            // expand file differences once. seeking then reads independent snapshots, with no rule execution.
+            // expand differences into full-board strings once. seek() decodes just the selected frame.
+            // this trades memory for direct forward and backward access, independently of game rules.
             if (index > 0) {
                 if (!applyChanges(previous->board, frame.board)) return false;
                 frame.board = packBoard(previous->board);

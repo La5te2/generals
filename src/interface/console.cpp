@@ -1,4 +1,5 @@
 #include "console.hpp"
+#include "manual.hpp"
 #include <algorithm>
 #include <cctype>
 #include <charconv>
@@ -31,6 +32,7 @@ namespace NEBULA {
         }
         if (stream >> extra) return {Command::Invalid};
         if (name == "help") return {Command::Help};
+        if (name == "man") return {Command::Man};
         if (name == "back") return {Command::Back};
         if (name == "quit") return {Command::Quit};
         return {Command::Invalid};
@@ -89,9 +91,46 @@ namespace NEBULA {
         }
     }
 
+    // preserve paragraphs and blank lines, then wrap each paragraph to the available text width.
+    std::vector<std::string_view> Console::lines(std::size_t columns) const {
+        std::vector<std::string_view> result;
+        std::string_view remaining = manual ? Manual::text : std::string_view(feedback);
+        columns = std::max(std::size_t{1}, columns);
+        while (!remaining.empty()) {
+            auto end = remaining.find('\n');
+            auto paragraph = remaining.substr(0, end);
+            if (paragraph.empty()) result.push_back({});
+            while (!paragraph.empty()) {
+                auto length = std::min(columns, paragraph.size());
+                if (length < paragraph.size()) {
+                    auto space = paragraph.rfind(' ', length);
+                    if (space != std::string_view::npos && space > 0) length = space;
+                }
+                result.push_back(paragraph.substr(0, length));
+                paragraph.remove_prefix(length);
+                while (paragraph.starts_with(' ')) paragraph.remove_prefix(1);
+            }
+            if (end == std::string_view::npos) break;
+            remaining.remove_prefix(end + 1);
+        }
+        return result;
+    }
+
+    bool Console::scroll(int amount, std::size_t columns, std::size_t rows) {
+        auto count = lines(columns).size();
+        auto limit = count > rows ? count - rows : 0;
+        auto current = static_cast<std::ptrdiff_t>(std::min(first, limit));
+        auto next = static_cast<std::size_t>(std::clamp(current + amount, std::ptrdiff_t{0}, static_cast<std::ptrdiff_t>(limit)));
+        bool changed = first != next;
+        first = next;
+        return changed;
+    }
+
     ParsedCommand Console::submit() {
         ParsedCommand command = parseCommand(input);
         edit(Edit::Clear);
+        manual = false;
+        first = 0;
         return command;
     }
 }
