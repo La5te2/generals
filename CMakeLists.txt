@@ -27,7 +27,7 @@ add_executable(simpleG src/agents/simpleG.cpp)
 target_link_libraries(simpleG PRIVATE engine)
 
 find_package(Threads REQUIRED)
-add_library(local STATIC src/interface/local.cpp src/interface/process.cpp)
+add_library(local STATIC src/interface/local.cpp src/interface/process.cpp src/interface/replay.cpp)
 target_link_libraries(local PUBLIC engine Threads::Threads)
 
 option(NEBULA_BUILD_INTERFACE "Build the interface application" ON)
@@ -35,10 +35,11 @@ if(NEBULA_BUILD_INTERFACE)
     find_package(glad CONFIG REQUIRED)
     find_package(glfw3 CONFIG REQUIRED)
 
-    add_executable(interface src/interface/nebula.cpp src/interface/renderer.cpp src/interface/console.cpp src/interface/dialog.cpp)
+    add_executable(interface src/interface/nebula.cpp src/interface/renderer.cpp src/interface/controller.cpp
+        src/interface/console.cpp src/interface/dialog.cpp)
     target_link_libraries(interface PRIVATE local glad::glad glfw)
     if(WIN32)
-        target_link_libraries(interface PRIVATE user32 comdlg32 comctl32 dwmapi)
+        target_link_libraries(interface PRIVATE user32 comdlg32 ole32 shell32 uuid)
     endif()
     set_target_properties(interface PROPERTIES OUTPUT_NAME nebula)
     add_custom_command(TARGET interface POST_BUILD

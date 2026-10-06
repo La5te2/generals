@@ -40,12 +40,6 @@ namespace NEBULA {
             return true;
         }
 
-        // seconds remaining until the timer expires.
-        double wait(Time now = Source::now()) const {
-            if (!active || now >= deadline) return 0;
-            return std::chrono::duration<double>(deadline - now).count();
-        }
-
     private:
         bool active = false;
         Time deadline{};

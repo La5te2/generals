@@ -14,10 +14,34 @@ struct Rect {
     }
 };
 
+enum class Tool { None, Backward, Playback, Forward, Stop, Reset };
+
 // page status and layout definition
 namespace NEBULA {
     // configuration state and layout are shared by nebula.cpp's input handling and renderer.cpp's drawing.
     enum class Scene { Home, Local, Online, Replay };
+    inline constexpr std::array tools{Tool::Backward, Tool::Playback, Tool::Forward, Tool::Stop, Tool::Reset};
+
+    // drawing, mouse input and shortcuts share the same availability rules.
+    struct BoardControls {
+        Scene scene = Scene::Local;
+        bool active = false, running = false, human = false;
+        Tool hover = Tool::None;
+        bool previous = false; // the replay reader supplies whether an earlier position is available.
+
+        bool spectator() const { return (scene == Scene::Local || scene == Scene::Replay) && !human; }
+
+        bool enabled(Tool tool) const {
+            if (tool == Tool::Stop) return active;
+            if (tool == Tool::Reset) return !active;
+            if (!active || scene == Scene::Online || scene == Scene::Home) return false;
+            if (tool == Tool::Playback) return true;
+            if (running || human) return false;
+            if (tool == Tool::Backward) return scene == Scene::Replay && previous;
+            if (tool == Tool::Forward) return scene == Scene::Local || scene == Scene::Replay;
+            return false;
+        }
+    };
     // save the current page, form content, and focus
     struct Setup {
         using Timer = std::chrono::steady_clock;
@@ -26,12 +50,18 @@ namespace NEBULA {
         Scene scene = Scene::Home;
         bool mainServer = false;
         // online fields stay in memory. the user ID is masked while drawing.
-        std::array<TextInput, 6> fields; // username, user ID, replay path, red command, blue command, online command.
-        int milliseconds = 500; // local half-turn duration, retained between games.
+        std::array<TextInput, 7> fields; // username, user ID, replay path, red command, blue command, online command, directory.
+        int milliseconds = 500; // local and replay half-turn interval, retained between sessions.
         int focus = -1;
         int fileHover = -1;
         std::string message;
         Timer::time_point messageTime{};
+
+        // empty player fields select keyboard control, including the single online player field.
+        bool humanPlayer(int field) const {
+            return (field == 3 || field == 4 || field == 5) &&
+                fields[field].input.find_first_not_of(" \t\r\n") == std::string::npos;
+        }
 
         // every notification starts a fresh display interval, including repeated text.
         void notify(std::string_view text, Timer::time_point now = Timer::now()) {
@@ -63,6 +93,23 @@ namespace NEBULA {
     // top and bottom controls scale with window height, between 100% and 150% of their reference size.
     inline float barScale(int height) { return std::clamp(height / 800.0f, 1.0f, 1.5f); }
 
+    // public totals occupy their own centered row below the navigation and playback controls.
+    inline Rect scoreArea(int width, int height) {
+        float scale = barScale(height);
+        float span = std::min(560 * scale, std::max(0.0f, width - 32.0f));
+        return {(width - span) / 2, 20 + 28 * scale, span, 40 * scale};
+    }
+
+    // fit square cells between the bars. drawing and board input use this same rectangle.
+    inline Rect boardArea(int rows, int cols, int width, int height) {
+        Rect scores = scoreArea(width, height);
+        float top = scores.y + scores.height + 12;
+        float available = height - top - 40;
+        if (rows <= 0 || cols <= 0 || available <= 0 || width <= 40) return {};
+        float cell = std::min((width - 32.0f) / cols, available / rows);
+        return {(width - cell * cols) / 2, top + (available - cell * rows) / 2, cell * cols, cell * rows};
+    }
+
     inline Rect menuTitle(int width, int height) {
         float scale = contentScale(width, height);
         float span = 400 * scale;
@@ -77,7 +124,7 @@ namespace NEBULA {
     }
 
     inline Rect formControl(Scene scene, int index, int width, int height) {
-        int groups = scene == Scene::Online ? 4 : scene == Scene::Local ? 2 : 1;
+        int groups = scene == Scene::Online ? 4 : scene == Scene::Local ? 3 : 1;
         // each group has a 24 px label area, a 36 px control and a 28 px gap to the next group.
         float scale = contentScale(width, height);
         float span = (groups * 88.0f - 28) * scale;
@@ -92,12 +139,12 @@ namespace NEBULA {
     }
 
     inline bool hasFileButton(Scene scene, int index) {
-        return (scene == Scene::Local && (index == 3 || index == 4)) ||
+        return (scene == Scene::Local && (index == 3 || index == 4 || index == 6)) ||
                (scene == Scene::Online && index == 5) || (scene == Scene::Replay && index == 2);
     }
 
     inline Rect fieldRow(Scene scene, int index, int width, int height) {
-        int group = scene == Scene::Local ? index - 3 : scene == Scene::Replay ? 0 : index == 5 ? 1 : index + 2;
+        int group = scene == Scene::Local ? (index == 6 ? 2 : index - 3) : scene == Scene::Replay ? 0 : index == 5 ? 1 : index + 2;
         return formControl(scene, group, width, height);
     }
 
@@ -115,7 +162,7 @@ namespace NEBULA {
 
     // the same order drives mouse focus and Tab navigation.
     inline std::array<int, 3> inputOrder(Scene scene) {
-        if (scene == Scene::Local) return {3, 4, -1};
+        if (scene == Scene::Local) return {3, 4, 6};
         if (scene == Scene::Online) return {5, 0, 1};
         if (scene == Scene::Replay) return {2, -1, -1};
         return {-1, -1, -1};
@@ -125,9 +172,6 @@ namespace NEBULA {
         return {width - 16.0f - 180 * scale, 12 - 4 * scale, 180 * scale, 36 * scale};
     }
     inline Rect backButton(float scale) { return {16, 12, 28 * scale, 28 * scale}; }
-    // the setup button occupies the same right-hand area as the three playback tools.
-    inline Rect setupButton(int width, float scale) { return {width - 16.0f - 100 * scale, 12, 100 * scale, 28 * scale}; }
-
     // operation feedback sits below the top bar, independently of the centered form.
     inline Rect messageArea(int width, float scale) { return {16, 40 + 28 * scale, width - 32.0f, 36 * scale}; }
 }

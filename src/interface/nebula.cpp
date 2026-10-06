@@ -12,48 +12,87 @@
 #endif
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
-#include <commctrl.h>
-#include <dwmapi.h>
 #endif
+#include <algorithm>
+#include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <random>
 
 namespace NEBULA {
     struct WindowState {
         LocalMatch local;
+        Replay replay;
+        Clock replayClock;
+        bool replayActive = false;
+        Controller controller;
         Renderer renderer;
         Console console;
         Setup setup;
         LocalSnapshot displayed = local.snapshot();
         bool showingBoard = false, closing = false;
-        bool repaintTimer = false; // a native timer redraws messages and live games during window drags.
+        unsigned int repaintTimer = 0; // native repaint interval in milliseconds. zero means the timer is stopped.
         bool painting = false;
-#ifdef _WIN32
-        bool desktopPacing = false; // during a window drag, wait for desktop composition instead of a separate swap interval.
-#endif
         bool observingLocal = false;
+        bool automatic = false;
+        std::optional<Clock::Time> resetAt;
         int perspective = 2; // 0 = red, 1 = blue, 2 = full board.
         Tool hover = Tool::None;
 
         bool active() const { return displayed.state == LocalState::Active; }
         bool running() const { return displayed.running; }
+        bool human() const { return active() && controller.player() >= 0; }
+        BoardControls controls() const {
+            return {setup.scene, active(), running(), human(), hover, setup.scene == Scene::Replay && replay.cursor() > 0};
+        }
         const Observation& view() const { return (*displayed.views)[perspective]; }
-        void update() { displayed = local.snapshot(); }
+        void update() {
+            if (setup.scene == Scene::Replay && replay.loaded()) {
+                displayed = {};
+                displayed.views = std::make_shared<const std::array<Observation, 3>>(matchViews(replay.state()));
+                displayed.state = replayActive ? LocalState::Active : LocalState::Finished;
+                displayed.running = replayClock.running();
+            } else displayed = local.snapshot();
+            controller.sync(displayed);
+        }
+
+        void report(std::string message) {
+            if (!displayed.error.empty()) message = displayed.error;
+            else if (!displayed.saved.empty()) message += ". Saved " + displayed.saved.filename().string();
+            setup.notify(message);
+            console.feedback = message;
+            if (!displayed.error.empty()) std::cerr << message << '\n';
+        }
+
+        // replay time changes the playback cursor. each position comes directly from its stored board snapshot.
+        void seekReplay(std::size_t halfTurn) {
+            if (!replay.seek(halfTurn)) return;
+            if (halfTurn == replay.length()) {
+                replayClock.pause();
+                replayActive = false;
+                update();
+                report("Replay ended");
+                scheduleReset();
+            } else update();
+        }
 
         // acquire one published snapshot, keeping the board, playback status and result consistent for the whole frame.
         bool refresh() {
             if (!showingBoard) return false;
+            if (setup.scene == Scene::Replay) {
+                if (!replayActive || !replayClock.consume()) return false;
+                seekReplay(replay.cursor() + 1);
+                return true;
+            }
             auto next = local.snapshot();
             bool changed = next.views != displayed.views || next.state != displayed.state || next.running != displayed.running;
             displayed = std::move(next);
+            controller.sync(displayed);
             if (observingLocal && !active()) {
                 observingLocal = false;
                 const std::string& error = displayed.error;
-                setup.notify(!error.empty() ? error : view().result == Phases::RedWin ? "Red wins"
-                           : view().result == Phases::BlueWin ? "Blue wins" : "Draw");
-                if (!error.empty()) showingBoard = false;
+                report(view().result == Phases::RedWin ? "Red wins" : view().result == Phases::BlueWin ? "Blue wins" : "Draw");
+                if (error.empty()) scheduleReset();
                 hover = Tool::None;
                 changed = true;
             }
@@ -66,25 +105,54 @@ namespace NEBULA {
                 setup.notify("A match is already active");
                 return;
             }
+            // consume a pending reset before starting, so a failed attempt stays available for manual retry.
+            resetAt.reset();
             if (setup.scene == Scene::Online) {
                 setup.notify(setup.fields[0].input.empty() || setup.fields[1].input.empty()
                     ? "Username and user ID required" : "Online transport is unavailable");
                 return;
             }
             if (setup.scene == Scene::Replay) {
-                std::filesystem::path path(setup.fields[2].input);
-                std::error_code error;
-                if (!std::filesystem::is_regular_file(path, error) || !std::ifstream(path, std::ios::binary)) {
-                    setup.notify("Replay file cannot be opened");
-                } else setup.notify("Replay playback is unavailable");
+                const auto& name = setup.fields[2].input;
+                std::string error;
+                if (!replay.load(std::filesystem::path(std::u8string(name.begin(), name.end())), error)) {
+                    setup.notify(error);
+                    return;
+                }
+                replayClock.interval = std::chrono::milliseconds(setup.milliseconds);
+                replayClock.reset();
+                replayActive = replay.length() > 0;
+                if (replayActive) replayClock.resume();
+                setup.message.clear();
+                setup.focus = setup.fileHover = -1;
+                showingBoard = true;
+                observingLocal = false;
+                perspective = 2;
+                hover = Tool::None;
+                controller.reset(-1, view());
+                update();
+                if (!replayActive) { report("Replay ended"); scheduleReset(); }
                 return;
             }
             if (setup.scene != Scene::Local) {
                 setup.notify("Select a mode first");
                 return;
             }
+            std::array<std::string, 2> commands{setup.fields[3].input, setup.fields[4].input};
+            for (int player = 0; player < 2; ++player) {
+                if (setup.humanPlayer(player + 3)) commands[player].clear();
+            }
+            // one keyboard controls one player. local sessions themselves accept any externally supplied actions.
+            if (commands[0].empty() && commands[1].empty()) {
+                setup.notify("Choose a program for at least one player");
+                return;
+            }
+            int player = commands[0].empty() ? 0 : commands[1].empty() ? 1 : -1;
+            const auto& name = setup.fields[6].input;
+            std::filesystem::path directory;
+            if (name.find_first_not_of(" \t\r\n") != std::string::npos) directory = std::u8string(name.begin(), name.end());
             std::random_device seed;
-            if (!local.start({setup.fields[3].input, setup.fields[4].input}, seed(), setup.milliseconds)) {
+            if (!local.start(commands, seed(), setup.milliseconds, directory)) {
                 update();
                 setup.notify(displayed.error);
                 return;
@@ -94,84 +162,212 @@ namespace NEBULA {
             setup.fileHover = -1;
             showingBoard = true;
             observingLocal = true;
-            perspective = 2;
+            perspective = player >= 0 ? player : 2;
             hover = Tool::None;
             update();
+            controller.reset(player, view());
         }
 
-        // end the current match and return to its configuration page, keeping the selected mode.
+        // stop keeps the final position on screen. reset starts another session with the current configuration.
         void stop() {
+            if (!showingBoard) return;
             if (active()) {
-                local.stop();
+                if (setup.scene == Scene::Replay) { replayClock.pause(); replayActive = false; }
+                else local.stop();
                 update();
-                setup.notify("Match stopped");
+                report(setup.scene == Scene::Replay ? "Replay stopped" : "Match stopped");
+                if (displayed.error.empty()) scheduleReset();
             }
-            showingBoard = false;
             observingLocal = false;
+            controller.deselect();
             hover = Tool::None;
         }
 
-        // stop the match first, then return to the home page and release text input focus.
+        void reset() {
+            if (showingBoard && controls().enabled(Tool::Reset)) start();
+        }
+
+        void scheduleReset() {
+            resetAt.reset();
+            if (automatic && showingBoard && !active() && !closing && displayed.error.empty()) {
+                resetAt = Clock::Source::now() + std::chrono::milliseconds(1000);
+            }
+        }
+
+        void setAuto(bool enabled) {
+            automatic = enabled;
+            scheduleReset();
+        }
+
+        // return one page at a time: board to configuration, then configuration to home.
         void back() {
-            stop();
-            setup.scene = Scene::Home;
+            if (showingBoard) {
+                stop();
+                showingBoard = false;
+                controller.reset(-1, view());
+            } else { setup.scene = Scene::Home; setup.message.clear(); }
+            resetAt.reset();
             setup.focus = -1;
             setup.fileHover = -1;
-            setup.message.clear();
             console.opened = false;
             console.edit(Edit::Clear);
         }
 
-        void quit() { stop(); closing = true; }
+        void quit() {
+            stop();
+            resetAt.reset();
+            // keep a failed recording available for directory correction before releasing the session.
+            if (local.snapshot().unsaved) {
+                local.stop();
+                auto pending = local.snapshot();
+                if (pending.unsaved) {
+                    setup.notify(pending.error);
+                    console.feedback = pending.error;
+                    return;
+                }
+            }
+            closing = true;
+        }
 
         bool setTurn(int milliseconds) {
             if (!local.setInterval(milliseconds)) return false;
             setup.milliseconds = milliseconds;
+            bool playing = replayClock.running();
+            replayClock.interval = std::chrono::milliseconds(milliseconds);
+            replayClock.reset();
+            if (playing) replayClock.resume();
+            return true;
+        }
+
+        // size the window relative to its current monitor. the highest level covers that monitor without borders.
+        bool setWindow(GLFWwindow* window, int level) {
+            if (level < 0 || level > maxWindowLevel) return false;
+            int x, y, width, height, count;
+            glfwGetWindowPos(window, &x, &y);
+            glfwGetWindowSize(window, &width, &height);
+            GLFWmonitor** monitors = glfwGetMonitors(&count);
+            GLFWmonitor* chosen = glfwGetPrimaryMonitor();
+            std::int64_t largest = 0;
+            for (int index = 0; index < count; ++index) {
+                int left, top, wide, high;
+                glfwGetMonitorWorkarea(monitors[index], &left, &top, &wide, &high);
+                auto overlap = static_cast<std::int64_t>(std::max(0, std::min(x + width, left + wide) - std::max(x, left))) *
+                    std::max(0, std::min(y + height, top + high) - std::max(y, top));
+                if (overlap > largest) { largest = overlap; chosen = monitors[index]; }
+            }
+            if (!chosen) return false;
+            if (level == maxWindowLevel) {
+                const GLFWvidmode* mode = glfwGetVideoMode(chosen);
+                if (!mode) return false;
+                // a borderless window fills the monitor while preserving its desktop resolution and refresh rate.
+                glfwGetMonitorPos(chosen, &x, &y);
+                glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+                glfwSetWindowSize(window, mode->width, mode->height);
+                glfwSetWindowPos(window, x, y);
+            } else {
+                int left, top, wide, high, frameLeft, frameTop, frameRight, frameBottom;
+                glfwGetMonitorWorkarea(chosen, &left, &top, &wide, &high);
+                glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
+                glfwGetWindowFrameSize(window, &frameLeft, &frameTop, &frameRight, &frameBottom);
+                int availableWidth = wide - frameLeft - frameRight;
+                int availableHeight = high - frameTop - frameBottom;
+                if (availableWidth <= 0 || availableHeight <= 0) return false;
+                // levels 0 through 9 use 50% through 95% of the available width and height, centered in the work area.
+                double scale = .5 + .5 * level / maxWindowLevel;
+                // preserve room for the configuration form, capped by the space available on smaller monitors.
+                int nextWidth = std::min(availableWidth, std::max(720, static_cast<int>(availableWidth * scale)));
+                int nextHeight = std::min(availableHeight, std::max(560, static_cast<int>(availableHeight * scale)));
+                glfwSetWindowSize(window, nextWidth, nextHeight);
+                glfwSetWindowPos(window, left + frameLeft + (availableWidth - nextWidth) / 2,
+                                 top + frameTop + (availableHeight - nextHeight) / 2);
+            }
+            hover = Tool::None;
+            setup.fileHover = -1;
             return true;
         }
 
         // console input calls the same application operations as window controls and keyboard shortcuts.
         // those operations exist independently of the console parser.
-        void runCommand(ParsedCommand command) {
+        void runCommand(GLFWwindow* window, ParsedCommand command) {
             if (command.type == Command::Back) { back(); return; }
             if (command.type == Command::Quit) { quit(); return; }
             if (command.type == Command::Turn) {
-                if (setTurn(command.milliseconds)) console.feedback = "Local half-turn: " + std::to_string(setup.milliseconds) + " ms";
+                if (setTurn(command.value)) console.feedback = "Local / replay half-turn: " + std::to_string(setup.milliseconds) + " ms";
+                return;
+            }
+            if (command.type == Command::Auto) {
+                setAuto(command.value == 1);
+                console.feedback = automatic ? "Auto reset: 1000 ms" : "Reset: manual";
+                return;
+            }
+            if (command.type == Command::Win) {
+                if (setWindow(window, command.value)) {
+                    int width, height;
+                    glfwGetWindowSize(window, &width, &height);
+                    std::string label = command.value == maxWindowLevel ? "Full screen" : "Window " + std::to_string(command.value);
+                    console.feedback = label + ": " +
+                        std::to_string(width) + " x " + std::to_string(height);
+                } else console.feedback = "Window size update failed";
                 return;
             }
             if (command.type == Command::Help) {
-                console.feedback = "help back quit. TURN milliseconds: positive integer. Current: " + std::to_string(setup.milliseconds) + " ms";
+                console.feedback = "help  back  quit  turn MS  win 0-" + std::to_string(maxWindowLevel) + "  auto 0|1";
                 return;
             }
-            if (command.type == Command::Invalid) console.feedback = "Invalid command. Use help, back, quit or TURN followed by positive milliseconds";
+            if (command.type == Command::Invalid) console.feedback = "Use help, back, quit, turn MS, win 0-" + std::to_string(maxWindowLevel) + " or auto 0|1";
         }
 
         // board buttons and keyboard shortcuts control playback independently of console commands.
         void playback() {
-            if (!active()) return;
+            if (!showingBoard || !controls().enabled(Tool::Playback)) return;
+            if (setup.scene == Scene::Replay) {
+                if (running()) replayClock.pause();
+                else replayClock.resume();
+                update();
+                return;
+            }
             if (running()) local.pause();
             else local.resume();
             refresh();
         }
 
-        void step() {
-            if (!active() || running()) return;
+        void step(Tool direction) {
+            if (!showingBoard || !controls().enabled(direction)) return;
+            if (setup.scene == Scene::Replay) {
+                seekReplay(direction == Tool::Forward ? replay.cursor() + 1 : replay.cursor() - 1);
+                replayClock.reset();
+                return;
+            }
+            if (setup.scene != Scene::Local || direction != Tool::Forward) return;
             local.advance();
             refresh();
         }
 
+        void useTool(Tool tool) {
+            if (!showingBoard || !controls().enabled(tool)) return;
+            switch (tool) {
+                case Tool::Backward: case Tool::Forward: step(tool); break;
+                case Tool::Playback: playback(); break;
+                case Tool::Stop: stop(); break;
+                case Tool::Reset: reset(); break;
+                default: break;
+            }
+        }
+
         void browse(GLFWwindow* window, int field) {
             std::string error;
-            bool program = setup.scene != Scene::Replay;
+            PathKind kind = field == 6 ? PathKind::Directory : setup.scene == Scene::Replay ? PathKind::Replay : PathKind::Program;
+            bool program = kind == PathKind::Program;
             setup.fileHover = -1;
-            auto selected = chooseFile(window, program, error);
+            auto selected = choosePath(window, kind, error);
             if (!selected) { if (!error.empty()) setup.notify(error); return; }
             std::error_code status;
             std::filesystem::path path(std::u8string(selected->begin(), selected->end()));
-            if (!std::filesystem::is_regular_file(path, status)) {
-                setup.notify("Select an existing file"); return;
+            bool valid = kind == PathKind::Directory ? std::filesystem::is_directory(path, status) : std::filesystem::is_regular_file(path, status);
+            if (!valid) {
+                setup.notify(kind == PathKind::Directory ? "Select an existing directory" : "Select an existing file"); return;
             }
-            // program fields are command lines, while replay fields hold an unquoted file path.
+            // only program command lines need quotes. replay and directory fields hold the path itself.
             std::string value = *selected;
             if (program) {
                 char quote = value.find('"') == std::string::npos ? '"' : '\'';
@@ -181,7 +377,10 @@ namespace NEBULA {
                 value = quote + value + quote;
             }
             TextInput next;
-            if (!next.insert(value)) { setup.notify(next.feedback); return; }
+            // native dialogs return UTF-8 paths. retain those bytes even when the pixel font lacks their glyphs.
+            if (value.find_first_of("\r\n") != std::string::npos) { setup.notify("Select a single-line path"); return; }
+            next.input = std::move(value);
+            next.cursor = next.input.size();
             setup.fields[field] = std::move(next);
             setup.focus = field;
             setup.message.clear();
@@ -193,18 +392,18 @@ namespace NEBULA {
             float scale = barScale(height);
             if (setup.scene != Scene::Home && backButton(scale).contains(x, y)) { back(); return; }
             if (showingBoard) {
-                for (int mode = 0; mode < 3; ++mode) {
-                    if (viewButton(mode, scale).contains(x, y)) { perspective = mode; update(); }
+                refresh();
+                for (Tool tool : tools) {
+                    if (toolButton(tool, width, scale).contains(x, y)) { useTool(tool); return; }
                 }
-                if (!active()) {
-                    if (setupButton(width, scale).contains(x, y)) showingBoard = false;
+                if (human()) {
+                    controller.click(local, displayed, x, y, width, height);
+                    update();
                     return;
                 }
-                if (toolButton(Tool::Playback, width, scale).contains(x, y)) {
-                    playback();
+                for (int mode = 0; controls().spectator() && mode < 3; ++mode) {
+                    if (viewButton(mode, scale).contains(x, y)) { perspective = mode; update(); }
                 }
-                if (toolButton(Tool::Step, width, scale).contains(x, y)) step();
-                if (toolButton(Tool::Stop, width, scale).contains(x, y)) stop();
                 return;
             }
             if (setup.scene == Scene::Home) {
@@ -247,15 +446,11 @@ namespace NEBULA {
 
     void drawWindow(GLFWwindow* window);
 
-    // input can share a pending paint. resizing paints immediately, using the current client dimensions.
-    void redraw(GLFWwindow* window, bool immediate = false) {
+    // on Windows, input and size changes share a pending paint. their callbacks return before drawing begins.
+    void redraw(GLFWwindow* window) {
 #ifdef _WIN32
-        auto* app = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
-        UINT flags = RDW_INVALIDATE | RDW_NOERASE;
-        if (immediate && app && !app->painting) flags |= RDW_UPDATENOW;
-        RedrawWindow(glfwGetWin32Window(window), nullptr, nullptr, flags);
+        RedrawWindow(glfwGetWin32Window(window), nullptr, nullptr, RDW_INVALIDATE | RDW_NOERASE);
 #else
-        (void)immediate;
         drawWindow(window);
 #endif
     }
@@ -264,25 +459,6 @@ namespace NEBULA {
     // timer callbacks also run while Windows handles a window drag inside event processing.
     void CALLBACK repaintWindow(HWND, UINT, UINT_PTR id, DWORD) {
         redraw(reinterpret_cast<GLFWwindow*>(id));
-    }
-
-    // preserve GLFW's message handling and change presentation timing only while the user moves or resizes the window.
-    LRESULT CALLBACK windowMessages(HWND handle, UINT message, WPARAM first, LPARAM second, UINT_PTR, DWORD_PTR data) {
-        auto* window = reinterpret_cast<GLFWwindow*>(data);
-        auto& app = *static_cast<WindowState*>(glfwGetWindowUserPointer(window));
-        if (message == WM_ENTERSIZEMOVE) {
-            BOOL composed = FALSE;
-            if (SUCCEEDED(DwmIsCompositionEnabled(&composed)) && composed) {
-                app.desktopPacing = true;
-                glfwSwapInterval(0);
-            }
-        } else if (message == WM_EXITSIZEMOVE) {
-            if (app.desktopPacing) glfwSwapInterval(1);
-            app.desktopPacing = false;
-        }
-        LRESULT result = DefSubclassProc(handle, message, first, second);
-        if (message == WM_EXITSIZEMOVE) redraw(window, true);
-        return result;
     }
 #endif
 
@@ -293,7 +469,7 @@ namespace NEBULA {
         app->painting = true;
 #ifdef _WIN32
         HWND handle = glfwGetWin32Window(window);
-        // an immediate size repaint may already have consumed the pending paint region.
+        // a duplicate paint message can arrive after the invalidated region has already been drawn.
         if (!GetUpdateRect(handle, nullptr, FALSE)) { app->painting = false; return; }
         PAINTSTRUCT paint{};
         BeginPaint(handle, &paint);
@@ -312,38 +488,44 @@ namespace NEBULA {
         auto& app = *state;
         app.refresh();
         // clear expired text here so both event callbacks and the outer loop erase its final frame.
-        if (!app.showingBoard && app.setup.messageOpacity() == 0) app.setup.message.clear();
+        if (app.setup.messageOpacity() == 0) app.setup.message.clear();
 #ifdef _WIN32
         HWND handle = glfwGetWin32Window(window);
         UINT_PTR id = reinterpret_cast<UINT_PTR>(window);
         bool live = app.showingBoard && app.running();
-        if (live || (!app.showingBoard && !app.setup.message.empty())) {
+        if (live || !app.setup.message.empty()) {
             double delay = live ? 1.0 / 60 : app.setup.messageWait();
             UINT milliseconds = static_cast<UINT>(delay * 1000) + 1;
-            app.repaintTimer = SetTimer(handle, id, milliseconds, repaintWindow) != 0;
+            // an unchanged interval keeps its original deadline when other window events request a repaint.
+            if (milliseconds != app.repaintTimer) {
+                if (SetTimer(handle, id, milliseconds, repaintWindow)) app.repaintTimer = milliseconds;
+                else { KillTimer(handle, id); app.repaintTimer = 0; }
+            }
         } else if (app.repaintTimer) {
             KillTimer(handle, id);
-            app.repaintTimer = false;
+            app.repaintTimer = 0;
         }
 #endif
         int width, height, pixelsWide, pixelsHigh;
         glfwGetWindowSize(window, &width, &height);
+#ifdef _WIN32
+        // GLFW's Windows client coordinates are framebuffer pixels. one size read keeps layout and viewport together.
+        pixelsWide = width;
+        pixelsHigh = height;
+#else
         glfwGetFramebufferSize(window, &pixelsWide, &pixelsHigh);
+#endif
         if (pixelsWide == 0 || pixelsHigh == 0) return;
         // window coordinates place controls. framebuffer dimensions set the high-DPI viewport.
         glViewport(0, 0, pixelsWide, pixelsHigh);
         if (app.showingBoard) {
-            app.renderer.draw(app.view(), app.perspective, width, height, app.running(), app.active(), app.hover, app.console);
+            std::span<const Action> queued;
+            if (app.controller.player() >= 0) queued = app.displayed.queued[app.controller.player()];
+            app.renderer.draw(app.view(), app.perspective, width, height, app.controls(), app.setup,
+                              app.console, app.controller, queued);
         } else app.renderer.drawSetup(app.setup, width, height, app.console);
         // draw() or drawSetup() fills the back buffer, then this swap presents the completed frame.
         glfwSwapBuffers(window);
-#ifdef _WIN32
-        // pace drag frames with desktop composition. the swap interval is disabled above to avoid two separate waits.
-        if (app.desktopPacing && FAILED(DwmFlush())) {
-            app.desktopPacing = false;
-            glfwSwapInterval(1);
-        }
-#endif
     }
 
     // editing keys and clipboard paste share this handler for console and configuration inputs.
@@ -370,22 +552,17 @@ namespace NEBULA {
         // run() releases the renderer's GPU resources before main() destroys the window.
         WindowState app;
         if (!app.renderer.init()) return 1;
+        app.setWindow(window, 4);
         // store app's address on the GLFW window so each callback can recover the same object.
         glfwSetWindowUserPointer(window, &app);
-#ifdef _WIN32
-        if (!SetWindowSubclass(glfwGetWin32Window(window), windowMessages, 1, reinterpret_cast<DWORD_PTR>(window))) {
-            std::cerr << "Window resize handler setup failed\n";
-            glfwSetWindowUserPointer(window, nullptr);
-            return 1;
-        }
-#endif
-        // moving or resizing a window can hold execution inside GLFW's event handling.
+        // moving a window can hold execution inside GLFW's event handling.
         // refresh callbacks redraw there, while the outer loop waits for event handling to return.
         glfwSetWindowRefreshCallback(window, refreshWindow);
-        glfwSetFramebufferSizeCallback(window, [](GLFWwindow* target, int, int) { redraw(target, true); });
+        glfwSetFramebufferSizeCallback(window, [](GLFWwindow* target, int, int) { redraw(target); });
         glfwSetWindowCloseCallback(window, [](GLFWwindow* target) {
             auto& state = *static_cast<WindowState*>(glfwGetWindowUserPointer(target));
             state.quit();
+            if (!state.closing) glfwSetWindowShouldClose(target, GLFW_FALSE);
         });
         // redraw a tooltip when the hovered tool changes, keeping ordinary mouse motion inexpensive.
         glfwSetCursorPosCallback(window, [](GLFWwindow* target, double x, double y) {
@@ -394,8 +571,8 @@ namespace NEBULA {
             int fileHover = -1;
             int width, height;
             glfwGetWindowSize(target, &width, &height);
-            if (state.showingBoard && state.active() && !state.console.opened) {
-                for (Tool tool : {Tool::Playback, Tool::Step, Tool::Stop}) {
+            if (state.showingBoard && !state.console.opened) {
+                for (Tool tool : tools) {
                     if (toolButton(tool, width, barScale(height)).contains(x, y)) hover = tool;
                 }
             } else if (!state.showingBoard && !state.console.opened) {
@@ -420,8 +597,14 @@ namespace NEBULA {
         });
         // mouse events supply window coordinates, matching the layout functions in scene.hpp.
         glfwSetMouseButtonCallback(window, [](GLFWwindow* target, int button, int action, int) {
-            if (button != GLFW_MOUSE_BUTTON_LEFT || action != GLFW_PRESS) return;
+            if (action != GLFW_PRESS) return;
             auto& state = *static_cast<WindowState*>(glfwGetWindowUserPointer(target));
+            if (button == GLFW_MOUSE_BUTTON_RIGHT && state.human() && !state.console.opened) {
+                state.controller.deselect();
+                redraw(target);
+                return;
+            }
+            if (button != GLFW_MOUSE_BUTTON_LEFT) return;
             double x, y;
             int width, height;
             glfwGetCursorPos(target, &x, &y);
@@ -453,7 +636,7 @@ namespace NEBULA {
             } else if (state.console.opened) {
                 if (key == GLFW_KEY_ESCAPE) state.console.opened = false;
                 else if ((key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) && action == GLFW_PRESS) {
-                    state.runCommand(state.console.submit());
+                    state.runCommand(target, state.console.submit());
                 } else editInput(target, state.console, key, action, mods);
             } else if (!state.showingBoard) {
                 if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) state.back();
@@ -469,10 +652,23 @@ namespace NEBULA {
                     editInput(target, *input, key, action, mods);
                     state.setup.notify(input->feedback);
                 }
+            } else if (state.human()) {
+                state.refresh();
+                if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) state.back();
+                else if (key == GLFW_KEY_SPACE) { if (action == GLFW_PRESS) state.playback(); }
+                else { state.controller.key(state.local, state.displayed, key, action, mods); state.update(); }
             } else if (action == GLFW_PRESS) {
-                if (key >= GLFW_KEY_1 && key <= GLFW_KEY_3) { state.perspective = key - GLFW_KEY_1; state.update(); }
+                if (state.controls().spectator() && key >= GLFW_KEY_1 && key <= GLFW_KEY_3) {
+                    state.perspective = key - GLFW_KEY_1;
+                    state.update();
+                }
                 if (key == GLFW_KEY_SPACE) state.playback();
-                if (key == GLFW_KEY_PERIOD) state.step();
+                if (key == GLFW_KEY_PERIOD) state.useTool(Tool::Forward);
+                if (key == GLFW_KEY_COMMA) state.useTool(Tool::Backward);
+                if (state.setup.scene == Scene::Replay) {
+                    if (key == GLFW_KEY_RIGHT) state.useTool(Tool::Forward);
+                    if (key == GLFW_KEY_LEFT) state.useTool(Tool::Backward);
+                }
                 if (key == GLFW_KEY_ESCAPE) state.back();
             }
             redraw(target);
@@ -482,25 +678,30 @@ namespace NEBULA {
         // observe the local session without advancing it. its clock runs independently of this window loop.
         while (!app.closing && !glfwWindowShouldClose(window)) {
             bool repaint = app.refresh();
-            if (!app.repaintTimer && !app.showingBoard && !app.setup.message.empty()) {
+            if (app.resetAt && Clock::Source::now() >= *app.resetAt) {
+                app.reset();
+                repaint = true;
+            }
+            if (!app.repaintTimer && !app.setup.message.empty()) {
                 if (app.setup.messageOpacity() < 1) repaint = true;
             }
             if (repaint) redraw(window);
 
             // wait for the earlier timer. a negative delay means that only input can wake the window.
             double seconds = app.showingBoard && app.running() && !app.repaintTimer ? 1.0 / 60 : -1;
-            if (!app.repaintTimer && !app.showingBoard && !app.setup.message.empty()) {
+            if (!app.repaintTimer && !app.setup.message.empty()) {
                 double messageDelay = app.setup.messageWait();
                 seconds = seconds < 0 ? messageDelay : std::min(seconds, messageDelay);
             }
+            if (app.resetAt) {
+                double delay = std::max(.001, std::chrono::duration<double>(*app.resetAt - Clock::Source::now()).count());
+                seconds = seconds < 0 ? delay : std::min(seconds, delay);
+            }
             if (seconds > 0) glfwWaitEventsTimeout(seconds);
-            else if (seconds == 0) glfwPollEvents();
             else glfwWaitEvents();
         }
 #ifdef _WIN32
         if (app.repaintTimer) KillTimer(glfwGetWin32Window(window), reinterpret_cast<UINT_PTR>(window));
-        RemoveWindowSubclass(glfwGetWin32Window(window), windowMessages, 1);
-        if (app.desktopPacing) glfwSwapInterval(1);
 #endif
         // detach callbacks before app is destroyed, ending their access to its stack address.
         glfwSetWindowRefreshCallback(window, nullptr);
@@ -527,6 +728,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
@@ -542,7 +744,6 @@ int main() {
     }
     // request swaps synchronized with the display refresh. actual redraws are scheduled in run().
     glfwSwapInterval(1);
-    glfwSetWindowSizeLimits(window, 540, 560, GLFW_DONT_CARE, GLFW_DONT_CARE);
     int result = NEBULA::run(window);
     glfwDestroyWindow(window);
     glfwTerminate();

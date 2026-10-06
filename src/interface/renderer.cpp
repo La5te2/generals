@@ -232,6 +232,39 @@ void Renderer::back(float scale) {
     line({bounds.x + 6 * scale, bounds.y + 14 * scale}, {bounds.x + 13 * scale, bounds.y + 21 * scale}, 2 * scale, white);
 }
 
+void Renderer::drawTools(const NEBULA::BoardControls& controls, int width, float scale) {
+    for (Tool tool : NEBULA::tools) {
+        Rect bounds = toolButton(tool, width, scale);
+        bool enabled = controls.enabled(tool);
+        Color color = enabled ? Color{.95f, .96f, .97f} : Color{.36f, .39f, .41f};
+        if (enabled && controls.hover == tool) rectangle(bounds, {.24f, .28f, .30f});
+        auto point = [&](float x, float y) { return Point{bounds.x + x * scale, bounds.y + y * scale}; };
+        if (tool == Tool::Playback) {
+            if (controls.running) {
+                rectangle({bounds.x + 7 * scale, bounds.y + 6 * scale, 5 * scale, 16 * scale}, color);
+                rectangle({bounds.x + 16 * scale, bounds.y + 6 * scale, 5 * scale, 16 * scale}, color);
+            } else triangle(point(9, 5), point(9, 23), point(22, 14), color);
+        } else if (tool == Tool::Backward || tool == Tool::Forward) {
+            // mirror the forward-step symbol for backward stepping.
+            auto x = [&](float value) { return tool == Tool::Backward ? 28 - value : value; };
+            triangle(point(x(5), 6), point(x(5), 22), point(x(17), 14), color);
+            line(point(x(20.5f), 6), point(x(20.5f), 22), 3 * scale, color);
+        } else if (tool == Tool::Stop) {
+            rectangle({bounds.x + 7 * scale, bounds.y + 7 * scale, 14 * scale, 14 * scale}, color);
+        } else if (tool == Tool::Reset) {
+            constexpr float pi = 3.14159265f;
+            Point last = point(14 + 8 * std::cos(pi / 4), 14 + 8 * std::sin(pi / 4));
+            for (int segment = 1; segment <= 24; ++segment) {
+                float angle = pi / 4 + 1.5f * pi * segment / 24;
+                Point next = point(14 + 8 * std::cos(angle), 14 + 8 * std::sin(angle));
+                line(last, next, 2 * scale, color);
+                last = next;
+            }
+            triangle(point(23, 12), point(16, 10), point(22, 5), color);
+        }
+    }
+}
+
 // assemble the selected configuration page, then submit it to the back buffer in one batch.
 void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, const NEBULA::Console& console) {
     using namespace NEBULA;
@@ -263,7 +296,7 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
         text(title, 16 + 48 * textScale, baseline, font, white);
 
         Rect start = startButton(width, textScale);
-        Color action = setup.scene == Scene::Local ? white : muted;
+        Color action = setup.scene != Scene::Online ? white : muted;
         std::string_view command = setup.scene == Scene::Local ? "START MATCH" : setup.scene == Scene::Online ? "CONNECT" : "PLAY";
         text(command, start.x + start.width - 36 * textScale - PixelFont::measure(command) * font, baseline, font, action);
         float right = start.x + start.width - 5 * textScale, middle = start.y + start.height / 2;
@@ -279,7 +312,11 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
         };
         auto fileInput = [&](std::string_view name, int field, int index) {
             group(name, index);
-            input(setup.fields[field], inputField(setup.scene, field, width, height), setup.focus == field, false, scale);
+            Rect entry = inputField(setup.scene, field, width, height);
+            input(setup.fields[field], entry, setup.focus == field, false, scale);
+            if (setup.focus != field && setup.humanPlayer(field)) {
+                text("HUMAN", entry.x + 10 * scale, entry.y + 11 * scale, 1.5f * scale, muted);
+            }
             Rect bounds = fileButton(setup.scene, field, width, height);
             rectangle(bounds, {.06f, .08f, .09f});
             Color symbol = setup.fileHover == field ? Color{.40f, .82f, .68f} : white;
@@ -292,12 +329,13 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
             if (setup.fileHover == field && !console.opened) {
                 Rect tooltip{bounds.x + bounds.width - 120 * scale, bounds.y - 30 * scale, 120 * scale, 24 * scale};
                 rectangle(tooltip, {.06f, .07f, .08f});
-                label("SELECT FILE", tooltip, white, 1.25f * scale);
+                label(field == 6 ? "DIRECTORY" : "SELECT FILE", tooltip, white, 1.25f * scale);
             }
         };
         if (setup.scene == Scene::Local) {
             fileInput("RED PLAYER", 3, 0);
             fileInput("BLUE PLAYER", 4, 1);
+            fileInput("DIRECTORY", 6, 2);
         } else if (setup.scene == Scene::Online) {
             Rect server = group("SERVER", 0);
             button("BOT", choiceButton(server, 0, 2), !setup.mainServer, true, scale);
@@ -309,10 +347,18 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
             fileInput("REPLAY FILE", 2, 0);
         }
     }
-    // show operation feedback below the top bar, wrapping at word boundaries.
+    drawMessage(setup, width, textScale);
+    if (console.opened) drawConsole(console, width, height, textScale);
+    flush(width, height);
+}
+
+void Renderer::drawMessage(const NEBULA::Setup& setup, int width, float textScale, bool board) {
+    // operation feedback wraps at word boundaries and fades with the notification's elapsed time.
     std::string_view message = setup.message;
-    Color feedback{muted.r, muted.g, muted.b, setup.messageOpacity()};
-    Rect row = messageArea(width, textScale);
+    float opacity = setup.messageOpacity();
+    Color feedback{.62f, .66f, .68f, opacity};
+    Rect row = NEBULA::messageArea(width, textScale);
+    if (board) row.y += 44 * textScale;
     auto columns = static_cast<std::size_t>(std::max(1.0f, row.width / (10 * textScale)));
     float top = row.y;
     while (!message.empty()) {
@@ -326,13 +372,33 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
         while (!message.empty() && message.front() == ' ') message.remove_prefix(1);
         top += 18 * textScale;
     }
-    if (console.opened) drawConsole(console, width, height, textScale);
-    flush(width, height);
+}
+
+void Renderer::drawScores(const Observation& view, int width, int height) {
+    Rect area = NEBULA::scoreArea(width, height);
+    float scale = NEBULA::barScale(height);
+    float gap = 24 * scale;
+    float span = (area.width - gap) / 2;
+    const std::array<std::string_view, 2> names{"RED", "BLUE"};
+    const std::array<Color, 2> colors{{{.82f, .23f, .26f}, {.20f, .38f, .73f}}};
+    for (int player = 0; player < 2; ++player) {
+        float left = area.x + player * (span + gap);
+        label(names[player], {left, area.y, span * .2f, area.height}, colors[player], 1.25f * scale);
+        // each heading and number share a fixed column center, independent of the number of digits.
+        for (int column = 0; column < 2; ++column) {
+            Rect bounds{left + span * (.2f + column * .4f), area.y, span * .4f, area.height / 2};
+            label(column == 0 ? "ARMY" : "LAND", bounds, {.62f, .66f, .68f}, scale);
+            bounds.y += bounds.height;
+            auto value = column == 0 ? view.armies[player] : view.land[player];
+            label(std::to_string(value), bounds, colors[player], 1.5f * scale);
+        }
+    }
 }
 
 // draw the supplied observation. selecting and updating that observation belongs to WindowState.
-void Renderer::draw(const Observation& view, int perspective, int width, int height, bool running, bool active, Tool hover,
-                    const NEBULA::Console& console) {
+void Renderer::draw(const Observation& view, int perspective, int width, int height,
+                    const NEBULA::BoardControls& controls, const NEBULA::Setup& setup,
+                    const NEBULA::Console& console, const NEBULA::Controller& controller, std::span<const Action> queued) {
     if (width <= 0 || height <= 0) return;
     vertices.clear();
     glClearColor(.12f, .14f, .15f, 1);
@@ -343,8 +409,9 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     float textScale = NEBULA::barScale(height);
     back(textScale);
     float font = 1.5f * textScale;
+    bool human = controls.human, active = controls.active, running = controls.running;
     const std::array<std::string_view, 3> labels{"RED", "BLUE", "ALL"};
-    for (int mode = 0; mode < 3; ++mode) {
+    for (int mode = 0; controls.spectator() && mode < 3; ++mode) {
         Rect button = viewButton(mode, textScale);
         Color color = mode == 0 ? red : mode == 1 ? blue : Color{.30f, .34f, .36f};
         rectangle(button, perspective == mode ? color : Color{.16f, .18f, .20f});
@@ -353,34 +420,13 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
         text(labels[mode], button.x + (button.width - length * font) / 2,
              button.y + (button.height - PixelFont::height * font) / 2, font, white);
     }
-    if (active) {
-        for (Tool tool : {Tool::Playback, Tool::Step, Tool::Stop}) {
-            if (hover == tool) rectangle(toolButton(tool, width, textScale), {.24f, .28f, .30f});
-        }
-        Rect playback = toolButton(Tool::Playback, width, textScale);
-        if (running) {
-            rectangle({playback.x + 7 * textScale, playback.y + 6 * textScale, 5 * textScale, 16 * textScale}, white);
-            rectangle({playback.x + 16 * textScale, playback.y + 6 * textScale, 5 * textScale, 16 * textScale}, white);
-        } else {
-            triangle({playback.x + 9 * textScale, playback.y + 5 * textScale}, {playback.x + 9 * textScale, playback.y + 23 * textScale},
-                     {playback.x + 22 * textScale, playback.y + 14 * textScale}, white);
-        }
-        Rect single = toolButton(Tool::Step, width, textScale);
-        Color stepColor = !running ? white : Color{.40f, .43f, .45f};
-        triangle({single.x + 5 * textScale, single.y + 6 * textScale}, {single.x + 5 * textScale, single.y + 22 * textScale},
-                 {single.x + 17 * textScale, single.y + 14 * textScale}, stepColor);
-        rectangle({single.x + 19 * textScale, single.y + 6 * textScale, 3 * textScale, 16 * textScale}, stepColor);
-        Rect stop = toolButton(Tool::Stop, width, textScale);
-        rectangle({stop.x + 7 * textScale, stop.y + 7 * textScale, 14 * textScale, 14 * textScale}, white);
-    } else button("SETUP", NEBULA::setupButton(width, textScale), false, true, textScale);
+    drawScores(view, width, height);
+    drawTools(controls, width, textScale);
 
-    float boardTop = 32 + 28 * textScale;
-    float boardHeight = height - boardTop - 40;
-    if (view.rows > 0 && view.cols > 0 && boardHeight > 0 && width > 40) {
-        // choose the largest square cell that fits the available width and height between the bars.
-        float size = std::min((width - 32.0f) / view.cols, boardHeight / view.rows);
-        float left = (width - size * view.cols) / 2;
-        float top = boardTop + (boardHeight - size * view.rows) / 2;
+    Rect board = NEBULA::boardArea(view.rows, view.cols, width, height);
+    if (board.width > 0) {
+        float size = board.width / view.cols;
+        float left = board.x, top = board.y;
         for (int row = 0; row < view.rows; ++row) {
             for (int col = 0; col < view.cols; ++col) {
                 const ViewCell& cell = view.cells[row * view.cols + col];
@@ -416,28 +462,71 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
                 }
             }
         }
+        if (human) drawSelection(controller, queued, board, view.cols);
     }
     // two half-turns form one displayed turn. bottom text shares the top bar's limited scaling.
     float bottom = height - 10.5f - PixelFont::height * font;
     text("TURN " + std::to_string(view.tick / 2), 16, bottom, font, white);
+    if (human && controller.half()) {
+        label("50%", {width / 2.0f - 40 * textScale, bottom - 4, 80 * textScale, 24 * textScale},
+              {.98f, .80f, .32f}, font);
+    }
     std::string_view status = active ? (running ? "RUNNING" : "PAUSED") : "STOPPED";
     if (view.result == Phases::RedWin) status = "RED WINS";
     else if (view.result == Phases::BlueWin) status = "BLUE WINS";
     else if (view.result == Phases::Draw) status = "DRAW";
     text(status, width - 16.0f - PixelFont::measure(status) * font, bottom, font, white);
-    if (active && hover != Tool::None) {
-        std::string_view label = hover == Tool::Playback ? (running ? "PAUSE" : "PLAY")
-                              : hover == Tool::Step ? "HALF TURN" : "STOP";
-        Rect button = toolButton(hover, width, textScale);
+    drawMessage(setup, width, textScale, true);
+    if (controls.hover != Tool::None && !console.opened) {
+        const std::array<std::string_view, 6> names{"", "STEP BACK", running ? "PAUSE" : "PLAY", "STEP FORWARD", "STOP", "RESET"};
+        std::string_view label = names[static_cast<int>(controls.hover)];
+        Rect button = toolButton(controls.hover, width, textScale);
         float length = PixelFont::measure(label) * font;
         float left = std::min(button.x, width - length - 32.0f);
         float top = button.y + button.height + 8;
         rectangle({left, top, length + 16, 28 * textScale}, {.06f, .07f, .08f});
-        text(label, left + 8, top + (28 * textScale - PixelFont::height * font) / 2, font, white);
+        text(label, left + 8, top + (28 * textScale - PixelFont::height * font) / 2, font,
+             controls.enabled(controls.hover) ? white : Color{.62f, .66f, .68f});
     }
 
     if (console.opened) drawConsole(console, width, height, textScale);
     flush(width, height);
+}
+
+void Renderer::drawSelection(const NEBULA::Controller& controller, std::span<const Action> queued, Rect board, int cols) {
+    float size = board.width / cols;
+    Color white{.97f, .98f, .99f}, gold{.98f, .80f, .32f}, outline{.06f, .08f, .09f};
+    // place queue arrows across tile edges, leaving the centered army numbers visible.
+    for (const Action& action : queued) {
+        float dx = 0, dy = 0;
+        switch (action.direction) {
+            case Direction::Up: dy = -1; break;
+            case Direction::Down: dy = 1; break;
+            case Direction::Left: dx = -1; break;
+            case Direction::Right: dx = 1; break;
+        }
+        Point edge{board.x + (action.col + .5f + dx * .5f) * size,
+                   board.y + (action.row + .5f + dy * .5f) * size};
+        Point from{edge.x - dx * size * .15f, edge.y - dy * size * .15f};
+        Point to{edge.x + dx * size * .15f, edge.y + dy * size * .15f};
+        for (int layer = 0; layer < 2; ++layer) {
+            float thickness = size * (layer == 0 ? .11f : .055f);
+            Color color = layer == 0 ? outline : action.half ? gold : white;
+            line(from, to, thickness, color);
+            line({edge.x - dy * size * .12f, edge.y + dx * size * .12f}, to, thickness, color);
+            line({edge.x + dy * size * .12f, edge.y - dx * size * .12f}, to, thickness, color);
+        }
+    }
+    int cell = controller.selection();
+    if (cell < 0) return;
+    float inset = size * .06f, thickness = size * .055f;
+    float left = board.x + (cell % cols) * size + inset, top = board.y + (cell / cols) * size + inset;
+    float span = size - inset * 2;
+    Color color = controller.half() ? gold : white;
+    rectangle({left, top, span, thickness}, color);
+    rectangle({left, top + span - thickness, span, thickness}, color);
+    rectangle({left, top, thickness, span}, color);
+    rectangle({left + span - thickness, top, thickness, span}, color);
 }
 
 void Renderer::flush(int width, int height) {

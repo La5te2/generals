@@ -5,12 +5,13 @@
 #include <string_view>
 
 namespace NEBULA {
-    enum class Command { None, Help, Back, Quit, Turn, Invalid };
+    inline constexpr int maxWindowLevel = 10; // the highest window size level selects full screen.
+    enum class Command { None, Help, Back, Quit, Turn, Win, Auto, Invalid };
     enum class Edit { Left, Right, Home, End, Backspace, Delete, Clear };
 
     struct ParsedCommand {
         Command type = Command::None;
-        int milliseconds = 0;
+        int value = 0;
     };
 
     // translate one line into a command. the caller decides how to execute it.

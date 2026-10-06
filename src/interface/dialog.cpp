@@ -7,6 +7,7 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #include <commdlg.h>
+#include <shobjidl.h>
 #else
 #include <cerrno>
 #include <fcntl.h>
@@ -18,9 +19,47 @@ extern char** environ;
 #endif
 
 namespace NEBULA {
-    std::optional<std::string> chooseFile(GLFWwindow* window, bool program, std::string& error) {
+    std::optional<std::string> choosePath(GLFWwindow* window, PathKind kind, std::string& error) {
         error.clear();
+        bool program = kind == PathKind::Program;
+        bool directory = kind == PathKind::Directory;
 #ifdef _WIN32
+        if (directory) {
+            HRESULT initialized = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+            if (FAILED(initialized)) { error = "Directory dialog initialization failed"; return std::nullopt; }
+            IFileOpenDialog* dialog = nullptr;
+            HRESULT result = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dialog));
+            std::optional<std::string> selected;
+            if (SUCCEEDED(result)) {
+                FILEOPENDIALOGOPTIONS flags{};
+                result = dialog->GetOptions(&flags);
+                if (SUCCEEDED(result)) result = dialog->SetOptions(flags | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_NOCHANGEDIR);
+                if (SUCCEEDED(result)) result = dialog->SetTitle(L"Select recording directory");
+                if (SUCCEEDED(result)) result = dialog->Show(glfwGetWin32Window(window));
+                if (SUCCEEDED(result)) {
+                    IShellItem* item = nullptr;
+                    result = dialog->GetResult(&item);
+                    if (SUCCEEDED(result)) {
+                        wchar_t* path = nullptr;
+                        result = item->GetDisplayName(SIGDN_FILESYSPATH, &path);
+                        if (SUCCEEDED(result)) {
+                            int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, path, -1, nullptr, 0, nullptr, nullptr);
+                            if (size > 0) {
+                                selected.emplace(size, '\0');
+                                WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, path, -1, selected->data(), size, nullptr, nullptr);
+                                selected->pop_back();
+                            } else result = E_FAIL;
+                            CoTaskMemFree(path);
+                        }
+                        item->Release();
+                    }
+                }
+                dialog->Release();
+            }
+            CoUninitialize();
+            if (FAILED(result) && result != HRESULT_FROM_WIN32(ERROR_CANCELLED)) error = "Directory selection failed";
+            return selected;
+        }
         std::array<wchar_t, 32768> path{};
         OPENFILENAMEW dialog{};
         dialog.lStructSize = sizeof(dialog);
@@ -28,7 +67,7 @@ namespace NEBULA {
         dialog.lpstrFile = path.data();
         dialog.nMaxFile = static_cast<DWORD>(path.size());
         dialog.lpstrTitle = program ? L"Select player program" : L"Select replay file";
-        dialog.lpstrFilter = program ? L"Programs (*.exe)\0*.exe\0All files\0*.*\0" : L"All files\0*.*\0";
+        dialog.lpstrFilter = program ? L"Programs (*.exe)\0*.exe\0All files\0*.*\0" : L"Replay files (*.grf)\0*.grf\0All files\0*.*\0";
         dialog.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
         if (!GetOpenFileNameW(&dialog)) {
             DWORD code = CommDlgExtendedError();
@@ -45,12 +84,17 @@ namespace NEBULA {
         (void)window;
         // invoke desktop helpers directly. file paths are returned through stdout rather than inserted into shell commands.
 #ifdef __APPLE__
-        const char* script = program
+        const char* script = directory
+            ? "try\nreturn POSIX path of (choose folder with prompt \"Select recording directory\")\non error number -128\nreturn \"\"\nend try"
+            : program
             ? "try\nreturn POSIX path of (choose file with prompt \"Select player program\")\non error number -128\nreturn \"\"\nend try"
             : "try\nreturn POSIX path of (choose file with prompt \"Select replay file\")\non error number -128\nreturn \"\"\nend try";
         const std::vector<std::vector<const char*>> choices{{"osascript", "-e", script}};
 #else
-        const std::vector<std::vector<const char*>> choices{
+        const std::vector<std::vector<const char*>> choices = directory ? std::vector<std::vector<const char*>>{
+            {"zenity", "--file-selection", "--directory", "--title=Select recording directory"},
+            {"kdialog", "--getexistingdirectory", ".", "--title", "Select recording directory"}
+        } : std::vector<std::vector<const char*>>{
             {"zenity", "--file-selection", program ? "--title=Select player program" : "--title=Select replay file"},
             {"kdialog", "--getopenfilename", ".", "--title", program ? "Select player program" : "Select replay file"}
         };

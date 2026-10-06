@@ -7,6 +7,7 @@
 struct GLFWwindow;
 
 namespace NEBULA {
+    enum class PathKind { Program, Replay, Directory };
     // cancellation returns an empty optional. a failure also supplies an error message.
-    std::optional<std::string> chooseFile(GLFWwindow* window, bool program, std::string& error);
+    std::optional<std::string> choosePath(GLFWwindow* window, PathKind kind, std::string& error);
 }

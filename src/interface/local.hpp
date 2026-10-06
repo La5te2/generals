@@ -1,15 +1,20 @@
-// local session: collect external strategy replies and advance the engine at half-turn deadlines.
+// local session: collect player actions and advance the engine at half-turn deadlines.
 #pragma once
 
 #include "clock.hpp"
 #include "engine/engine.hpp"
 #include "process.hpp"
+#include "replay.hpp"
 #include <condition_variable>
+#include <deque>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <thread>
+#include <vector>
 
 namespace NEBULA {
+    std::array<Observation, 3> matchViews(const States& state);
     enum class LocalState { Empty, Active, Finished };
 
     struct LocalSnapshot {
@@ -18,19 +23,28 @@ namespace NEBULA {
         LocalState state = LocalState::Empty;
         bool running = false;
         std::string error;
+        std::array<std::vector<Action>, 2> queued;
+        std::filesystem::path saved;
+        bool unsaved = false;
     };
 
     class LocalMatch {
     public:
         ~LocalMatch();
-        bool start(const std::array<std::string, 2>& commands, std::uint32_t seed, int milliseconds = 500);
+        // an empty command leaves that player's actions to the caller, for example the window's controller.
+        bool start(const std::array<std::string, 2>& commands, std::uint32_t seed, int milliseconds = 500,
+                   const std::filesystem::path& directory = {});
         void stop();
         void pause();
         void resume();
-        // change future half-turn lengths while preserving the current deadline or paused remainder.
+        // begin a full interval with the new duration, retaining the current running or paused state.
         bool setInterval(int milliseconds);
         // manually settle one half-turn while paused, using replies available at the time of this call.
         bool advance();
+        // queued moves execute in order, one per half-turn, with legality checked at execution time.
+        bool enqueue(int player, const Action& action);
+        // cancel the last queued move, or the entire queue. return the first removed move for cursor placement.
+        std::optional<Action> cancel(int player, bool all);
         // read the latest published board and status, independently of rule updates and strategy communication.
         LocalSnapshot snapshot() const;
 
@@ -41,6 +55,7 @@ namespace NEBULA {
         void finish();
         void updateViews();
         void publish();
+        bool saveRecording();
 
         mutable std::mutex mutex;
         std::condition_variable changed;
@@ -49,7 +64,11 @@ namespace NEBULA {
         Clock clock;
         LocalState phase = LocalState::Empty;
         std::array<std::unique_ptr<StrategyProcess>, 2> strategies;
-        std::string failure;
+        struct Pending { Action action; Clock::Time received; };
+        std::array<std::deque<Pending>, 2> inputs;
+        std::string failure, saveError;
+        std::optional<Recording> recording;
+        std::filesystem::path directory, saved;
         std::shared_ptr<const std::array<Observation, 3>> views = std::make_shared<const std::array<Observation, 3>>();
         // hold this separate lock only while exchanging the small snapshot, never while computing or stopping processes.
         mutable std::mutex snapshotMutex;
