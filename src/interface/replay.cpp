@@ -10,14 +10,15 @@
 namespace NEBULA {
     namespace {
         constexpr std::size_t maxFileBytes = 512 * 1024 * 1024;
+        constexpr int digestLength = 8;
 
         // FNV-1a identifies file contents and detects accidental changes. it is separate from game protocol fields.
         std::string digest(std::string_view bytes) {
-            std::uint64_t value = 14695981039346656037ull;
-            for (unsigned char byte : bytes) { value ^= byte; value *= 1099511628211ull; }
+            std::uint32_t value = 2166136261u;
+            for (unsigned char byte : bytes) { value ^= byte; value *= 16777619u; }
             std::ostringstream output;
             output.imbue(std::locale::classic());
-            output << std::hex << std::setfill('0') << std::setw(16) << value;
+            output << std::hex << std::setfill('0') << std::setw(digestLength) << value;
             return output.str();
         }
 
@@ -238,7 +239,7 @@ namespace NEBULA {
             previous = std::move(state);
         }
         std::string bytes = output.str();
-        if (bytes.size() + 17 > maxFileBytes) { error = "Recording exceeds 512 MiB"; return std::nullopt; }
+        if (bytes.size() + digestLength + 1 > maxFileBytes) { error = "Recording exceeds 512 MiB"; return std::nullopt; }
         std::string hash = digest(bytes);
         bytes += hash + '\n';
         if (!replayDirectory(directory, error)) return std::nullopt;
@@ -273,9 +274,9 @@ namespace NEBULA {
         std::string bytes;
         if (!readFile(path, bytes, error)) return false;
         error = "Replay file is malformed";
-        if (bytes.size() < 18 || bytes.back() != '\n') return false;
-        auto checksum = bytes.size() - 17;
-        if (bytes[checksum - 1] != '\n' || bytes.substr(checksum, 16) != digest(std::string_view(bytes).substr(0, checksum))) {
+        if (bytes.size() < digestLength + 2 || bytes.back() != '\n') return false;
+        auto checksum = bytes.size() - digestLength - 1;
+        if (bytes[checksum - 1] != '\n' || bytes.substr(checksum, digestLength) != digest(std::string_view(bytes).substr(0, checksum))) {
             error = "Replay checksum differs from its contents";
             return false;
         }

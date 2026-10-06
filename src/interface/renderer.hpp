@@ -44,8 +44,8 @@ private:
     void icon(ViewTerrain terrain, Rect bounds, Color color);
     void drawSelection(const NEBULA::Controller& controller, std::span<const Action> queued, Rect board, int cols);
     void drawConsole(const NEBULA::Console& console, int width, int height, float textScale);
-    void drawMessage(const NEBULA::Setup& setup, int width, float textScale, bool board = false);
-    void drawScores(const Observation& view, int width, int height);
+    void drawMessage(const NEBULA::Setup& setup, int width, int height, bool board = false);
+    void drawScores(const Observation& view, const NEBULA::Setup& setup, int width, int height);
     void drawTools(const NEBULA::BoardControls& controls, int width, float scale);
     void label(std::string_view value, Rect bounds, Color color, float scale = 1.5f);
     void button(std::string_view value, Rect bounds, bool selected = false, bool enabled = true, float scale = 1);

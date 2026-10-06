@@ -347,18 +347,22 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
             fileInput("REPLAY FILE", 2, 0);
         }
     }
-    drawMessage(setup, width, textScale);
+    drawMessage(setup, width, height);
     if (console.opened) drawConsole(console, width, height, textScale);
     flush(width, height);
 }
 
-void Renderer::drawMessage(const NEBULA::Setup& setup, int width, float textScale, bool board) {
+void Renderer::drawMessage(const NEBULA::Setup& setup, int width, int height, bool board) {
     // operation feedback wraps at word boundaries and fades with the notification's elapsed time.
+    float textScale = NEBULA::barScale(height);
     std::string_view message = setup.message;
     float opacity = setup.messageOpacity();
     Color feedback{.62f, .66f, .68f, opacity};
     Rect row = NEBULA::messageArea(width, textScale);
-    if (board) row.y += 44 * textScale;
+    if (board) {
+        Rect names = NEBULA::scoreNamesArea(width, height);
+        row = {names.x, names.y + names.height + 44 * textScale, names.width, row.height};
+    }
     auto columns = static_cast<std::size_t>(std::max(1.0f, row.width / (10 * textScale)));
     float top = row.y;
     while (!message.empty()) {
@@ -374,24 +378,40 @@ void Renderer::drawMessage(const NEBULA::Setup& setup, int width, float textScal
     }
 }
 
-void Renderer::drawScores(const Observation& view, int width, int height) {
+void Renderer::drawScores(const Observation& view, const NEBULA::Setup& setup, int width, int height) {
     Rect area = NEBULA::scoreArea(width, height);
     float scale = NEBULA::barScale(height);
-    float gap = 24 * scale;
-    float span = (area.width - gap) / 2;
-    const std::array<std::string_view, 2> names{"RED", "BLUE"};
+    std::array<std::string_view, 2> names{"RED", "BLUE"};
+    if (setup.scene == NEBULA::Scene::Online && view.player >= 0 && view.player < 2) {
+        if (!setup.fields[0].input.empty()) names[view.player] = setup.fields[0].input;
+        names[1 - view.player] = "OPPONENT";
+    }
     const std::array<Color, 2> colors{{{.82f, .23f, .26f}, {.20f, .38f, .73f}}};
-    for (int player = 0; player < 2; ++player) {
-        float left = area.x + player * (span + gap);
-        label(names[player], {left, area.y, span * .2f, area.height}, colors[player], 1.25f * scale);
-        // each heading and number share a fixed column center, independent of the number of digits.
-        for (int column = 0; column < 2; ++column) {
-            Rect bounds{left + span * (.2f + column * .4f), area.y, span * .4f, area.height / 2};
-            label(column == 0 ? "ARMY" : "LAND", bounds, {.62f, .66f, .68f}, scale);
-            bounds.y += bounds.height;
-            auto value = column == 0 ? view.armies[player] : view.land[player];
-            label(std::to_string(value), bounds, colors[player], 1.5f * scale);
+    const Color paper{.95f, .96f, .97f}, ink{.08f, .10f, .11f};
+    const std::array<std::string_view, 3> headings{"", "Army", "Land"};
+    constexpr std::array<float, 4> columns{0, .16f, .58f, 1};
+    float border = scale, rowHeight = area.height / 3;
+    rectangle(area, ink);
+    // the first column shows the player's color. the two score columns keep their headings and numbers centered.
+    for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 3; ++column) {
+            Rect cell{area.x + area.width * columns[column] + border, area.y + row * rowHeight + border,
+                      area.width * (columns[column + 1] - columns[column]) - border * 2, rowHeight - border * 2};
+            bool playerCell = row > 0 && column == 0;
+            rectangle(cell, playerCell ? colors[row - 1] : paper);
+            std::string value;
+            if (row == 0) value = headings[column];
+            else if (column > 0) value = std::to_string(column == 1 ? view.armies[row - 1] : view.land[row - 1]);
+            label(value, cell, playerCell ? paper : ink, 1.25f * scale);
         }
+    }
+    Rect players = NEBULA::scoreNamesArea(width, height);
+    for (int player = 0; player < 2; ++player) {
+        Rect row{players.x, players.y + player * players.height / 2, players.width, players.height / 2};
+        rectangle({row.x, row.y + (row.height - 8 * scale) / 2, 8 * scale, 8 * scale}, colors[player]);
+        row.x += 14 * scale;
+        row.width -= 14 * scale;
+        label(names[player], row, paper, scale);
     }
 }
 
@@ -420,7 +440,7 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
         text(labels[mode], button.x + (button.width - length * font) / 2,
              button.y + (button.height - PixelFont::height * font) / 2, font, white);
     }
-    drawScores(view, width, height);
+    drawScores(view, setup, width, height);
     drawTools(controls, width, textScale);
 
     Rect board = NEBULA::boardArea(view.rows, view.cols, width, height);
@@ -476,14 +496,15 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     else if (view.result == Phases::BlueWin) status = "BLUE WINS";
     else if (view.result == Phases::Draw) status = "DRAW";
     text(status, width - 16.0f - PixelFont::measure(status) * font, bottom, font, white);
-    drawMessage(setup, width, textScale, true);
+    drawMessage(setup, width, height, true);
     if (controls.hover != Tool::None && !console.opened) {
         const std::array<std::string_view, 6> names{"", "STEP BACK", running ? "PAUSE" : "PLAY", "STEP FORWARD", "STOP", "RESET"};
         std::string_view label = names[static_cast<int>(controls.hover)];
         Rect button = toolButton(controls.hover, width, textScale);
         float length = PixelFont::measure(label) * font;
         float left = std::min(button.x, width - length - 32.0f);
-        float top = button.y + button.height + 8;
+        Rect players = NEBULA::scoreNamesArea(width, height);
+        float top = players.y + players.height + 8;
         rectangle({left, top, length + 16, 28 * textScale}, {.06f, .07f, .08f});
         text(label, left + 8, top + (28 * textScale - PixelFont::height * font) / 2, font,
              controls.enabled(controls.hover) ? white : Color{.62f, .66f, .68f});

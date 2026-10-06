@@ -549,7 +549,7 @@ namespace NEBULA {
     }
 
     int run(GLFWwindow* window) {
-        // run() releases the renderer's GPU resources before main() destroys the window.
+        // run() releases the renderer's GPU resources before the entry function destroys the window.
         WindowState app;
         if (!app.renderer.init()) return 1;
         app.setWindow(window, 4);
@@ -674,7 +674,9 @@ namespace NEBULA {
             redraw(target);
         });
 
-        redraw(window);
+        // prepare the first frame at the chosen size before making the window visible.
+        drawWindow(window);
+        glfwShowWindow(window);
         // observe the local session without advancing it. its clock runs independently of this window loop.
         while (!app.closing && !glfwWindowShouldClose(window)) {
             bool repaint = app.refresh();
@@ -717,7 +719,11 @@ namespace NEBULA {
     }
 }
 
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+#else
 int main() {
+#endif
     glfwSetErrorCallback([](int code, const char* message) {
         std::cerr << "GLFW " << code << ": " << message << '\n';
     });
@@ -729,6 +735,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif

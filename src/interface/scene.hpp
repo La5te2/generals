@@ -93,21 +93,35 @@ namespace NEBULA {
     // top and bottom controls scale with window height, between 100% and 150% of their reference size.
     inline float barScale(int height) { return std::clamp(height / 800.0f, 1.0f, 1.5f); }
 
-    // public totals occupy their own centered row below the navigation and playback controls.
+    // align the score table with the right edge of the playback controls.
     inline Rect scoreArea(int width, int height) {
         float scale = barScale(height);
-        float span = std::min(560 * scale, std::max(0.0f, width - 32.0f));
-        return {(width - span) / 2, 20 + 28 * scale, span, 40 * scale};
+        float span = std::min(172 * scale, std::max(0.0f, width - 32.0f));
+        return {width - 16.0f - span, 12 + 36 * scale, span, 84 * scale};
     }
 
-    // fit square cells between the bars. drawing and board input use this same rectangle.
-    inline Rect boardArea(int rows, int cols, int width, int height) {
+    inline Rect scoreNamesArea(int width, int height) {
         Rect scores = scoreArea(width, height);
-        float top = scores.y + scores.height + 12;
-        float available = height - top - 40;
-        if (rows <= 0 || cols <= 0 || available <= 0 || width <= 40) return {};
-        float cell = std::min((width - 32.0f) / cols, available / rows);
-        return {(width - cell * cols) / 2, top + (available - cell * rows) / 2, cell * cols, cell * rows};
+        float scale = barScale(height);
+        return {scores.x, scores.y + scores.height + 6 * scale, scores.width, 40 * scale};
+    }
+
+    // center the board in the window. use space below the score table when the right margin is too narrow.
+    // drawing and board input use this same rectangle.
+    inline Rect boardArea(int rows, int cols, int width, int height) {
+        float top = 32 + 28 * barScale(height);
+        if (rows <= 0 || cols <= 0 || height <= top + 40 || width <= 32) return {};
+        auto centered = [&](float upper) {
+            float available = height - upper - 40;
+            if (available <= 0) return Rect{};
+            float cell = std::min((width - 32.0f) / cols, available / rows);
+            return Rect{(width - cell * cols) / 2, upper + (available - cell * rows) / 2, cell * cols, cell * rows};
+        };
+        Rect board = centered(top);
+        Rect scores = scoreArea(width, height), names = scoreNamesArea(width, height);
+        float lower = names.y + names.height + 12;
+        if (board.x + board.width + 12 > scores.x && board.y < lower) board = centered(lower);
+        return board;
     }
 
     inline Rect menuTitle(int width, int height) {
