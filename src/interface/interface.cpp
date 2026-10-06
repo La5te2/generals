@@ -1,4 +1,4 @@
-// application entry point: bring the game components together into an interactive desktop application.
+// interface entry point: bring the game components together into an interactive desktop application.
 // create the window and OpenGL context, handle page navigation, and route keyboard, mouse and console input.
 // coordinate session controls and display updates, then release resources when the application closes.
 #include "local.hpp"

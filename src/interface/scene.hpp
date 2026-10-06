@@ -19,7 +19,7 @@ enum class Tool { None, Backward, Playback, Forward, Stop, Reset };
 
 // page status and layout definition
 namespace NEBULA {
-    // configuration state and layout are shared by nebula.cpp's input handling and renderer.cpp's drawing.
+    // configuration state and layout are shared by interface.cpp's input handling and renderer.cpp's drawing.
     enum class Scene { Home, Local, Online, Replay };
     inline constexpr std::array tools{Tool::Backward, Tool::Playback, Tool::Forward, Tool::Stop, Tool::Reset};
 

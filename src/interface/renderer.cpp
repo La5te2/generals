@@ -556,6 +556,6 @@ void Renderer::flush(int width, int height) {
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)), vertices.data(), GL_STREAM_DRAW);
-    // this submits drawing commands. drawWindow() in nebula.cpp presents the frame with glfwSwapBuffers().
+    // this submits drawing commands. drawWindow() in interface.cpp presents the frame with glfwSwapBuffers().
     glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
 }

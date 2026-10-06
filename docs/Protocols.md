@@ -136,7 +136,7 @@ if initial:
         print("1 0 0 0 0", flush=True)
 ```
 
-[simpleG.cpp](src/agents/simpleG.cpp) provides a complete C++ example of the same exchange.
+[simple.cpp](../src/agents/simple.cpp) provides a complete C++ example of the same exchange.
 
 ## Interface Console
 

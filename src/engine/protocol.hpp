@@ -13,7 +13,7 @@
 #include <string>
 
 namespace Protocol {
-    // one process plays one game. initialization precedes observations, and EOF ends the game.
+    // one process corresponds to one player. initialization precedes observations, and EOF ends the game.
     // each observation receives one action in response. stdout carries protocol data, stderr diagnostics.
     // a slow strategy receives the latest pending observation after replying. its next tick can therefore skip ahead.
     struct Init {

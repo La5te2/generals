@@ -2,3 +2,5 @@
 /tmp/
 /.vscode/
 /replays/
+/runs/
+__pycache__/
