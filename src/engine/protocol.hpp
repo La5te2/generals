@@ -51,8 +51,9 @@ namespace Protocol {
         std::istringstream message(line);
         message.imbue(std::locale::classic());
         Init init;
-        if (!integer(message, init.player) || !integer(message, init.rows) || !integer(message, init.cols) ||
-            !valid(init)) return std::nullopt;
+        if (!integer(message, init.player) || !integer(message, init.rows) || !integer(message, init.cols) || !valid(init)) {
+            return std::nullopt;
+        }
         message >> std::ws;
         if (!message.eof()) return std::nullopt;
         return init;

@@ -1,4 +1,4 @@
-// online session: keep server communication off the window thread, publish account-only views, and send one action per update.
+// online session: keep server communication off the window thread, publish account-only views, and track queued actions until server confirmation.
 // the server settles moves and decides the outcome. stopping a session cancels its queue entry or leaves its game.
 #include "online.hpp"
 #include "process.hpp"
@@ -144,6 +144,7 @@ namespace NEBULA::OnlineProtocol {
             next.rows = static_cast<int>(height);
             next.player = player;
             next.tick = tick;
+            next.result = view.result;
             for (int cell = 0; cell < count; ++cell) {
                 auto terrain = nextMap[2 + count + cell], army = nextMap[2 + cell];
                 require(terrain >= -4 && terrain <= 1, "Server map contains an unsupported player or terrain");
@@ -211,6 +212,54 @@ namespace NEBULA::OnlineProtocol {
         return cell;
     }
 
+    // human routes and strategy replies share the same numbered queue and ordered outgoing messages.
+    struct Moves {
+        struct Pending { Action action; std::int64_t index; };
+        std::deque<Pending> pending;
+        std::deque<Json> outgoing;
+        std::int64_t issued = 0, transmitted = 0, confirmed = 0;
+
+        bool append(const Observation& view, const Action& action) {
+            auto to = target(view, action);
+            if (!to || pending.size() >= Capacity || outgoing.size() >= 2 * Capacity || issued == maxInteger) return false;
+            // an earlier queued move can acquire this source. the server checks ownership and army when executing it.
+            auto index = ++issued;
+            outgoing.push_back(Json::array({"attack", action.row * view.cols + action.col, *to, action.half, index}));
+            pending.push_back({action, index});
+            return true;
+        }
+
+        void confirm(const Json& data) {
+            // some updates omit this field. a later map alone leaves the pending queue unchanged.
+            if (!data.contains("attackIndex") || data["attackIndex"].is_null()) return;
+            auto index = integer(data["attackIndex"], -1, transmitted);
+            confirmed = std::max(confirmed, index);
+            while (!pending.empty() && pending.front().index <= confirmed) pending.pop_front();
+        }
+
+        std::optional<Action> cancel(bool all) {
+            if (pending.empty()) return {};
+            Action removed = all ? pending.front().action : pending.back().action;
+            if (all) {
+                pending.clear();
+                outgoing.clear();
+                outgoing.push_back(Json::array({"clear_moves"}));
+            } else {
+                auto index = pending.back().index;
+                auto unsent = std::find_if(outgoing.begin(), outgoing.end(), [index](const Json& message) {
+                    return message[0] == "attack" && message[4] == index;
+                });
+                if (unsent != outgoing.end()) outgoing.erase(unsent);
+                else outgoing.push_back(Json::array({"undo_move"}));
+                pending.pop_back();
+            }
+            // issued indices keep increasing, including after cancellation, so old confirmations stay unambiguous.
+            return removed;
+        }
+
+        void clear() { pending.clear(); outgoing.clear(); }
+    };
+
     inline Json join(const OnlineConfig& config) {
         if (!config.room.empty()) {
             Json event = Json::array({"join_private", config.room, config.userId});
@@ -235,12 +284,19 @@ namespace NEBULA {
             std::mutex mutex;
             std::condition_variable changed;
             std::deque<Frame> frames;
-            std::deque<Action> inputs;
-            std::optional<Action> sent;
+            Moves moves;
             std::size_t bytes = 0;
             bool closing = false, human = true;
             std::string failure;
             MatchSnapshot published;
+
+            // callers hold mutex so input changes and published route markers describe the same queue.
+            void publishQueue() {
+                published.queued = {};
+                if (published.player >= 0) {
+                    for (const auto& move : moves.pending) published.queued[published.player].push_back(move.action);
+                }
+            }
         };
         std::shared_ptr<Mailbox> mail = std::make_shared<Mailbox>();
         std::thread worker;
@@ -249,8 +305,7 @@ namespace NEBULA {
             {
                 std::lock_guard lock(mail->mutex);
                 mail->closing = true;
-                mail->inputs.clear();
-                mail->sent.reset();
+                mail->moves.clear();
                 mail->changed.notify_all();
             }
             if (worker.joinable()) worker.join();
@@ -301,20 +356,14 @@ namespace NEBULA {
             bool strategyStarted = false, acted = true, completed = false;
             auto handshakeDeadline = Time::now() + 15s;
             auto heartbeatDeadline = handshakeDeadline, queueDeadline = Time::time_point::max();
-            auto gameDeadline = Time::time_point::max(), actionDeadline = Time::time_point::min();
+            auto gameDeadline = Time::time_point::max();
+            auto finishDeadline = Time::time_point::max();
             auto heartbeat = 45s;
-            Time::time_point previousUpdate{};
-            std::chrono::milliseconds cadence{500}; // initial update interval estimate until consecutive ticks arrive.
 
             auto publish = [&] {
                 std::lock_guard lock(mail->mutex);
-                state.queued = {};
-                if (state.player >= 0) {
-                    auto& queue = state.queued[state.player];
-                    if (mail->sent) queue.push_back(*mail->sent);
-                    queue.insert(queue.end(), mail->inputs.begin(), mail->inputs.end());
-                }
                 mail->published = state;
+                mail->publishQueue();
             };
             auto publishView = [&] {
                 auto views = std::make_shared<std::array<Observation, 3>>();
@@ -391,14 +440,14 @@ namespace NEBULA {
                 } else if (name == "game_update") {
                     require(started, "Board update arrived before game start");
                     bool advanced = board.update(data, state.player);
-                    if (advanced) {
+                    {
                         std::lock_guard lock(mail->mutex);
-                        mail->sent.reset();
+                        mail->moves.confirm(data);
                     }
                     gameDeadline = Time::now() + 30s;
-                    state.status = "Playing";
+                    if (!completed) state.status = "Playing";
                     publishView();
-                    if (!advanced) return;
+                    if (completed || !advanced) return;
                     acted = false;
                     if (!config.command.empty()) {
                         if (!strategyStarted) {
@@ -407,29 +456,40 @@ namespace NEBULA {
                         }
                         strategy.request(board.view);
                     }
-                } else if ((name == "game_won" || name == "game_lost") && started) {
+                } else if ((name == "game_won" || name == "game_lost") && started && !completed) {
                     int winner = name == "game_won" ? state.player : 1 - state.player;
                     board.view.result = winner == 0 ? Phases::RedWin : Phases::BlueWin;
                     state.status = name == "game_won" ? "Victory" : "Defeat";
                     completed = true;
+                    state.running = false;
+                    // the result announces the winner. keep receiving final map diffs for up to two seconds.
+                    // this keeps automatic matchmaking from disconnecting before the remaining updates arrive.
+                    finishDeadline = Time::now() + 2s;
+                    {
+                        std::lock_guard lock(mail->mutex);
+                        mail->moves.clear();
+                    }
                     publishView();
                 }
             };
 
             try {
                 socket.open(config.server == Server::Main ? "wss://ws.generals.io/socket.io/?EIO=4&transport=websocket" : "wss://botws.generals.io/socket.io/?EIO=4&transport=websocket");
-                while (!completed) {
+                while (true) {
                     std::deque<Frame> frames;
                     {
                         std::unique_lock lock(mail->mutex);
-                        mail->changed.wait_for(lock, strategyStarted || started ? 5ms : 100ms, [&] {
-                            return mail->closing || !mail->frames.empty() || !mail->failure.empty();
+                        mail->changed.wait_for(lock, !completed && strategyStarted ? 5ms : 100ms, [&] {
+                            return mail->closing || !mail->frames.empty() || !mail->failure.empty() || !mail->moves.outgoing.empty();
                         });
                         if (mail->closing) break;
                         frames.swap(mail->frames);
                         mail->bytes = 0;
                         // consume final result packets before handling a transport close in the same batch.
-                        if (frames.empty() && !mail->failure.empty()) throw Error(mail->failure);
+                        if (frames.empty() && !mail->failure.empty()) {
+                            if (completed) break;
+                            throw Error(mail->failure);
+                        }
                     }
                     for (const auto& frame : frames) {
                         {
@@ -471,63 +531,45 @@ namespace NEBULA {
                             while (cursor < packet.size() && packet[cursor] >= '0' && packet[cursor] <= '9') ++cursor;
                             require(cursor - 2 <= 12, "Oversized event acknowledgement identifier");
                             auto payload = parse(std::string_view(packet).substr(cursor));
-                            bool update = payload.is_array() && !payload.empty() && payload[0] == "game_update";
-                            auto oldTick = board.view.tick;
                             event(payload);
-                            if (update && board.view.tick > oldTick) {
-                                // consecutive ticks estimate the update interval, clamped to 50 through 5000 ms.
-                                // accept actions during the first 80% to leave time for transmission before the next update.
-                                // this is a client-side cutoff. the server determines when each action executes.
-                                if (previousUpdate != Time::time_point{} && board.view.tick - oldTick == 1) {
-                                    cadence = std::clamp(std::chrono::duration_cast<std::chrono::milliseconds>(frame.arrival - previousUpdate), 50ms, 5000ms);
-                                }
-                                previousUpdate = frame.arrival;
-                                actionDeadline = frame.arrival + cadence * 4 / 5;
-                            }
                             if (cursor > 2) send("43" + packet.substr(2, cursor - 2) + "[]");
                         } else if (packet.starts_with("44")) {
                             auto reason = parse(std::string_view(packet).substr(2));
                             throw Error(rejection("connect_error", reason, config.userId));
-                        } else if (packet == "1") {
-                            throw Error("Server closed the Engine.IO transport");
-                        } else if (packet.starts_with("41")) {
-                            throw Error("Server disconnected the Socket.IO session");
+                        } else if (packet == "1" || packet.starts_with("41")) {
+                            if (!completed) throw Error(packet == "1" ? "Server closed the Engine.IO transport" : "Server disconnected the Socket.IO session");
+                            finishDeadline = Time::now();
                         } else require(packet == "6" || packet.front() == '3' || packet.starts_with("43"), "Unsupported server packet");
-                        if (completed) break;
                     }
-                    if (completed) break;
                     auto now = Time::now();
+                    if (completed) {
+                        if (now >= finishDeadline) break;
+                        continue;
+                    }
                     require(joined || now < handshakeDeadline, "Connection or queue handshake timed out");
                     require(now < heartbeatDeadline, "Server heartbeat timed out");
                     require(now < queueDeadline, "Private room acknowledgement timed out");
                     require(now < gameDeadline, "Server board updates timed out");
                     if (strategyStarted) require(strategy.error().empty(), "Strategy stopped or returned an invalid action");
-                    if (!board.received || acted) continue;
-                    if (now >= actionDeadline) { acted = true; continue; }
-                    std::optional<Action> action;
+                    if (!board.received) continue;
                     {
                         std::lock_guard lock(mail->mutex);
                         if (mail->closing || !mail->frames.empty()) continue;
-                        if (!strategyStarted && !mail->inputs.empty()) {
-                            action = mail->inputs.front();
-                            mail->inputs.pop_front();
+                        if (strategyStarted && !acted && mail->moves.pending.empty()) {
+                            // keep one strategy move pending. replies to older observations expire when the board advances.
+                            if (auto action = strategy.reply(board.view.tick, Time::now())) {
+                                acted = true;
+                                if (action->type == ActionType::Move) mail->moves.append(board.view, *action);
+                            }
                         }
-                    }
-                    if (strategyStarted) action = strategy.reply(board.view.tick, actionDeadline);
-                    if (!action) continue;
-                    acted = true;
-                    if (auto to = target(board.view, *action)) {
-                        int from = action->row * board.view.cols + action->col;
-                        const auto& cell = board.view.cells[from];
-                        if (cell.owner == state.player && cell.army >= 2) {
-                            std::lock_guard lock(mail->mutex);
-                            if (mail->closing || !mail->frames.empty()) continue;
-                            // keep at most one move on the server. the remaining human route stays locally cancellable.
-                            emit(Json::array({"attack", from, *to, action->half}));
-                            if (!strategyStarted) mail->sent = *action;
+                        // send before removing an outgoing message. the same lock preserves attack/undo ordering.
+                        for (const auto& message : mail->moves.outgoing) {
+                            emit(message);
+                            if (message[0] == "attack") mail->moves.transmitted = message[4].get<std::int64_t>();
                         }
+                        mail->moves.outgoing.clear();
+                        mail->publishQueue();
                     }
-                    publish();
                 }
             } catch (const Error& error) { state.error = error.what(); }
             catch (const Json::exception&) { state.error = "Malformed JSON in server data"; }
@@ -548,8 +590,7 @@ namespace NEBULA {
             else if (!completed) state.status = "Stopped";
             {
                 std::lock_guard lock(mail->mutex);
-                mail->inputs.clear();
-                mail->sent.reset();
+                mail->moves.clear();
                 mail->closing = true;
             }
             publish();
@@ -633,13 +674,9 @@ namespace NEBULA {
         auto& mail = *session->mail;
         std::lock_guard lock(mail.mutex);
         const auto& shown = mail.published;
-        if (mail.closing || !mail.human || shown.state != MatchState::Active || player < 0 || player != shown.player || mail.inputs.size() >= Capacity) return false;
-        if (!target((*shown.views)[player], action)) return false;
-        mail.inputs.push_back(action);
-        auto& queue = mail.published.queued[player];
-        queue.clear();
-        if (mail.sent) queue.push_back(*mail.sent);
-        queue.insert(queue.end(), mail.inputs.begin(), mail.inputs.end());
+        if (mail.closing || !mail.human || shown.state != MatchState::Active || !shown.running || player < 0 || player != shown.player) return false;
+        if (!mail.moves.append((*shown.views)[player], action)) return false;
+        mail.publishQueue();
         mail.changed.notify_all();
         return true;
     }
@@ -647,14 +684,10 @@ namespace NEBULA {
     std::optional<Action> OnlineMatch::cancel(int player, bool all) {
         auto& mail = *session->mail;
         std::lock_guard lock(mail.mutex);
-        if (player < 0 || player != mail.published.player || mail.inputs.empty()) return {};
-        Action removed = all ? mail.inputs.front() : mail.inputs.back();
-        if (all) mail.inputs.clear();
-        else mail.inputs.pop_back();
-        auto& queue = mail.published.queued[player];
-        queue.clear();
-        if (mail.sent) queue.push_back(*mail.sent);
-        queue.insert(queue.end(), mail.inputs.begin(), mail.inputs.end());
+        if (mail.closing || !mail.published.running || player < 0 || player != mail.published.player) return {};
+        auto removed = mail.moves.cancel(all);
+        mail.publishQueue();
+        mail.changed.notify_all();
         return removed;
     }
 }

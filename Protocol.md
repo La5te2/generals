@@ -109,7 +109,7 @@ The exchange follows a request/reply sequence. The strategy reads one complete o
 
 For LOCAL, a matching reply received by the deadline participates in that half-turn. If the deadline arrives while the session is still waiting, the action for that half-turn becomes Pass. A slow strategy may receive observations with gaps in their tick values.
 
-For ONLINE, a timely move is eligible for submission to the server, while Pass waits for the next observation. Expired replies are discarded. A syntactically valid but illegal move is skipped, and the game continues. Malformed replies, oversized lines, and premature process exit end the session.
+For ONLINE, a move is eligible for submission while its observation tick matches the latest received board. Pass waits for the next observation, and replies to older ticks expire. Submitted moves remain pending until server confirmation. The server checks move legality at execution time and advances the processed index for both executed and discarded moves. Malformed replies, oversized lines, and premature process exit end the session.
 
 Each action line allows up to 255 bytes before LF. With CRLF endings, CR counts toward that limit. Fields are whitespace-separated integers, and each line follows the field count specified above.
 
@@ -201,7 +201,7 @@ Bot:  42["join_private", ROOM, USER_ID]
 Main: 42["join_private", ROOM, USER_ID, CLIENT_KEY, null]
 ```
 
-Both servers accept `42["attack", from, to, half]`. The `half` argument is a JSON boolean. Source and destination use row-major indices, where $r$ is the row, $c$ is the column, and $W$ is the board width:
+Movement uses `42["attack", from, to, half, index]`. The `half` argument is a JSON boolean. The client assigns increasing positive integer indices within each game, including after cancellation. Source and destination use row-major indices, where $r$ is the row, $c$ is the column, and $W$ is the board width:
 
 $$
 i = rW + c, \qquad 0 \le r < H, \quad 0 \le c < W.
@@ -209,11 +209,15 @@ $$
 
 `42["cancel"]` leaves the matchmaking queue, and `42["leave_game"]` leaves a game.
 
+`42["undo_move"]` removes the newest queued move on the server. `42["clear_moves"]` clears the server's movement queue. These events affect moves still awaiting execution when the server receives them.
+
 ### Game Events
 
 `queue_update` reports queue status, and `pre_game_start` announces an upcoming game. `game_start` supplies `playerIndex`, the `usernames` array, and game options. This section covers mainstream 1v1 with two opposing players, using indices `0` for red and `1` for blue.
 
 Within `game_update`, `turn` is the half-turn counter. `map_diff` patches the previous map array, and `cities_diff` patches the previous city-index array. `generals` gives both general indices, with `-1` for a hidden general. Entries in `scores` identify players through `i` and provide land through `tiles` and army through `total`.
+
+`attackIndex` identifies the latest processed move. Pending moves with indices at or below this value have been processed, including moves discarded as illegal. Subsequent board data describes the actual outcome. A missing or null `attackIndex` leaves the previous confirmation in effect.
 
 A diff alternates a count of old values to copy with a count of replacement values and the replacements themselves. A trailing copy count can stand alone. Both copied and replaced runs advance the cursor in the old array. For example:
 

@@ -59,7 +59,9 @@ namespace NEBULA {
             } else displayed = setup.scene == Scene::Online ? online.snapshot() : static_cast<MatchSnapshot>(local.snapshot());
             if (setup.scene == Scene::Online && displayed.player >= 0) {
                 perspective = displayed.player;
-                if (setup.humanPlayer(5) && controller.player() < 0 && view().cols > 0 && active()) controller.reset(perspective, view());
+                if (setup.humanPlayer(5) && controller.player() < 0 && view().cols > 0 && active()) {
+                    controller.reset(perspective, view());
+                }
             }
             controller.sync(displayed);
         }
@@ -518,7 +520,7 @@ namespace NEBULA {
 #ifdef _WIN32
         HWND handle = glfwGetWin32Window(window);
         UINT_PTR id = reinterpret_cast<UINT_PTR>(window);
-        bool live = app.showingBoard && app.running();
+        bool live = app.showingBoard && (app.running() || (app.setup.scene == Scene::Online && app.active()));
         if (live || !app.setup.message.empty()) {
             double delay = live ? 1.0 / 60 : app.setup.messageWait();
             UINT milliseconds = static_cast<UINT>(delay * 1000) + 1;
@@ -731,7 +733,8 @@ namespace NEBULA {
             if (repaint) redraw(window);
 
             // wait for the earlier timer. a negative delay means that only input can wake the window.
-            double seconds = app.showingBoard && app.running() && !app.repaintTimer ? 1.0 / 60 : -1;
+            bool live = app.showingBoard && (app.running() || (app.setup.scene == Scene::Online && app.active()));
+            double seconds = live && !app.repaintTimer ? 1.0 / 60 : -1;
             if (!app.repaintTimer && !app.setup.message.empty()) {
                 double messageDelay = app.setup.messageWait();
                 seconds = seconds < 0 ? messageDelay : std::min(seconds, messageDelay);

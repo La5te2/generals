@@ -49,11 +49,11 @@ PROXY takes an anonymous HTTP CONNECT address such as http://127.0.0.1:10090. Us
 The top-right arrow connects with the selected settings. Online timing and game results come from the server.
 
 HUMAN CONTROLS
-Click an owned tile to select it. Click a neighboring tile or press WASD or an arrow key to queue a move. Further moves extend the queued route.
+Click an owned tile to select it. Click a neighboring tile or press WASD or an arrow key to queue a move. Further moves will extend the queued route shown on the map.
 
 Shift or a second click on the selected tile toggles half-army movement for the next move. G selects the general. Right-click clears the selection.
 
-E removes the last queued move. Q clears the queued route. Space toggles pause in local play.
+E removes the last queued move. Q clears the queued route. Space toggles trigger pause in local play.
 
 PLAYBACK AND NAVIGATION
 The pause button and Space toggle local play or replay playback. Step buttons operate while paused. Local program-versus-program play supports forward steps. Replay supports both directions, also using Left and Right.
