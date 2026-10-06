@@ -1,4 +1,4 @@
-// standalone inference connects a trained TorchScript model to the agent protocol through shared observation memory.
+// run the trained model on CPU as an independent agent, converting observations into features and returning actions.
 #include "features.hpp"
 #include "engine/protocol.hpp"
 #ifdef _MSC_VER
@@ -19,8 +19,9 @@ int main(int argc, char** argv) {
     try {
         std::ios::sync_with_stdio(false);
         std::cin.tie(nullptr);
-        at::set_num_threads(2);
-        auto model = torch::jit::load(argv[1]);
+        at::set_num_threads(1);
+        at::set_num_interop_threads(1);
+        auto model = torch::jit::load(argv[1], at::kCPU);
         model.eval();
         at::NoGradGuard inference;
         int side = static_cast<int>(model.attr("side").toInt());

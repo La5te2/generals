@@ -6,12 +6,12 @@ from torch import nn
 from torch.nn import functional as F
 
 
-def inputs(arrays, device):
-    board, legal, history = arrays
+def inputs(tensors, device):
+    board, legal, history = tensors
     # collection and PPO see exactly the same quantized board values.
-    return (torch.from_numpy(board).to(dtype=torch.bfloat16).to(device=device, dtype=torch.float32),
-            torch.from_numpy(legal).to(device=device, dtype=torch.bool),
-            torch.from_numpy(history).to(device=device))
+    return (board.to(device=device, dtype=torch.bfloat16).to(dtype=torch.float32),
+            legal.to(device=device, dtype=torch.bool),
+            history.to(device=device))
 
 
 class Block(nn.Module):

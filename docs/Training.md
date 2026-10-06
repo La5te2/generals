@@ -1,26 +1,24 @@
 # Training
 
-The 2026 paper provides the target algorithm for the agent in `src/agents/nebula/`. PyTorch handles the neural network and optimization, while the existing C++ engine supplies self-play games through `arena`. Both training and deployment use `features.hpp` to construct observations from each player's own field of view.
+The 2026 paper provides the target algorithm for the agent in `src/agents/nebula/`. PyTorch handles the neural network and optimization, while `generals-bots` supplies batched self-play games through JAX. During sampling, `train.py` runs the model to select actions. It then uses the collected games to update the model through PPO. Training uses `features.py` and C++ deployment uses `features.hpp` to encode the same information from each player's own field of view.
 
 ## Running
 
-The Python dependencies are listed in the root `requirements.txt`. The build places the graphical application and its runtime libraries in `build/interface/`. The training library and Nebula executable use `build/nebula/`. The independent `simple` program stays in `build/`.
+The Python dependencies are listed in the root `requirements.txt`. Training runs directly through Python. C++ compilation belongs to deployment, which produces the Nebula executable and its runtime libraries in `build/nebula/`. The graphical application uses `build/interface/`, while the independent `simple` program stays in `build/`.
 
 From the repository root on Windows:
 
 ```powershell
-.\scripts\build.bat
 .\scripts\train.bat --profile check
 ```
 
 On Linux or macOS:
 
 ```sh
-bash scripts/build.sh -DNEBULA_BUILD_INTERFACE=OFF
 bash scripts/train.sh --profile check
 ```
 
-`check` uses a small network and two brief updates to exercise sampling, optimization and saving. `paper` selects the seven-layer model and large rollout configuration. GPU training selects a CUDA-enabled PyTorch installation through `--device cuda`.
+`check` uses a small network and two brief updates to exercise sampling, optimization and saving. `paper` selects the seven-layer model and large rollout configuration. GPU training requires CUDA-enabled JAX and PyTorch installations, selected together through `--device cuda`.
 
 ```powershell
 .\scripts\train.bat --profile paper --device cuda --output runs/nebula
@@ -29,7 +27,7 @@ bash scripts/train.sh --profile check
 
 The output directory contains `checkpoint.pt` and `metrics.jsonl`. A checkpoint stores model weights, EMA weights, optimizer state, update count, random state and curriculum stage. Resuming begins fresh games at the saved stage and continues the optimization schedule. `--updates` specifies the total target update count.
 
-The paper-sized rollout contains $512\times512\times2$ player transitions and uses about 25.9 GiB of host memory for board, mask and temporal buffers. Model activations, optimizer state and minibatch transfers require additional memory. The default execution check uses about 3 MiB for these buffers.
+The paper-sized rollout contains $512\times512\times2$ player transitions and uses about 25.9 GiB for board, mask and temporal buffers. These buffers reside on the selected training device by default. `--storage cpu` keeps them in host memory instead. Model activations, optimizer state and environment data require additional memory. The default execution check uses about 3 MiB for rollout buffers.
 
 ## Observation and Model
 
@@ -73,7 +71,7 @@ EMA updates once per training iteration with decay $0.999$. Deployment uses thes
 
 The first stage uses general-to-general BFS distance 3 through 4. Later stages use 4 through 8, 6 through 13, 11 through 17 and 17 through 28. Evaluation against a random legal mover gates advancement at a win rate of $0.6$. This evaluation measures curriculum readiness. Competitive strength calls for separate matches against capable opponents and authorized ladder play.
 
-The current implementation runs optimization on one selected device. Its C++ arena creates maps through the local mainstream generator, then relocates generals to satisfy the stage distance. Map generation, the serial CPU environment loop and single-device training are adaptations of the paper's JAX environment and four-device execution. The released recipe uses a large reusable map pool, while this implementation generates maps as games reset. The current terrain and city distribution follows the local engine.
+The current implementation runs the JAX environment and PyTorch model on one selected CPU or GPU device, sharing arrays through DLPack. `env.py` generates a reusable map pool through `generals-bots` and refreshes it periodically or when the curriculum advances. Ongoing games retain their boards, while completed games restart from the current pool. The environment retains neutral cities, fog of war and general trades. The paper's four-device training remains a separate extension.
 
 The network, observation dimensions and principal PPO settings match the paper and the corresponding released configuration. The paper describes a starting distance upper bound of four, while the current released YAML begins with distance two through six. This implementation uses three through four, preserving the local engine's general-separation assumptions. The current repository also contains a policy-guidance regularizer. This implementation follows the paper's entropy objective. The truncation implementation explicitly bootstraps the final observation and retains that transition for training.
 
@@ -81,35 +79,35 @@ CPU execution checks establish functional correctness. Reproducing the reported 
 
 ## Deployment
 
-The Python agent reads the existing initialization and observation protocol and writes five-integer actions. In the graphical application's Player field, a command can be:
-
-```text
-python src/agents/nebula/agent.py runs/nebula/checkpoint.pt
-```
-
-Quote each executable or file path that contains spaces. Relative paths resolve from the application's working directory. An explicit `--library PATH` selects an arena library in a custom build directory. The model input size determines the largest supported board for its checkpoint, and the agent reports larger boards through `stderr`.
-
-For C++ inference, export the EMA model:
+The deployed agent runs through `infer.cpp`, using LibTorch on CPU with one computation thread. It reads initialization and observations through the process protocol and replies with five-integer actions. To prepare its model, export the EMA weights:
 
 ```powershell
 python src/agents/nebula/export.py runs/nebula/checkpoint.pt runs/nebula/policy.pt
 ```
 
-The `nebula` target builds by default and uses LibTorch. CMake first searches the configured library paths, then queries the selected Python interpreter for PyTorch's CMake package location. A separate LibTorch installation can be selected through `CMAKE_PREFIX_PATH` or `Torch_DIR`. Builds dedicated to Python training can select `-DNEBULA_BUILD_AGENT=OFF` to build the arena and other enabled targets.
+The `nebula` target builds by default and uses LibTorch. CMake first searches the configured library paths, then queries the selected Python interpreter for PyTorch's CMake package location. A separate LibTorch installation can be selected through `CMAKE_PREFIX_PATH` or `Torch_DIR`.
 
-For an existing build configured with the agent disabled, enable it once:
+Build the executable on Windows:
 
 ```powershell
 .\scripts\build.bat -DNEBULA_BUILD_AGENT=ON
 ```
 
-The corresponding Player command is:
+On Linux or macOS, a deployment-only build uses:
+
+```sh
+bash scripts/build.sh -DNEBULA_BUILD_INTERFACE=OFF -DNEBULA_BUILD_AGENT=ON
+```
+
+The corresponding Player command on Windows is:
 
 ```text
 build/nebula/nebula.exe runs/nebula/policy.pt
 ```
 
-The C++ target uses TorchScript as the currently tested bridge to LibTorch. PyTorch classifies TorchScript as a legacy export path. Training remains ordinary PyTorch, so the export boundary can later move to a newer runtime. Python and C++ inference share the same feature encoder and quantization step.
+Linux and macOS use `build/nebula/nebula` as the executable path. Quote each executable or model path that contains spaces. Relative paths resolve from the application's working directory. The model input size determines the largest supported board for its checkpoint, and the agent reports larger boards through `stderr`.
+
+TorchScript carries the exported model from PyTorch to LibTorch. The JAX training encoder and C++ deployment encoder produce matching features, and both paths apply the same board quantization before model evaluation. Deployment uses the executable, model file and LibTorch runtime libraries.
 
 ## Sources
 

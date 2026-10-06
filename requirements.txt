@@ -1,2 +1,4 @@
 numpy>=2.0,<3
 torch>=2.9,<3
+jax>=0.11.2,<0.12
+generals-bots @ git+https://github.com/strakam/generals-bots.git@2e9b00a4dd3a0489a7091c144548243f3d6d7b15

@@ -26,13 +26,6 @@ target_compile_features(engine INTERFACE cxx_std_20)
 add_executable(simple src/agents/simple.cpp)
 target_link_libraries(simple PRIVATE engine)
 
-add_library(arena SHARED src/agents/nebula/arena.cpp)
-target_link_libraries(arena PRIVATE engine)
-set_target_properties(arena PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/nebula"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/nebula"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/nebula")
-
 option(NEBULA_BUILD_AGENT "Build the LibTorch inference program" ON)
 if(NEBULA_BUILD_AGENT)
     find_package(Torch CONFIG QUIET)

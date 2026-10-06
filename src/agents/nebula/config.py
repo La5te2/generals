@@ -15,6 +15,11 @@ class Config:
     bins: int = 128
     sigma: float = 0.04
     environments: int = 512
+    # each map size contributes equally to a pool, which is refreshed between training iterations.
+    minimum: int = 17
+    maximum: int = 23
+    pool: int = 4096
+    refresh: int = 50
     steps: int = 512
     minibatch: int = 1024
     epochs: int = 1
@@ -41,11 +46,13 @@ class Config:
             raise ValueError("Input size must be 18..40 and divisible by patch size")
         if self.width < 1 or self.heads < 1 or self.width % self.heads:
             raise ValueError("Embedding width must be divisible by the head count")
-        for name in ("depth", "expansion", "temporal", "environments", "steps", "minibatch", "epochs", "updates", "save", "games"):
+        for name in ("depth", "expansion", "temporal", "environments", "pool", "refresh", "steps", "minibatch", "epochs", "updates", "save", "games"):
             if getattr(self, name) < 1:
                 raise ValueError(f"{name} must be positive")
         if self.temporal != 512 or self.bins < 2 or self.sigma <= 0:
             raise ValueError("Invalid temporal or value-head settings")
+        if not 17 <= self.minimum <= self.maximum <= self.side:
+            raise ValueError("Map sizes must satisfy 17 <= minimum <= maximum <= input size")
         if not 0 < self.fraction <= 1 or not 0 <= self.ema < 1 or not 1 <= self.horizon <= 50000:
             raise ValueError("Invalid sampling, EMA or episode limit")
         for lower, upper in self.curriculum:
@@ -61,7 +68,7 @@ def profile(name):
     if name == "check":
         config = replace(config, width=48, depth=2, heads=4, environments=2, steps=16,
                          minibatch=16, updates=2, horizon=64, bf16=False, save=1,
-                         evaluate=0, games=4)
+                         evaluate=0, games=4, minimum=18, maximum=18, pool=4)
     elif name != "paper":
         raise ValueError(f"Unknown profile: {name}")
     return config.validate()
