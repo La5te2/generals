@@ -33,9 +33,31 @@ set_target_properties(arena PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/nebula"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/nebula")
 
-option(NEBULA_BUILD_AGENT "Build the LibTorch inference program" OFF)
+option(NEBULA_BUILD_AGENT "Build the LibTorch inference program" ON)
 if(NEBULA_BUILD_AGENT)
-    find_package(Torch CONFIG REQUIRED)
+    find_package(Torch CONFIG QUIET)
+    if(NOT Torch_FOUND)
+        # PyTorch exposes the CMake package location for its bundled C++ libraries.
+        if(WIN32)
+            find_program(Python3_EXECUTABLE NAMES python python3)
+        else()
+            find_program(Python3_EXECUTABLE NAMES python3 python)
+        endif()
+        find_package(Python3 COMPONENTS Interpreter QUIET)
+        if(Python3_Interpreter_FOUND)
+            execute_process(
+                COMMAND "${Python3_EXECUTABLE}" -c "import torch; print(torch.utils.cmake_prefix_path)"
+                RESULT_VARIABLE torchStatus
+                OUTPUT_VARIABLE torchPrefix
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+                TIMEOUT 20)
+            if(torchStatus EQUAL 0 AND NOT "${torchPrefix}" STREQUAL "")
+                list(APPEND CMAKE_PREFIX_PATH "${torchPrefix}")
+            endif()
+        endif()
+        find_package(Torch CONFIG REQUIRED)
+    endif()
     add_executable(nebula src/agents/nebula/infer.cpp)
     target_link_libraries(nebula PRIVATE engine "${TORCH_LIBRARIES}")
     set_target_properties(nebula PROPERTIES

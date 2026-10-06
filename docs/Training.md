@@ -4,7 +4,7 @@ The 2026 paper provides the target algorithm for the agent in `src/agents/nebula
 
 ## Running
 
-The Python dependencies are listed in the root `requirements.txt`. The build places the graphical application and its runtime libraries in `build/interface/`. The training library and optional Nebula executable use `build/nebula/`. The independent `simple` program stays in `build/`.
+The Python dependencies are listed in the root `requirements.txt`. The build places the graphical application and its runtime libraries in `build/interface/`. The training library and Nebula executable use `build/nebula/`. The independent `simple` program stays in `build/`.
 
 From the repository root on Windows:
 
@@ -95,11 +95,12 @@ For C++ inference, export the EMA model:
 python src/agents/nebula/export.py runs/nebula/checkpoint.pt runs/nebula/policy.pt
 ```
 
-The optional `nebula` target uses LibTorch. With a PyTorch installation that includes C++ development files, its CMake prefix can be discovered directly:
+The `nebula` target builds by default and uses LibTorch. CMake first searches the configured library paths, then queries the selected Python interpreter for PyTorch's CMake package location. A separate LibTorch installation can be selected through `CMAKE_PREFIX_PATH` or `Torch_DIR`. Builds dedicated to Python training can select `-DNEBULA_BUILD_AGENT=OFF` to build the arena and other enabled targets.
+
+For an existing build configured with the agent disabled, enable it once:
 
 ```powershell
-$torchPrefix = python -c "print(__import__('torch').utils.cmake_prefix_path)"
-.\scripts\build.bat -DNEBULA_BUILD_AGENT=ON "-DCMAKE_PREFIX_PATH=$torchPrefix"
+.\scripts\build.bat -DNEBULA_BUILD_AGENT=ON
 ```
 
 The corresponding Player command is:

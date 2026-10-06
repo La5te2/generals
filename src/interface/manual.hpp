@@ -33,14 +33,14 @@ FOG OF WAR
 Your territory reveals nearby tiles. Expand to discover the map and locate your opponent. In fog, cities and mountains share an obstacle symbol. The scoreboard shows both players' total army and land.
 
 LOCAL
-RED PLAYER and BLUE PLAYER accept strategy programs and their arguments. A blank player field selects human control. At least one player uses an external program. The folder button selects an executable.
+RED PLAYER and BLUE PLAYER are command fields: enter a program path followed by its arguments. Quote each path or argument containing spaces, for example "D:/My Agents/nebula.exe" "D:/My Models/best.pt". A blank player field selects human control. At least one player uses an external program. The folder button fills in the executable path, and arguments can be appended afterward.
 
-DIRECTORY selects where games are recorded as .gior files. An empty directory field leaves recording disabled. The top-right arrow starts the match.
+DIRECTORY is a plain folder-path field for saving .gior recordings. Enter the path directly, including spaces, for example D:/My Replays. An empty directory field leaves recording disabled. The top-right arrow starts the match.
 
 ONLINE
 SERVER selects BOT or MAIN. Use the account registered on that server. Main-server automated play requires authorization for that account.
 
-PLAYER accepts a strategy program, or stays blank for human control. USERNAME is the public account name. USER ID is the private account credential.
+PLAYER uses the same command format as LOCAL, including program arguments and quoted paths, or stays blank for human control. USERNAME is the public account name. USER ID is the private account credential.
 
 PRIVATE ROOM takes a room ID such as cikp. An empty field selects ranked 1v1 matchmaking.
 
