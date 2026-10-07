@@ -23,9 +23,6 @@ add_library(engine INTERFACE)
 target_include_directories(engine INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_compile_features(engine INTERFACE cxx_std_20)
 
-add_executable(simple src/agents/simple.cpp)
-target_link_libraries(simple PRIVATE engine)
-
 option(NEBULA_BUILD_AGENT "Build the LibTorch inference program" ON)
 if(NEBULA_BUILD_AGENT)
     find_package(Torch CONFIG QUIET)

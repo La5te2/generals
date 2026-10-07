@@ -136,7 +136,7 @@ if initial:
         print("1 0 0 0 0", flush=True)
 ```
 
-[simple.cpp](../src/agents/simple/simple.cpp) provides a complete C++ example of the same exchange.
+An external C++ agent can implement the same exchange through the standard process protocol.
 
 ## Interface Console
 

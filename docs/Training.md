@@ -4,7 +4,7 @@ The 2026 paper provides the target algorithm for the agent in `src/agents/nebula
 
 ## Running
 
-The Python dependencies are listed in the root `requirements.txt`. Training runs directly through Python. C++ compilation belongs to deployment, which produces the Nebula executable and its runtime libraries in `build/nebula/`. The graphical application uses `build/interface/`, while the independent `simple` program stays in `build/`.
+The Python dependencies are listed in the root `requirements.txt`. Training runs directly through Python. C++ compilation belongs to deployment, which produces the Nebula executable and its runtime libraries in `build/nebula/`. 
 
 From the repository root on Windows:
 
