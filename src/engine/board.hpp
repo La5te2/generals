@@ -26,6 +26,21 @@ public:
         }
     }
 
+    Board(const Board& other) : R(other.R), C(other.C) {
+        for (int position = 0; position < R * C; ++position) cells[position] = other.cells[position];
+    }
+
+    Board& operator=(const Board& other) {
+        if (this == &other) return *this;
+        R = other.R;
+        C = other.C;
+        for (int position = 0; position < R * C; ++position) cells[position] = other.cells[position];
+        return *this;
+    }
+
+    Board(Board&&) = default;
+    Board& operator=(Board&&) = default;
+
     int rows() const noexcept { return R; }
     int cols() const noexcept { return C; }
     int size() const noexcept { return R * C; }
