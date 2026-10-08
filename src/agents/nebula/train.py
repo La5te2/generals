@@ -13,6 +13,7 @@ from config import Config, profile
 from env import Arena
 from model import Model, inputs
 from ppo import advantages, average, objective
+from rollout import Rollout
 
 
 def precision(device, config):
@@ -20,20 +21,16 @@ def precision(device, config):
 
 
 @torch.inference_mode()
-def collect(model, arena, config, device, storage):
-    count, steps, side = 2 * arena.count, config.steps, config.side
-    # keep sampling and optimization on the selected device. CPU storage is an explicit memory-saving option.
-    board = torch.empty((steps, count, 38, side, side), dtype=torch.bfloat16, device=storage)
-    legal = torch.empty((steps, count, 9, side, side), dtype=torch.bool, device=storage)
-    history = torch.empty((steps, count, 2, 512), device=storage)
-    actions = torch.empty((steps, count), dtype=torch.long, device=storage)
-    logprobs, values, rewards, limitValues = [torch.zeros(steps, count, device=storage) for field in range(4)]
-    terminal, truncated = [torch.zeros(steps, count, dtype=torch.bool, device=storage) for field in range(2)]
+def collect(model, arena, config, device, rollout):
+    count, steps = 2 * arena.count, config.steps
+    # small scalar buffers stay beside the model for GAE and sample selection, regardless of observation storage.
+    actions = torch.empty((steps, count), dtype=torch.long, device=device)
+    logprobs, values, rewards, limitValues = [torch.zeros(steps, count, device=device) for field in range(4)]
+    terminal, truncated = [torch.zeros(steps, count, dtype=torch.bool, device=device) for field in range(2)]
+    reset = None
     for step in range(steps):
         raw = arena.read()
-        board[step].copy_(raw[0])
-        legal[step].copy_(raw[1])
-        history[step].copy_(raw[2])
+        rollout.write(step, raw, reset)
         with precision(device, config):
             logits, prediction = model(*inputs(raw, device))[:2]
         distribution = torch.distributions.Categorical(logits=logits)
@@ -45,28 +42,29 @@ def collect(model, arena, config, device, storage):
         rewards[step].copy_(reward)
         terminal[step].copy_(ended)
         truncated[step].copy_(limited)
+        reset = ended | limited
         if limited.any():
             # final() retains the time-limited game, while read() already contains its replacement game.
             final = tuple(array[limited] for array in arena.final())
             with precision(device, config):
                 finalValue = model(*inputs(final, device))[1]
-            limitValues[step, limited.to(storage)] = finalValue.to(storage)
+            limitValues[step, limited] = finalValue
     with precision(device, config):
         finalValue = model(*inputs(arena.read(), device))[1]
-    following = torch.cat((values[1:], finalValue.to(storage).unsqueeze(0)))
+    following = torch.cat((values[1:], finalValue.unsqueeze(0)))
     following[truncated] = limitValues[truncated]
     advantage = advantages(rewards, values, following, terminal, truncated, config.gamma, config.gae)
     returns = advantage + values
     advantage = (advantage - advantage.mean()) / (advantage.std(unbiased=False) + 1e-8)
-    batches = [board, legal, history, actions, logprobs, advantage, returns]
-    return [data.flatten(0, 1) for data in batches], {
+    batches = [actions, logprobs, advantage, returns]
+    return (rollout, *(data.flatten(0, 1) for data in batches)), {
         "completed": int(terminal[:, ::2].sum()), "truncated": int(truncated[:, ::2].sum()),
         "terminal_rewards": int(rewards.count_nonzero()), "advantage_std": float(returns.sub(values).std(unbiased=False)),
     }
 
 
 def update(model, optimizer, batch, config, iteration, device):
-    board, legal, history, actions, previous, advantage, returns = batch
+    rollout, actions, previous, advantage, returns = batch
     kept = max(1, int(advantage.numel() * config.fraction))
     indices = advantage.abs().topk(kept, sorted=False).indices
     rate = min(1e-4, max(5e-6, 0.5 / (iteration + 1) ** 1.1))
@@ -81,7 +79,7 @@ def update(model, optimizer, batch, config, iteration, device):
         for ids in order.split(config.minibatch):
             optimizer.zero_grad(set_to_none=True)
             with precision(device, config):
-                prediction = model(board[ids].to(device=device, dtype=torch.float32), legal[ids].to(device), history[ids].to(device))
+                prediction = model(*rollout.read(ids, device))
                 loss, stats = objective(prediction[0], prediction[2], actions[ids].to(device), previous[ids].to(device),
                                         advantage[ids].to(device), returns[ids].to(device), model.centers, config, entropy)
             if not torch.isfinite(loss):
@@ -139,7 +137,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", choices=("check", "paper"), default="check")
     parser.add_argument("--device", default="auto")
-    parser.add_argument("--storage", choices=("device", "cpu"), default="device")
+    parser.add_argument("--storage", choices=("device", "cpu"), default="cpu",
+                        help="where to keep compressed observations (default: cpu)")
     parser.add_argument("--output", type=Path, default=Path("runs/nebula"))
     parser.add_argument("--resume", type=Path)
     parser.add_argument("--updates", type=int)
@@ -171,11 +170,10 @@ def main():
         if device.type == "cuda" and loaded["cuda_random"]:
             torch.cuda.set_rng_state_all(loaded["cuda_random"])
     args.output.mkdir(parents=True, exist_ok=True)
-    count = 2 * config.environments * config.steps
-    storage = count * (38 * config.side ** 2 * 2 + 9 * config.side ** 2 + 2 * 512 * 4)
+    rollout = Rollout(config.steps, 2 * config.environments, config.side, storageDevice)
     print(json.dumps({"device": str(device), "environment": "generals-bots", "storage": str(storageDevice),
                       "parameters": sum(p.numel() for p in model.parameters()),
-                      "rollout_storage_gib": round(storage / 1024 ** 3, 3), "start": start, "config": asdict(config)}), flush=True)
+                      "rollout_storage_gib": round(rollout.nbytes / 1024 ** 3, 3), "start": start, "config": asdict(config)}), flush=True)
     iteration = start
     # resuming starts fresh games but restores weights, optimizer, schedules, EMA and curriculum stage.
     with Arena(config.environments, config, config.seed + start, device) as arena:
@@ -185,7 +183,7 @@ def main():
             try:
                 for iteration in range(start, config.updates):
                     began = time.perf_counter()
-                    batch, metrics = collect(model, arena, config, device, storageDevice)
+                    batch, metrics = collect(model, arena, config, device, rollout)
                     metrics.update(update(model, optimizer, batch, config, iteration, device))
                     del batch
                     average(ema, model, config.ema)

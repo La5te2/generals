@@ -27,7 +27,7 @@ bash scripts/train.sh --profile check
 
 The output directory contains `checkpoint.pt` and `metrics.jsonl`. A checkpoint stores model weights, EMA weights, optimizer state, update count, random state and curriculum stage. Resuming begins fresh games at the saved stage and continues the optimization schedule. `--updates` specifies the total target update count.
 
-The paper-sized rollout contains $512\times512\times2$ player transitions and uses about 25.9 GiB for board, mask and temporal buffers. These buffers reside on the selected training device by default. `--storage cpu` keeps them in host memory instead. Model activations, optimizer state and environment data require additional memory. The default execution check uses about 3 MiB for rollout buffers.
+The paper-sized rollout contains $512\times512\times2$ player transitions. Its compressed observation buffer uses about 5.09 GiB and stays in CPU memory by default. `--storage device` keeps it on the training device instead. The buffer stores shared history entries once, packs binary markers into bits and reconstructs the original inputs for each selected minibatch without changing their precision. On CUDA, only that minibatch's host data is pinned for transfer. The buffer is reused between updates; scalar training data, model activations, optimizer state and environment data require additional memory. The default execution check uses about 0.71 MiB for the observation buffer.
 
 ## Observation and Model
 
