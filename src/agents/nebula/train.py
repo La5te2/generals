@@ -21,6 +21,16 @@ def precision(device, config):
 
 
 @torch.inference_mode()
+def predict(model, raw, config, device):
+    results = []
+    for start in range(0, len(raw[0]), config.microbatch):
+        chunk = tuple(value[start:start + config.microbatch] for value in raw)
+        with precision(device, config):
+            results.append(model(*inputs(chunk, device))[:2])
+    return tuple(torch.cat(parts) for parts in zip(*results, strict=True))
+
+
+@torch.inference_mode()
 def collect(model, arena, config, device, rollout):
     count, steps = 2 * arena.count, config.steps
     # small scalar buffers stay beside the model for GAE and sample selection, regardless of observation storage.
@@ -31,8 +41,7 @@ def collect(model, arena, config, device, rollout):
     for step in range(steps):
         raw = arena.read()
         rollout.write(step, raw, reset)
-        with precision(device, config):
-            logits, prediction = model(*inputs(raw, device))[:2]
+        logits, prediction = predict(model, raw, config, device)
         distribution = torch.distributions.Categorical(logits=logits)
         choice = distribution.sample()
         actions[step].copy_(choice)
@@ -46,11 +55,11 @@ def collect(model, arena, config, device, rollout):
         if limited.any():
             # final() retains the time-limited game, while read() already contains its replacement game.
             final = tuple(array[limited] for array in arena.final())
-            with precision(device, config):
-                finalValue = model(*inputs(final, device))[1]
+            finalValue = predict(model, final, config, device)[1]
             limitValues[step, limited] = finalValue
-    with precision(device, config):
-        finalValue = model(*inputs(arena.read(), device))[1]
+        if steps >= 64 and (step + 1) % 64 == 0:
+            print(json.dumps({"phase": "rollout", "steps": step + 1, "total": steps}), flush=True)
+    finalValue = predict(model, arena.read(), config, device)[1]
     following = torch.cat((values[1:], finalValue.unsqueeze(0)))
     following[truncated] = limitValues[truncated]
     advantage = advantages(rewards, values, following, terminal, truncated, config.gamma, config.gae)
@@ -68,31 +77,38 @@ def update(model, optimizer, batch, config, iteration, device):
     kept = max(1, int(advantage.numel() * config.fraction))
     indices = advantage.abs().topk(kept, sorted=False).indices
     rate = min(1e-4, max(5e-6, 0.5 / (iteration + 1) ** 1.1))
-    entropy = max(0.001, 0.05 / (iteration + 1) ** 0.2)
+    entropy = 0.05 / (iteration + 1) ** 0.2
     for group in optimizer.param_groups:
         group["lr"] = rate
     totals = torch.zeros(4, device=device)
     samples = 0
     gradient = 0.0
+    updates = 0
     for epoch in range(config.epochs):
         order = indices[torch.randperm(kept, device=indices.device)]
         for ids in order.split(config.minibatch):
             optimizer.zero_grad(set_to_none=True)
-            with precision(device, config):
-                prediction = model(*rollout.read(ids, device))
-                loss, stats = objective(prediction[0], prediction[2], actions[ids].to(device), previous[ids].to(device),
-                                        advantage[ids].to(device), returns[ids].to(device), model.centers, config, entropy)
-            if not torch.isfinite(loss):
-                raise FloatingPointError("Training loss became nonfinite")
-            loss.backward()
+            # gradients sum to one minibatch mean; clipping and Adam run only after every chunk contributes.
+            for chunk in ids.split(config.microbatch):
+                with precision(device, config):
+                    prediction = model(*rollout.read(chunk, device))
+                    loss, stats = objective(prediction[0], prediction[2], actions[chunk].to(device), previous[chunk].to(device),
+                                            advantage[chunk].to(device), returns[chunk].to(device), model.centers, config, entropy)
+                if not torch.isfinite(loss):
+                    raise FloatingPointError("Training loss became nonfinite")
+                (loss * (len(chunk) / len(ids))).backward()
+                totals += stats * len(chunk)
             norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad, error_if_nonfinite=True)
             gradient = max(gradient, float(norm))
             optimizer.step()
-            totals += stats * len(ids)
             samples += len(ids)
+            updates += 1
+            if updates % 32 == 0:
+                print(json.dumps({"phase": "ppo", "optimized": samples, "total": kept * config.epochs}), flush=True)
     values = (totals / samples).cpu().tolist()
     return dict(zip(("policy_loss", "value_loss", "entropy", "kl"), values, strict=True),
-                grad_norm=gradient, selected=kept, learning_rate=rate, entropy_coefficient=entropy)
+                grad_norm=gradient, batch_samples=advantage.numel(), selected=kept, optimized=samples,
+                optimizer_steps=updates, learning_rate=rate, entropy_coefficient=entropy)
 
 
 @torch.inference_mode()
@@ -109,8 +125,7 @@ def evaluate(model, config, stage, device, seed):
         arena.reset(config.curriculum[stage])
         while completed < config.games:
             raw = arena.read()
-            with precision(device, config):
-                logits = model(*inputs(raw, device))[0]
+            logits = predict(model, raw, config, device)[0]
             moves = logits.argmax(-1)
             possible = raw[1][opponents, :8].flatten(1)
             # equal weights sample uniformly from legal moves. a blocked opponent uses a pass.
@@ -135,13 +150,14 @@ def save(path, model, ema, optimizer, config, iteration, stage):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=("check", "paper"), default="check")
+    parser.add_argument("--profile", choices=("check", "paper"), default="paper")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--storage", choices=("device", "cpu"), default="cpu",
                         help="where to keep compressed observations (default: cpu)")
     parser.add_argument("--output", type=Path, default=Path("runs/nebula"))
     parser.add_argument("--resume", type=Path)
     parser.add_argument("--updates", type=int)
+    parser.add_argument("--microbatch", type=int, help="Maximum players per forward pass; preserves the effective minibatch")
     parser.add_argument("--threads", type=int, default=4)
     args = parser.parse_args()
     if args.threads < 1:
@@ -155,6 +171,8 @@ def main():
     config = Config(**loaded["config"]) if loaded else profile(args.profile)
     if args.updates is not None:
         config = replace(config, updates=args.updates)
+    if args.microbatch is not None:
+        config = replace(config, microbatch=args.microbatch)
     config.validate()
     torch.manual_seed(config.seed)
     model = Model(config).to(device)
@@ -183,12 +201,15 @@ def main():
             try:
                 for iteration in range(start, config.updates):
                     began = time.perf_counter()
+                    print(json.dumps({"phase": "rollout", "iteration": iteration + 1,
+                                      "environment_samples": config.environments * config.steps}), flush=True)
                     batch, metrics = collect(model, arena, config, device, rollout)
                     metrics.update(update(model, optimizer, batch, config, iteration, device))
                     del batch
                     average(ema, model, config.ema)
                     previousStage = stage
                     if config.evaluate and (iteration + 1) % config.evaluate == 0:
+                        print(json.dumps({"phase": "evaluation", "games": config.games, "stage": stage}), flush=True)
                         gate = evaluate(model, config, stage, device, config.seed + 100000 + iteration)
                         metrics.update(gate)
                         if gate["gate_win_rate"] >= config.threshold and stage + 1 < len(config.curriculum):

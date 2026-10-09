@@ -22,6 +22,7 @@ class Config:
     refresh: int = 50
     steps: int = 512
     minibatch: int = 1024
+    microbatch: int = 128  # bounds device memory without changing the optimizer's minibatch.
     epochs: int = 1
     updates: int = 100000
     horizon: int = 2048
@@ -46,7 +47,7 @@ class Config:
             raise ValueError("Input size must be 18..40 and divisible by patch size")
         if self.width < 1 or self.heads < 1 or self.width % self.heads:
             raise ValueError("Embedding width must be divisible by the head count")
-        for name in ("depth", "expansion", "temporal", "environments", "pool", "refresh", "steps", "minibatch", "epochs", "updates", "save", "games"):
+        for name in ("depth", "expansion", "temporal", "environments", "pool", "refresh", "steps", "minibatch", "microbatch", "epochs", "updates", "save", "games"):
             if getattr(self, name) < 1:
                 raise ValueError(f"{name} must be positive")
         if self.temporal != 512 or self.bins < 2 or self.sigma <= 0:
