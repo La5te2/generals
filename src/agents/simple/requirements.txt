@@ -1,0 +1,6 @@
+# the cloud environment must provide a GPU-enabled JAX build for CUDA training.
+numpy>=2.0,<3
+jax>=0.11.2,<0.12
+equinox>=0.13.8,<0.14
+optax>=0.2.8,<0.3
+generals-bots @ git+https://github.com/strakam/generals-bots.git@2e9b00a4dd3a0489a7091c144548243f3d6d7b15
