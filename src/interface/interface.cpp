@@ -8,6 +8,7 @@
 #include "dialog.hpp"
 #include "renderer.hpp"
 #include "manual.hpp"
+#include "icon.hpp"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
@@ -52,17 +53,22 @@ namespace NEBULA {
             if (setup.scene != Scene::Online) return local;
             return setup.lan() ? static_cast<PlayerInput&>(lan) : online;
         }
-        BoardControls controls() const { return {setup.scene, active(), running(), hasHuman(), hover, setup.scene == Scene::Replay && replay.cursor() > 0}; }
+        BoardControls controls() const {
+            bool review = setup.scene == Scene::Online && setup.lan() && !active() && (*displayed.views)[2].cols > 0;
+            return {setup.scene, active(), running(), hasHuman(), hover, setup.scene == Scene::Replay && replay.cursor() > 0, review};
+        }
         const Observation& view() const { return (*displayed.views)[perspective]; }
 
         // Read the selected session and synchronize human controls with its latest observation.
         void update() {
             bool wasRunning = running();
+            bool wasSpectator = controls().spectator();
             if (setup.scene == Scene::Replay) displayed = replay.snapshot();
             else if (setup.scene == Scene::Online) displayed = setup.lan() ? lan.snapshot() : online.snapshot();
             else displayed = local.snapshot();
             if (setup.scene == Scene::Online && displayed.player >= 0) {
-                perspective = displayed.player;
+                if (!controls().spectator()) perspective = displayed.player;
+                else if (!wasSpectator) perspective = 2;
                 bool newGame = !wasRunning && running();
                 if (setup.humanPlayer(Field::Player) && (human.player() < 0 || newGame) && view().cols > 0 && active()) human.reset(perspective, view());
             }
@@ -574,7 +580,9 @@ namespace NEBULA {
         // run() releases the renderer's GPU resources before the entry function destroys the window.
         WindowState app;
         if (!app.renderer.init()) return 1;
-        app.setWindow(window, 960, 800);
+        int width, height;
+        glfwGetWindowSize(window, &width, &height);
+        app.setWindow(window, width, height);
         // store app's address on the GLFW window so each callback can recover the same object.
         glfwSetWindowUserPointer(window, &app);
         // moving a window can hold execution inside GLFW's event handling.
@@ -775,8 +783,21 @@ int main() {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
-    GLFWwindow* window = glfwCreateWindow(960, 800, "Generals", nullptr, nullptr);
+    // Start at 80% of the primary display; run() fits and centers the window in its work area.
+    int width = 1280, height = 720;
+    if (auto* monitor = glfwGetPrimaryMonitor()) if (const auto* mode = glfwGetVideoMode(monitor)) {
+        width = std::clamp(mode->width * 4 / 5, NEBULA::minWindowWidth, NEBULA::maxWindowWidth);
+        height = std::clamp(mode->height * 4 / 5, NEBULA::minWindowHeight, NEBULA::maxWindowHeight);
+    }
+    GLFWwindow* window = glfwCreateWindow(width, height, "Generals", nullptr, nullptr);
     if (!window) { glfwTerminate(); return 1; }
+#ifndef __APPLE__
+    if (glfwGetPlatform() != GLFW_PLATFORM_WAYLAND) {
+        auto pixels16 = NEBULA::Icon::pixels(16), pixels32 = NEBULA::Icon::pixels(32), pixels48 = NEBULA::Icon::pixels(48);
+        const GLFWimage icons[] = {{16, 16, pixels16.data()}, {32, 32, pixels32.data()}, {48, 48, pixels48.data()}};
+        glfwSetWindowIcon(window, 3, icons); // GLFW copies the pixels before returning.
+    }
+#endif
     // make this context current before GLAD loads the OpenGL function addresses for it.
     glfwMakeContextCurrent(window);
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {

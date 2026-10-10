@@ -42,8 +42,9 @@ namespace NEBULA {
         bool active = false, running = false, human = false;
         Tool hover = Tool::None;
         bool previous = false; // the replay reader supplies whether an earlier position is available.
+        bool review = false; // an ended network match supplies all three final perspectives.
 
-        bool spectator() const { return (scene == Scene::Local || scene == Scene::Replay) && !human; }
+        bool spectator() const { return ((scene == Scene::Local || scene == Scene::Replay) && !human) || review; }
 
         bool enabled(Tool tool) const {
             if (tool == Tool::Stop) return active && scene != Scene::Replay;

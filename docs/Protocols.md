@@ -332,7 +332,7 @@ The following client commands have no additional required fields:
 
 Stop, Back and Quit request departure. `leave` surrenders an ongoing game and ends the room for both participants. Natural completion also ends the room. An orderly end transfers the final replay before closing; an abrupt disconnection may prevent delivery. A closed room never accepts a replacement player.
 
-The interface may retain the final position. Reset or automatic Reset starts a new discovery and pairing attempt with the current configuration; it is not readiness within the previous room.
+The interface retains the final position. Once the complete recording is available and the session has ended, RED, BLUE and ALL select the final player views or the full board, initially ALL. This does not require an `RD` destination. Reset or automatic Reset starts a new discovery and pairing attempt with the current configuration; it is not readiness within the previous room.
 
 Both peers answer `ping` with `{"type":"pong"}`. Heartbeats are sent every five seconds; twenty seconds without incoming activity is a connection failure.
 

@@ -24,7 +24,7 @@ namespace NEBULA {
 
     // one published value keeps observations, session status and input queues together for the interface.
     struct MatchSnapshot {
-        // local play supplies three perspectives. online play fills only the account's perspective.
+        // Local and replay supply three perspectives. Online supplies the account's view; completed LAN games also supply all three.
         std::shared_ptr<const std::array<Observation, 3>> views = std::make_shared<const std::array<Observation, 3>>();
         MatchState state = MatchState::Empty;
         bool active() const { return state != MatchState::Empty && state != MatchState::Finished; }

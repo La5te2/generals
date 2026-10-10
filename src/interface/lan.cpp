@@ -313,7 +313,7 @@ namespace NEBULA {
                             int result = message.at("result").get<int>();
                             require(result >= 0 && result <= 3 && view->tick >= (*state.views)[1].tick, "Invalid LAN result or tick");
                             view->result = static_cast<Phases>(result);
-                            auto views = std::make_shared<std::array<Observation, 3>>(); (*views)[1] = *view; state.views = views;
+                            auto views = std::make_shared<std::array<Observation, 3>>(*state.views); (*views)[1] = *view; state.views = views;
                             state.state = result == 0 ? MatchState::Playing : MatchState::Finishing;
                             if (result && !finished) finished = now;
                             const auto& queue = message.at("queued");
@@ -328,6 +328,10 @@ namespace NEBULA {
                                 Replay check;
                                 std::string error;
                                 require(check.loadBytes(replay, error), "Invalid LAN recording");
+                                require(check.seek(check.length()) && check.state().tick == (*state.views)[1].tick &&
+                                        check.state().result == (*state.views)[1].result, "LAN recording differs from the final observation");
+                                // Final perspectives come from the validated recording, even when RD is unset.
+                                state.views = std::make_shared<const std::array<Observation, 3>>(matchViews(check.state()));
                                 persist(replay, state); saved = received = true;
                                 send(peer, {{"type", "recorded"}});
                             }

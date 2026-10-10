@@ -11,6 +11,8 @@ option(VCPKG_MANIFEST_INSTALL "Install packages during configuration" OFF)
 project(Nebula LANGUAGES CXX)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
+# Static and import libraries are link-time artifacts, not runtime files.
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/CMakeFiles/lib")
 
 if(MSVC)
     add_compile_options(/W4 /permissive-)
@@ -66,8 +68,7 @@ if(inferenceAgents)
         target_compile_options(${agent} PRIVATE ${torchFlags})
         set_target_properties(${agent} PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${agent}"
-            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${agent}"
-            ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${agent}")
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${agent}")
         if(WIN32 AND torchDlls)
             add_custom_command(TARGET ${agent} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${torchDlls} "$<TARGET_FILE_DIR:${agent}>"
@@ -100,11 +101,24 @@ if(NEBULA_BUILD_INTERFACE)
     target_link_libraries(interface PRIVATE local online lan glad::glad glfw)
     if(WIN32)
         target_link_libraries(interface PRIVATE user32 comdlg32 ole32 shell32 uuid)
+        enable_language(RC)
+        add_executable(icon EXCLUDE_FROM_ALL src/interface/icon.cpp)
+        target_compile_features(icon PRIVATE cxx_std_20)
+        set_target_properties(icon PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/icon")
+        set(iconFile "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/icon/icon.ico")
+        set(iconResource "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/interface.rc")
+        add_custom_command(OUTPUT "${iconFile}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/icon"
+            COMMAND $<TARGET_FILE:icon> "${iconFile}"
+            DEPENDS icon src/interface/icon.hpp src/interface/icons.inc
+            VERBATIM)
+        file(GENERATE OUTPUT "${iconResource}" CONTENT "1 ICON \"${iconFile}\"\n")
+        set_source_files_properties("${iconResource}" PROPERTIES OBJECT_DEPENDS "${iconFile}")
+        target_sources(interface PRIVATE "${iconResource}" "${iconFile}")
     endif()
     set_target_properties(interface process local online lan PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface"
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface")
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface")
     add_custom_command(TARGET interface POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_CURRENT_SOURCE_DIR}/ATTRIBUTION.txt"
