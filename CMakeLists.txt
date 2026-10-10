@@ -23,8 +23,16 @@ add_library(engine INTERFACE)
 target_include_directories(engine INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_compile_features(engine INTERFACE cxx_std_20)
 
-option(NEBULA_BUILD_AGENT "Build the LibTorch inference program" ON)
+option(NEBULA_BUILD_AGENT "Build the Nebula LibTorch inference program" ON)
+option(SIMPLE_BUILD_AGENT "Build the Simple GenFormer LibTorch inference program" ON)
+set(inferenceAgents)
 if(NEBULA_BUILD_AGENT)
+    list(APPEND inferenceAgents nebula)
+endif()
+if(SIMPLE_BUILD_AGENT)
+    list(APPEND inferenceAgents simple)
+endif()
+if(inferenceAgents)
     find_package(Torch CONFIG QUIET)
     if(NOT Torch_FOUND)
         # PyTorch exposes the CMake package location for its bundled C++ libraries.
@@ -48,22 +56,24 @@ if(NEBULA_BUILD_AGENT)
         endif()
         find_package(Torch CONFIG REQUIRED)
     endif()
-    add_executable(nebula src/agents/nebula/infer.cpp)
-    target_link_libraries(nebula PRIVATE engine "${TORCH_LIBRARIES}")
-    set_target_properties(nebula PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/nebula"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/nebula"
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/nebula")
     separate_arguments(torchFlags NATIVE_COMMAND "${TORCH_CXX_FLAGS}")
-    target_compile_options(nebula PRIVATE ${torchFlags})
     if(WIN32)
         file(GLOB torchDlls "${TORCH_INSTALL_PREFIX}/lib/*.dll")
-        if(torchDlls)
-            add_custom_command(TARGET nebula POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${torchDlls} "$<TARGET_FILE_DIR:nebula>"
+    endif()
+    foreach(agent IN LISTS inferenceAgents)
+        add_executable(${agent} "src/agents/${agent}/infer.cpp")
+        target_link_libraries(${agent} PRIVATE engine "${TORCH_LIBRARIES}")
+        target_compile_options(${agent} PRIVATE ${torchFlags})
+        set_target_properties(${agent} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${agent}"
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${agent}"
+            ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${agent}")
+        if(WIN32 AND torchDlls)
+            add_custom_command(TARGET ${agent} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${torchDlls} "$<TARGET_FILE_DIR:${agent}>"
                 VERBATIM)
         endif()
-    endif()
+    endforeach()
 endif()
 
 option(NEBULA_BUILD_INTERFACE "Build the interface application" ON)
@@ -77,16 +87,18 @@ if(NEBULA_BUILD_INTERFACE)
     find_package(LibDataChannel CONFIG REQUIRED)
     add_library(online STATIC src/interface/online.cpp)
     target_link_libraries(online PUBLIC process PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
+    add_library(lan STATIC src/interface/lan.cpp)
+    target_link_libraries(lan PUBLIC local PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
     find_package(glad CONFIG REQUIRED)
     find_package(glfw3 CONFIG REQUIRED)
 
     add_executable(interface WIN32 src/interface/interface.cpp src/interface/renderer.cpp src/interface/human.cpp
         src/interface/console.cpp src/interface/dialog.cpp)
-    target_link_libraries(interface PRIVATE local online glad::glad glfw)
+    target_link_libraries(interface PRIVATE local online lan glad::glad glfw)
     if(WIN32)
         target_link_libraries(interface PRIVATE user32 comdlg32 ole32 shell32 uuid)
     endif()
-    set_target_properties(interface process local online PROPERTIES
+    set_target_properties(interface process local online lan PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface"
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface"
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface")

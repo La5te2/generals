@@ -19,6 +19,7 @@ namespace NEBULA {
     struct LocalSnapshot : MatchSnapshot {
         std::filesystem::path saved;
         bool unsaved = false;
+        std::shared_ptr<const Recording> completed; // optional finished recording for LAN transfer, never sent during play.
     };
 
     class LocalMatch : public PlayerInput {
@@ -26,8 +27,8 @@ namespace NEBULA {
         ~LocalMatch();
         // an empty command leaves that player's actions to the caller, for example the window's human input handler.
         bool start(const std::array<std::string, 2>& commands, std::uint32_t seed, int milliseconds = 500,
-                   const std::filesystem::path& directory = {});
-        void stop();
+                   const std::filesystem::path& directory = {}, bool retainRecording = false);
+        void stop(int surrender = -1); // a supplied seat forfeits; LAN uses this for departure or Stop.
         void pause();
         void resume();
         // begin a full interval with the new duration, retaining the current running or paused state.
@@ -61,6 +62,7 @@ namespace NEBULA {
         std::array<std::deque<Pending>, 2> inputs;
         std::string failure, saveError;
         std::optional<Recording> recording;
+        std::shared_ptr<const Recording> completed;
         std::filesystem::path directory, saved;
         std::shared_ptr<const std::array<Observation, 3>> views = std::make_shared<const std::array<Observation, 3>>();
         // hold this separate lock only while exchanging the small snapshot, never while computing or stopping processes.

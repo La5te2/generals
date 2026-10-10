@@ -13,7 +13,28 @@ namespace NEBULA {
         for (char& letter : name) {
             letter = static_cast<char>(std::tolower(static_cast<unsigned char>(letter)));
         }
-        if (name == "turn" || name == "win" || name == "auto") {
+        if (name == "rd") {
+            stream >> std::ws;
+            if (stream.get() != '"') return {Command::Invalid};
+            std::string path;
+            if (!std::getline(stream, path, '"') || stream.eof() || stream >> extra) return {Command::Invalid};
+            return {Command::Rd, 0, 0, path};
+        }
+        if (name == "win") {
+            std::string wide, high;
+            int width = 0, height = 0;
+            if (!(stream >> wide >> high) || stream >> extra) return {Command::Invalid};
+            auto integer = [](const std::string& text, int& value) {
+                auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+                return error == std::errc{} && end == text.data() + text.size();
+            };
+            if (!integer(wide, width) || !integer(high, height)) return {Command::Invalid};
+            if (width == 0 && height == 0) return {Command::Win, 0, 0};
+            if (width < minWindowWidth || width > maxWindowWidth || height < minWindowHeight || height > maxWindowHeight)
+                return {Command::Invalid};
+            return {Command::Win, width, height};
+        }
+        if (name == "turn" || name == "auto") {
             std::string number;
             int value = 0;
             if (!(stream >> number) || stream >> extra) return {Command::Invalid};
@@ -22,10 +43,6 @@ namespace NEBULA {
             if (name == "auto") {
                 if (value != 0 && value != 1) return {Command::Invalid};
                 return {Command::Auto, value};
-            }
-            if (name == "win") {
-                if (value < 0 || value > maxWindowLevel) return {Command::Invalid};
-                return {Command::Win, value};
             }
             if (value <= 0) return {Command::Invalid};
             return {Command::Turn, value};

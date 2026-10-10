@@ -6,13 +6,16 @@
 #include <vector>
 
 namespace NEBULA {
-    inline constexpr int maxWindowLevel = 10; // the highest window size level selects full screen.
-    enum class Command { None, Help, Man, Back, Quit, Turn, Win, Auto, Invalid };
+    inline constexpr int minWindowWidth = 720, minWindowHeight = 560;
+    inline constexpr int maxWindowWidth = 7680, maxWindowHeight = 4320;
+    enum class Command { None, Help, Man, Back, Quit, Turn, Win, Auto, Rd, Invalid };
     enum class Edit { Left, Right, Home, End, Backspace, Delete, Clear };
 
     struct ParsedCommand {
         Command type = Command::None;
         int value = 0;
+        int height = 0; // Win uses value as width; other commands leave height unused.
+        std::string text;
     };
 
     // translate one line into a command. the caller decides how to execute it.

@@ -5,7 +5,7 @@ namespace NEBULA {
     LocalMatch::~LocalMatch() { stop(); }
 
     bool LocalMatch::start(const std::array<std::string, 2>& commands, std::uint32_t seed, int milliseconds,
-                           const std::filesystem::path& destination) {
+                           const std::filesystem::path& destination, bool retainRecording) {
         std::unique_lock lock(mutex);
         if (phase == MatchState::Active) return false;
         lock.unlock();
@@ -36,7 +36,8 @@ namespace NEBULA {
         engine = std::move(next);
         directory = destination;
         saved.clear();
-        if (!directory.empty()) recording.emplace(*engine.snapshot());
+        completed.reset();
+        if (!directory.empty() || retainRecording) recording.emplace(*engine.snapshot());
         strategies = std::move(players);
         for (auto& input : inputs) input.clear();
         phase = MatchState::Active;
@@ -50,11 +51,11 @@ namespace NEBULA {
         return true;
     }
 
-    void LocalMatch::stop() {
+    void LocalMatch::stop(int surrender) {
         {
             std::lock_guard lock(mutex);
             int human = !strategies[0] && strategies[1] ? 0 : strategies[0] && !strategies[1] ? 1 : -1;
-            finish(human);
+            finish(surrender == 0 || surrender == 1 ? surrender : human);
         }
         if (worker.joinable()) worker.join();
     }
@@ -82,6 +83,7 @@ namespace NEBULA {
                 updateViews();
             }
             phase = MatchState::Finished;
+            if (recording) completed = std::make_shared<const Recording>(*recording);
         }
         for (auto& input : inputs) input.clear();
         saveRecording();
@@ -94,6 +96,7 @@ namespace NEBULA {
     bool LocalMatch::saveRecording() {
         saveError.clear();
         if (!recording) return true;
+        if (directory.empty()) { recording.reset(); return true; }
         auto path = saveReplay(*recording, directory, saveError);
         if (!path) return false;
         saved = *path;
@@ -173,6 +176,7 @@ namespace NEBULA {
         next.error = failure;
         if (!saveError.empty()) next.error += (next.error.empty() ? "" : ". ") + saveError;
         next.saved = saved;
+        next.completed = completed;
         next.unsaved = recording.has_value() && phase == MatchState::Finished;
         for (int player = 0; player < 2; ++player) {
             for (const auto& pending : inputs[player]) next.queued[player].push_back(pending.action);

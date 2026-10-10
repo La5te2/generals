@@ -27,11 +27,15 @@ namespace NEBULA {
     bool replayDirectory(const std::filesystem::path& directory, std::string& error);
     std::optional<std::filesystem::path> saveReplay(const Recording& record, const std::filesystem::path& directory,
                                                    std::string& error);
+    std::string encodeReplay(const Recording& record);
+    std::optional<std::filesystem::path> saveReplayBytes(std::string_view bytes, const std::filesystem::path& directory,
+                                                        std::string& error);
 
     class Replay {
     public:
         // validate and reconstruct a candidate before replacing the currently loaded replay.
         bool load(const std::filesystem::path& path, std::string& error);
+        bool loadBytes(std::string_view bytes, std::string& error);
         bool seek(std::size_t halfTurn);
         const States& state() const { return *position; }
         const std::array<std::string, 2>& names() const { return players; }

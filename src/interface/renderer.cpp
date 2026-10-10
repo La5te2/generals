@@ -327,23 +327,23 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
             if (setup.fileHover == field && !console.opened) {
                 Rect tooltip{bounds.x + bounds.width - 120 * scale, bounds.y - 30 * scale, 120 * scale, 24 * scale};
                 rectangle(tooltip, {.06f, .07f, .08f});
-                label(field == 6 ? "DIRECTORY" : "SELECT FILE", tooltip, white, 1.25f * scale);
+                label("SELECT FILE", tooltip, white, 1.25f * scale);
             }
         };
         if (setup.scene == Scene::Local) {
             fileInput("RED PLAYER", 3, 0);
             fileInput("BLUE PLAYER", 4, 1);
-            fileInput("DIRECTORY", 6, 2);
         } else if (setup.scene == Scene::Online) {
             Rect server = group("SERVER", 0);
-            button("BOT", choiceButton(server, 0, 2), !setup.mainServer, true, scale);
-            button("MAIN", choiceButton(server, 1, 2), setup.mainServer, true, scale);
+            button("BOT", choiceButton(server, 0, 3), setup.server == 0, true, scale);
+            button("MAIN", choiceButton(server, 1, 3), setup.server == 1, true, scale);
+            button("LAN", choiceButton(server, 2, 3), setup.lan(), true, scale);
             fileInput("PLAYER", 5, 1);
             input(setup.fields[0], group("USERNAME", 2), setup.focus == 0, false, scale);
-            input(setup.fields[1], group("USER ID", 3), setup.focus == 1, true, scale);
-            Rect room = group("PRIVATE ROOM", 4);
-            input(setup.fields[7], room, setup.focus == 7, false, scale);
-            input(setup.fields[8], group("PROXY", 5), setup.focus == 8, false, scale);
+            input(setup.fields[1], group(setup.lan() ? "ROOM ID" : "USER ID", 3), setup.focus == 1, !setup.lan(), scale);
+            Rect room = group(setup.lan() ? "IP" : "PRIVATE ROOM", 4);
+            input(setup.fields[6], room, setup.focus == 6, false, scale);
+            input(setup.fields[7], group("PROXY", 5), setup.focus == 7, false, scale);
         } else {
             fileInput("REPLAY FILE", 2, 0);
         }
@@ -407,7 +407,7 @@ void Renderer::drawScores(const Observation& view, const std::array<std::string,
         rectangle({row.x, row.y + (row.height - 8 * scale) / 2, 8 * scale, 8 * scale}, colors[player]);
         row.x += 14 * scale;
         row.width -= 14 * scale;
-        label(names[player], row, paper, scale);
+        label(names[player], row, paper, 1.5f * scale);
     }
 }
 
@@ -423,6 +423,7 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     const Color white{.95f, .96f, .97f}, ink{.12f, .14f, .16f};
     const Color red{.82f, .23f, .26f}, blue{.20f, .38f, .73f};
     const Color darkRed{.53f, .12f, .15f}, darkBlue{.11f, .23f, .48f};
+    const Color generalRed{1.0f, .30f, .35f}, generalBlue{.25f, .65f, 1.0f};
     float textScale = NEBULA::barScale(height);
     back(textScale);
     float font = 1.5f * textScale;
@@ -451,8 +452,8 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
                 Color fill{.88f, .89f, .88f};
                 if (cell.terrain == ViewTerrain::Fog) fill = {.27f, .29f, .31f};
                 else if (cell.terrain == ViewTerrain::Obstacle) fill = {.43f, .46f, .48f};
-                else if (cell.owner == 0) fill = structure ? darkRed : red;
-                else if (cell.owner == 1) fill = structure ? darkBlue : blue;
+                else if (cell.owner == 0) fill = cell.terrain == ViewTerrain::General ? generalRed : structure ? darkRed : red;
+                else if (cell.owner == 1) fill = cell.terrain == ViewTerrain::General ? generalBlue : structure ? darkBlue : blue;
                 else if (cell.terrain == ViewTerrain::Mountain) fill = {.70f, .72f, .72f};
                 else if (cell.terrain == ViewTerrain::City) fill = {.49f, .52f, .54f};
                 // an inset fill exposes the dark tile beneath as the grid border.
@@ -490,10 +491,14 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     }
     std::string_view status = active ? (running ? "RUNNING" : "PAUSED") : "STOPPED";
     if (!sessionStatus.empty()) status = sessionStatus;
-    if (view.result == Phases::RedWin) status = "RED WINS";
-    else if (view.result == Phases::BlueWin) status = "BLUE WINS";
-    else if (view.result == Phases::Draw) status = "DRAW";
-    text(status, width - 16.0f - PixelFont::measure(status) * font, bottom, font, white);
+    if (sessionStatus.empty()) {
+        if (view.result == Phases::RedWin) status = "RED WINS";
+        else if (view.result == Phases::BlueWin) status = "BLUE WINS";
+        else if (view.result == Phases::Draw) status = "DRAW";
+    }
+    float statusFont = std::min(font, std::max(1.0f, width - 220.0f * textScale) / std::max(1.0f, PixelFont::measure(status)));
+    text(status, width - 16.0f - PixelFont::measure(status) * statusFont,
+         bottom + PixelFont::height * (font - statusFont) / 2, statusFont, white);
     drawMessage(setup, width, height, true);
     if (controls.hover != Tool::None && !console.opened) {
         const std::array<std::string_view, 6> toolNames{"", "STEP BACK", running ? "PAUSE" : "PLAY", "STEP FORWARD", "STOP", "RESET"};

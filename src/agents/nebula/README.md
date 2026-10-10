@@ -1,28 +1,45 @@
-# Training
+# Nebula
 
-The 2026 paper provides the target algorithm for the agent in `src/agents/nebula/`. PyTorch handles the neural network and optimization, while `generals-bots` supplies batched self-play games through JAX. During sampling, `train.py` runs the model to select actions. It then uses the collected games to update the model through PPO. Training uses `features.py` and C++ deployment uses `features.hpp` to encode the same information from each player's own field of view.
+Nebula implements the agent described in the 2026 paper. PyTorch handles the neural network and optimization, while `generals-bots` supplies batched self-play games through JAX. During sampling, `train.py` runs the model to select actions. It then uses the collected games to update the model through PPO. Training uses `features.py` and C++ deployment uses `features.hpp` to encode the same information from each player's own field of view.
 
 ## Running
 
-The Python dependencies are listed in the root `requirements.txt`. Training runs directly through Python. C++ compilation belongs to deployment, which produces the Nebula executable and its runtime libraries in `build/nebula/`. 
+Copy this directory to the training machine. Keep its Python files, `requirements.txt` and the appropriate launch script; `infer.cpp` and `features.hpp` are not needed for training. No other repository files or C++ build are required. Git must be installed because `requirements.txt` pins `generals-bots` to a Git commit.
 
-From the repository root on Windows:
-
-```powershell
-.\scripts\train.bat --profile check
-```
-
-On Linux or macOS:
+Run the following commands from inside the copied directory, using the Python environment selected for training:
 
 ```sh
-bash scripts/train.sh --profile check
+python -m pip install -r requirements.txt
 ```
 
-`check` uses a small network and two brief updates to exercise sampling, optimization and saving. `paper` selects the seven-layer model and large rollout configuration. GPU training requires CUDA-enabled JAX and PyTorch installations, selected together through `--device cuda`.
+On Linux or macOS, a short CPU execution check is:
+
+```sh
+bash train.sh --profile check --device cpu
+```
+
+On Windows:
 
 ```powershell
-.\scripts\train.bat --profile paper --device cuda --output runs/nebula
-.\scripts\train.bat --resume runs/nebula/checkpoint.pt --updates 100000
+.\train.bat --profile check --device cpu
+```
+
+`check` uses a small network and two brief updates to exercise sampling, optimization and saving. The default profile, `paper`, selects the seven-layer model and large rollout configuration. The scripts use `python3` on Unix and `python` on Windows; set `PYTHON` to an executable path to override this. They preserve the calling directory, so relative output and resume paths resolve from where the command is run.
+
+For NVIDIA GPU training on Linux, install a CUDA-enabled PyTorch build using the [PyTorch installation selector](https://pytorch.org/get-started/locally/), and a compatible CUDA-enabled JAX build using the [JAX installation guide](https://docs.jax.dev/en/latest/installation.html). Both libraries must have GPU support. For a CUDA 13-compatible machine, the JAX command is:
+
+```sh
+python -m pip install "jax[cuda13]>=0.11.2,<0.12"
+python -c "import torch, jax; print('PyTorch CUDA:', torch.cuda.is_available()); print('JAX devices:', jax.devices())"
+bash train.sh --device cuda --output runs/nebula
+```
+
+The check should report PyTorch CUDA availability and a JAX GPU device. Native Windows and macOS can run the CPU path; the CUDA command above targets Linux. `--device auto`, the default, selects an available device; `--device cuda` requires GPU support and reports an error if it is missing.
+
+To resume training:
+
+```sh
+bash train.sh --device cuda --resume runs/nebula/checkpoint.pt --updates 100000
 ```
 
 The output directory contains `checkpoint.pt` and `metrics.jsonl`. A checkpoint stores model weights, EMA weights, optimizer state, update count, random state and curriculum stage. Resuming begins fresh games at the saved stage and continues the optimization schedule. `--updates` specifies the total target update count.
@@ -62,7 +79,7 @@ $$
 $$
 
 $$
-\beta_k=\max\left(0.001,\frac{0.05}{(k+1)^{0.2}}\right).
+\beta_k=\frac{0.05}{(k+1)^{0.2}}.
 $$
 
 EMA updates once per training iteration with decay $0.999$. Deployment uses these averaged weights.
@@ -81,13 +98,15 @@ CPU execution checks establish functional correctness. Reproducing the reported 
 
 The deployed agent runs through `infer.cpp`, using LibTorch on CPU with one computation thread. It reads initialization and observations through the process protocol and replies with five-integer actions. To prepare its model, export the EMA weights:
 
-```powershell
-python src/agents/nebula/export.py runs/nebula/checkpoint.pt runs/nebula/policy.pt
+```sh
+python -B export.py runs/nebula/checkpoint.pt runs/nebula/policy.pt
 ```
 
-The `nebula` target builds by default and uses LibTorch. CMake first searches the configured library paths, then queries the selected Python interpreter for PyTorch's CMake package location. A separate LibTorch installation can be selected through `CMAKE_PREFIX_PATH` or `Torch_DIR`.
+`checkpoint.pt` resumes Python training; `policy.pt` is the exported TorchScript model loaded by the C++ executable. Exporting needs only this folder and its Python dependencies. Copy the resulting `policy.pt` to the deployment machine.
 
-Build the executable on Windows:
+Building the executable requires the full repository. The `nebula` target builds by default and uses LibTorch. CMake first searches the configured library paths, then queries the selected Python interpreter for PyTorch's CMake package location. A separate LibTorch installation can be selected through `CMAKE_PREFIX_PATH` or `Torch_DIR`.
+
+From the repository root, build the executable on Windows:
 
 ```powershell
 .\scripts\build.bat -DNEBULA_BUILD_AGENT=ON
@@ -102,7 +121,7 @@ bash scripts/build.sh -DNEBULA_BUILD_INTERFACE=OFF -DNEBULA_BUILD_AGENT=ON
 The corresponding Player command on Windows is:
 
 ```text
-build/nebula/nebula.exe runs/nebula/policy.pt
+build/nebula/nebula.exe "path/to/policy.pt"
 ```
 
 Linux and macOS use `build/nebula/nebula` as the executable path. Quote each executable or model path that contains spaces. Relative paths resolve from the application's working directory. The model input size determines the largest supported board for its checkpoint, and the agent reports larger boards through `stderr`.
@@ -111,7 +130,7 @@ TorchScript carries the exported model from PyTorch to LibTorch. The JAX trainin
 
 ## Sources
 
-- [2026 paper](2606.23348v1.pdf)
+- [2026 paper](https://arxiv.org/abs/2606.23348)
 - [Author repository](https://github.com/strakam/AverageJoe)
 - [Released model configuration](https://github.com/strakam/AverageJoe/blob/main/configs/custom/L_7d_gae90.yaml)
 - [Observation and action encoding](https://github.com/strakam/AverageJoe/blob/main/networks/common.py)

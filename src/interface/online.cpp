@@ -1,6 +1,7 @@
 // online session: keep server communication off the window thread, publish account-only views, and track queued actions until server confirmation.
 // the server settles moves and decides the outcome. stopping a session cancels its queue entry or leaves its game.
 #include "online.hpp"
+#include "proxy.hpp"
 #include "process.hpp"
 #include <rtc/websocket.hpp>
 #include <condition_variable>
@@ -316,7 +317,7 @@ namespace NEBULA {
             transport.connectionTimeout = 10s;
             transport.maxMessageSize = 256 * 1024;
             // an empty proxy selects a direct connection. both routes retain the library's TLS verification.
-            if (!config.proxy.empty()) transport.proxyServer = rtc::ProxyServer(config.proxy);
+            transport.proxyServer = httpProxy(config.proxy);
             rtc::WebSocket socket(transport);
             auto inbox = mail;
             auto fail = [inbox](std::string message) {
@@ -616,19 +617,8 @@ namespace NEBULA {
         else if (!config.command.empty() && !StrategyProcess::available(config.command)) error = "Strategy program was not found or its command is invalid";
         // this client accepts anonymous HTTP CONNECT endpoints with an explicit host and port.
         if (error.empty() && !config.proxy.empty()) {
-            try {
-                require(config.proxy.starts_with("http://") && config.proxy.size() <= 2048 &&
-                    config.proxy.find_first_of("/?#@ \t\r\n", 7) == std::string::npos, "Proxy requires http://host:port");
-                rtc::ProxyServer proxy(config.proxy);
-                auto colon = config.proxy.rfind(':');
-                require(colon > 6 && colon + 1 < config.proxy.size(), "Proxy requires an explicit port");
-                int port = 0;
-                const char* end = config.proxy.data() + config.proxy.size();
-                auto parsed = std::from_chars(config.proxy.data() + colon + 1, end, port);
-                require(parsed.ec == std::errc{} && parsed.ptr == end && port >= 1 && port <= 65535, "Proxy port is outside its range");
-                require(proxy.type == rtc::ProxyServer::Type::Http && !proxy.hostname.empty() && proxy.port > 0 &&
-                    !proxy.username && !proxy.password, "Proxy requires an HTTP endpoint without authentication");
-            } catch (const std::exception&) { error = "Proxy requires http://host:port without authentication"; }
+            try { httpProxy(config.proxy); }
+            catch (const std::exception& problem) { error = problem.what(); }
         }
         if (!error.empty()) {
             std::lock_guard lock(session->mail->mutex);

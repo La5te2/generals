@@ -118,3 +118,25 @@ Use `bash train.sh --device cpu --microbatch 32 --inference-batch 32` or run `py
 `checkpoint.eqx` is resumable. `policy.eqx` contains only the exported network and input configuration. Both use native Equinox leaf serialization after a JSON metadata line. The default save interval is 10 completed training iterations; evaluation and normal completion also save. Exported policies use the existing initialization/observation/action text protocol through stdin/stdout; diagnostics go to stderr. Checkpoints must match the current network structure. No conversion of earlier architectures or PyTorch `.pt` files is implemented; start the changed architecture in a new output directory.
 
 Evaluation plays the same maps from both colors and reports wins, losses, terminal draws and time-limit truncations separately. Omit both `--baseline` and `--opponent` to use the random legal mover. Evaluation defaults to CPU; pass `--device cuda:0` to use the GPU for both the environment and network. A completed CPU smoke test checks execution, not learning quality. GPU memory use, sustained throughput and competitive strength still require measurements on the intended machine.
+
+## C++ Deployment
+
+Training and evaluation remain in JAX. `export.py` copies a native `.eqx` policy or checkpoint into an equivalent float32 TorchScript module for CPU deployment. It includes observation history, dated memory, action masking and the network; it does not train or distill another policy. PyTorch is an optional export dependency, not a training dependency:
+
+```sh
+python -m pip install torch
+python -B export.py runs/train/policy.eqx policy.pt
+python -B export.py runs/train/checkpoint.eqx policy.pt --weights ema
+```
+
+`--weights selected` is the default. A resumable checkpoint can also select `model` or `ema`; an exported `policy.eqx` already contains only its selected weights. The resulting `.pt` file is for inference and cannot resume JAX training. Floating-point results can differ slightly between runtimes, so nearly tied actions need not always have the same argmax.
+
+The repository's CMake configuration builds `infer.cpp` as `build/simple/simple.exe` on Windows, or `build/simple/simple` on Linux. `SIMPLE_BUILD_AGENT` defaults to `ON`. CMake uses an available Torch package or queries PyTorch through the discovered Python interpreter; it does not hard-code a machine-specific library path. The executable requires LibTorch and its runtime libraries, but no Python, JAX or CUDA at match time. Windows builds copy the Torch DLLs beside the executable. Use a PyTorch export installation compatible with the deployment LibTorch version.
+
+The executable takes one model-path argument, whose basename is unrestricted. For example, the interface's Player field can contain:
+
+```text
+"D:\Repository\Games\generals\build\simple\simple.exe" "D:\Models\genformer.pt"
+```
+
+It reads initialization and observations from stdin, chooses the highest-scoring legal action and flushes the standard five-integer reply to stdout. Diagnostics go to stderr. Inference uses one CPU thread. The model's padded `side` bounds both input dimensions; larger maps are rejected. Quoting is necessary for paths containing spaces. The executable does not search for a model beside itself or assume the name `policy.pt`.

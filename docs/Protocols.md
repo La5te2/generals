@@ -1,8 +1,19 @@
 # Protocols
 
-This document defines the external agent protocol, interface console commands, supported online messages, and the GIOR replay format. Each section specifies the data exchanged, its meaning, and the order of communication.
+This document defines the external agent protocol, interface console commands, supported online messages, LAN room messages, and the GIOR replay format. Each section specifies the data exchanged, its meaning, and the order of communication.
 
 ## External Agents
+
+### Program Commands
+
+The Player field contains an executable followed by its arguments. Whitespace separates arguments; single or double quotes group an argument containing spaces. Quotes must be balanced, and backslashes remain literal. The command is passed directly to process creation: shell operators, variable expansion and redirection are not interpreted.
+
+```text
+"D:\Games\simple.exe" "D:\Models\policy.pt"
+python -B "D:\Agents\agent.py" "D:\Models\policy.eqx"
+```
+
+An empty Player field selects human input instead of an external program. The recording directory is a path, not an executable command; its console syntax is defined under `RD` below.
 
 ### Streams and Lifecycle
 
@@ -39,7 +50,7 @@ tick my_land my_army opp_land opp_army
 <H rows of army counts>
 ```
 
-`tick` counts half-turns. LOCAL starts at `0`, while ONLINE uses the server's `turn` value, starting from `1`.
+`tick` counts half-turns. LOCAL and LAN start at `0`. Main- and bot-server sessions use the server's `turn` value, starting from `1`.
 
 `my_land` and `my_army` give the agent's total land and army. `opp_land` and `opp_army` give the opponent's public totals. These statistics cover each player's entire territory, while the matrices describe the agent's current field of view.
 
@@ -109,11 +120,15 @@ The exchange follows a request/reply sequence. The agent reads one complete obse
 
 For LOCAL, a matching reply received by the deadline participates in that half-turn. If the deadline arrives while the session is still waiting, the action for that half-turn becomes Pass. A slow agent may receive observations with gaps in their tick values.
 
-For ONLINE, a move is eligible for submission while its observation tick matches the latest received board. Pass waits for the next observation, and replies to older ticks expire. Submitted moves remain pending until server confirmation. The server checks move legality at execution time and advances the processed index for both executed and discarded moves. Malformed replies, oversized lines, and premature process exit end the session.
+For main- and bot-server sessions, a move is eligible for submission while its observation tick matches the latest received board. Pass waits for the next observation, and replies to older ticks expire. Submitted moves remain pending until server confirmation. The server checks move legality at execution time and advances the processed index for both executed and discarded moves.
+
+LAN agent replies also expire when their observation tick is no longer current. The host checks the tick again when it receives the move. Acknowledgment confirms receipt and processing of the request, not execution of the move; the following observations describe its outcome. A slow agent may skip intermediate observations. Pass submits no queued move.
+
+Malformed replies, oversized lines, and premature process exit end the agent's session. In an ongoing LAN game, an agent failure also surrenders that player's side.
 
 Each action line allows up to 255 bytes before LF. With CRLF endings, CR counts toward that limit. Fields are whitespace-separated integers, and each line follows the field count specified above.
 
-LOCAL deadlines follow the configured half-turn duration. ONLINE action timing follows server updates. An agent sends its reply as soon as its decision is ready.
+LOCAL deadlines follow the configured half-turn duration. LAN timing follows the room host, while main- and bot-server timing follows server updates. An agent sends its reply as soon as its decision is ready.
 
 ### Minimal Agent
 
@@ -140,17 +155,27 @@ An external C++ agent can implement the same exchange through the standard proce
 
 ## Interface Console
 
-Each submission contains one command with whitespace-separated arguments. Command names are case-insensitive, so `TURN 250` and `turn 250` are equivalent.
+Each submission contains one command. Command names are case-insensitive, so `TURN 250` and `turn 250` are equivalent. Numeric arguments are whitespace-separated decimal integers. Paths retain their case, and `RD` requires the quoting described below. Extra arguments invalidate a command.
 
 - `help` takes zero arguments and displays the command list.
 - `man` takes zero arguments and displays the game and interface manual.
 - `back` takes zero arguments and returns to the previous scene. From a match, it ends the session and returns to configuration.
 - `quit` takes zero arguments and ends the session before closing the application. A recording save failure defers exit until the recording can be saved.
-- `turn MS` accepts a positive integer and sets the LOCAL and REPLAY half-turn duration in milliseconds.
-- `win N` accepts an integer from `0` through `10` and selects a fixed window size. Level `10` fills the current screen with a borderless window.
+- `turn MS` accepts a positive integer and sets the LOCAL and REPLAY half-turn duration in milliseconds. A newly created LAN room uses this setting, restricted to `1` through `60000`; an existing room retains its creator's duration, including after Reset. Main- and bot-server speed is unaffected.
+- `win WIDTH HEIGHT` sets the window's content size. Width must be from `720` through `7680`, and height from `560` through `4320`. The result is limited to the monitor's usable area. `win 0 0` selects borderless fullscreen; a single zero is invalid.
+- `rd "folder path"` selects the recording directory for new LOCAL and LAN games. `rd ""` disables saving for new games.
 - `auto N` accepts `0` for manual Reset or `1` for automatic Reset after a 1000 ms delay following normal completion or manual Stop.
 
-`auto` defaults to `0`. With automatic Reset enabled, LOCAL starts a new game, ONLINE reconnects and joins the queue, and REPLAY restarts the current file. `back` and `quit` cancel a pending automatic Reset. Sessions ending in an error await manual retry.
+`auto` defaults to `0`. With automatic Reset enabled, LOCAL starts a new game, main- and bot-server sessions reconnect and join the queue, and REPLAY restarts the current file. In an open LAN room, Reset marks the player ready; both players must be ready before another game starts. REPLAY has no Stop operation. `back` and `quit` cancel a pending automatic Reset. Sessions ending in an error await manual retry.
+
+The recording directory is empty at application startup. Its value is shared across modes and is not persisted across application launches. The double quotes around the `RD` path are mandatory, even without spaces. Backslashes are literal path characters, not escape sequences; embedded double quotes are unsupported. A nonempty directory is created if necessary. An invalid directory leaves the previous setting unchanged. An ongoing game keeps the directory selected when it started. The path is local to each participant and is never sent to a LAN peer.
+
+```text
+win 1280 800
+win 0 0
+rd "D:\Games\Replays"
+rd ""
+```
 
 ## Online Servers
 
@@ -164,6 +189,8 @@ Bot:  wss://botws.generals.io/socket.io/?EIO=4&transport=websocket
 ```
 
 The User ID identifies the account in join requests. The server supplies public usernames in `game_start`. A private-game request includes the room ID, while ranked play uses `join_1v1`.
+
+The optional Proxy field accepts an anonymous HTTP CONNECT proxy, for example `http://127.0.0.1:7890`. The `http://` prefix and explicit port are required. Proxy credentials, paths and query strings are unsupported. An empty field uses a direct connection. A configured proxy does not fall back to a direct connection on failure. These proxy semantics also apply to LAN connections.
 
 ### Message Framing
 
@@ -233,11 +260,114 @@ Board updates describe the account's perspective, while scores provide both play
 
 `game_won` and `game_lost` describe victory and defeat relative to the account.
 
+## LAN Rooms
+
+### Transport and Address
+
+LAN uses a WebSocket connection with one JSON object per text frame. Every message has a case-sensitive `type` field. There are no Engine.IO or Socket.IO prefixes. Binary frames are unsupported, and each message must fit within 256 KiB.
+
+The address accepts `host:port`, `ws://host:port`, or a WebSocket URL with a forwarding path. The default port is `8080` for `ws` and `443` for `wss`. Ports range from `1` through `65535`. Query strings and fragments are unsupported. IPv6 literals use square brackets.
+
+An empty address selects the local endpoint `127.0.0.1:8080` and permits listening on `0.0.0.0:8080`. It does not discover other computers on the network. If a direct connection fails, a plain `ws` endpoint without a forwarding path can start a listener when the address belongs to this computer. Other players connect to that listener's reachable LAN address or forwarding address. A configured proxy disables automatic local listening. Secure forwarding can use `wss`, but the local listener itself serves plain WebSocket.
+
+One listener can serve multiple independent rooms. The listener's owner and an individual room's creator need not be the same participant. A Room ID selects a room; it is not a password or an account credential.
+
+### Joining
+
+The first client message identifies the player and requested room:
+
+```json
+{"type":"hello","name":"Alice","room":"","milliseconds":500}
+```
+
+`name` must contain 1 through 64 printable ASCII characters. A nonempty `room` has the same limits and is case-sensitive. `milliseconds` must be an integer from `1` through `60000`. The first participant creates the room and determines its half-turn duration; later participants cannot change it.
+
+An empty `room` requests public matchmaking. The listener selects a public vacancy or creates a new public room with an automatically assigned label. Full rooms are skipped: the third and fourth arrivals can form a second game. A nonempty `room` creates or joins that private room; joining a full or closing private room is rejected. Public and private rooms have separate namespaces, so entering a public label as a nonempty ID does not select that public room. Once assigned, a participant remains in that room until leaving or disconnecting.
+
+The listener replies with the assigned room label and seat:
+
+```json
+{"type":"welcome","room":"1","player":0}
+{"type":"waiting","ready":true,"names":["Alice","BLUE"]}
+```
+
+Seat `0` is red and owns the room; seat `1` is blue and joins it. `names` is always ordered red, blue. `waiting.ready` describes the receiving player's readiness. New participants are ready initially, so the first game begins once both seats are occupied. Later games require both participants to send `ready` again.
+
+### Observations and Queues
+
+During and after a game, the listener sends `state` messages. The following example uses a complete three-by-three observation:
+
+```json
+{"type":"state","game":1,"rows":3,"cols":3,"view":"8 2 6 3 12\n4 1 2\n1 1 1\n0 0 5\n1 1 0\n0 0 0\n0 0 0\n5 1 0\n0 0 0\n0 0 0\n","result":0,"ready":false,"names":["Alice","Bob"],"queued":[],"ack":0}
+```
+
+`game` is a positive identifier that increases within the room at each new game. `rows` and `cols` are the board dimensions. `view` is the complete external-agent observation text, without an initialization line; ownership is relative to the recipient. `result` is `0` for ongoing, `1` for red victory, `2` for blue victory, or `3` for a draw. Terminal states still include the final observation. Each client receives only its own field of view, not the full board.
+
+`queued` contains only the receiving player's pending actions, each encoded as a five-integer action string. `ack` is the highest processed input ID, initially zero. It confirms processing of a queue edit, not execution of a move. States may repeat a tick when only queue or readiness information changes. Ticks cannot decrease within one game; a new game begins at tick zero.
+
+### Actions
+
+Queue edits carry a strictly increasing positive `id` and the current `game`. IDs are unsigned 64-bit integers and continue increasing across games on the same connection.
+
+```json
+{"type":"move","id":1,"game":1,"action":"0 1 1 0 0\n"}
+{"type":"move","id":2,"game":1,"tick":8,"action":"0 1 1 3 1\n"}
+{"type":"cancel","id":3,"game":1,"all":false}
+```
+
+`action` uses the external-agent action format and may contain at most 100 bytes. An optional `tick` restricts acceptance to that exact host tick. External-agent moves carry this restriction; human queued moves omit it. A stale game or tick causes the request to be ignored while its input ID is still acknowledged. This prevents an old request from entering a later game or a later decision step.
+
+`cancel` removes the newest pending move when `all` is false, or clears the queue when true. Move legality is checked against the game state, including at execution time. A correctly formatted but illegal move does not imply a transport failure.
+
+### Completion and Room Lifetime
+
+The following client commands have no additional required fields:
+
+```json
+{"type":"stop"}
+{"type":"ready"}
+{"type":"leave"}
+{"type":"ping"}
+```
+
+`stop` surrenders the requesting player's side if a game is ongoing, but keeps the room open. Natural completion also leaves the room open. Both players become unready after completion. `ready` marks the sender ready for the next game; it does not interrupt an ongoing game. The next game waits for both players' readiness and acknowledgment of the preceding replay transfer.
+
+`leave` exits the room and surrenders an ongoing game. If the joining player leaves or disconnects, the creator's room remains available for another participant. If the creator leaves or disconnects, the room closes and the remaining participant is notified. Returning to configuration or Home sends `leave`. Closing the program that provides the listener also disconnects the rooms it serves.
+
+The listener answers `ping` with `{"type":"pong"}`. Clients send heartbeat messages every five seconds; a connection with no incoming activity for twenty seconds is considered lost.
+
+Rejections and orderly closure use:
+
+```json
+{"type":"error","message":"Room is full"}
+{"type":"closed","message":"Room closed: its host left"}
+```
+
+The connection closes after these messages. Unexpected transport loss may close it without a final message.
+
+### Replay Transfer
+
+At completion, both participants receive the same compressed GIOR bytes in ordered chunks:
+
+```json
+{"type":"replay","game":1,"offset":0,"data":"0012abff","last":false}
+```
+
+`data` is lowercase hexadecimal, with two characters per byte. `offset` counts decoded bytes, begins at zero and must equal the end of the previous chunk. A chunk contains at most 8192 bytes, and a complete transfer at most 16 MiB. `last` marks the final chunk. The example illustrates chunk framing, not a complete replay.
+
+The recipient acknowledges completion with:
+
+```json
+{"type":"recorded","game":1}
+```
+
+This acknowledgment confirms receipt, not successful disk persistence. Transfer and acknowledgment are required even when local recording is disabled. Each participant independently applies its `RD` setting. An orderly departure allows the completed replay to be delivered before closure, but transport loss can prevent delivery.
+
 ## Replays
 
 ### File Structure
 
-Local recordings and downloaded games share the `.gior` format used by generals.io. The file contains a positional JSON array compressed with LZ-String's `compressToUint8Array`. Compressed 16-bit words appear as two bytes each, high byte first. Text decoding follows UTF-16 semantics, preserving Unicode player names.
+LOCAL recordings, LAN recordings and downloaded games share the `.gior` format used by generals.io. The file contains a positional JSON array compressed with LZ-String's `compressToUint8Array`. Compressed 16-bit words appear as two bytes each, high byte first. Text decoding follows UTF-16 semantics, preserving Unicode player names.
 
 The current writer emits format revision `19`. The reader accepts revisions `15` through `19` for mainstream 1v1. These revisions share the movement priorities used by the local engine. Supported games contain two opposing players, plains, mountains, cities and generals.
 
@@ -290,9 +420,11 @@ General captures and time limits derive their results from the game rules. A sur
 
 Stopping an ongoing local human match records the human player's surrender. With two programs, Stop compares army totals, then land totals, with blue winning an exact tie. The losing player surrenders at the next unresolved half-turn. The resulting file uses the existing surrender event.
 
+In LAN, Stop or departure surrenders the requesting or disconnected player's side, whether human or external agent. Both recipients receive the same completed recording. No additional replay event is needed for a manual stop.
+
 ### Filenames
 
-Local filenames consist of an eight-character lowercase hexadecimal digest followed by `.gior`. Downloaded files keep their original names. The local digest is 32-bit FNV-1a over the compressed file bytes $b_0, \ldots, b_{n-1}$:
+LOCAL and LAN recordings are saved to the directory selected through `RD`. Filenames consist of an eight-character lowercase hexadecimal digest followed by `.gior`. Downloaded files keep their original names. The digest is 32-bit FNV-1a over the compressed file bytes $b_0, \ldots, b_{n-1}$:
 
 $$
 h_0 = 2166136261,
@@ -301,3 +433,5 @@ h_{k+1} = \bigl((h_k \mathbin{\oplus} b_k) \times 16777619\bigr) \bmod 2^{32}.
 $$
 
 Here, $\oplus$ denotes bitwise XOR. The final value $h_n$ becomes eight lowercase hexadecimal characters, padded with leading zeroes. The filename identifies the local recording, while the binary contents retain the GIOR structure.
+
+An existing file with identical contents is reused. If the same digest names different contents, saving reports an error instead of overwriting that recording. The short digest is not a guarantee of uniqueness or authenticity.

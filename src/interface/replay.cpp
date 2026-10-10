@@ -200,12 +200,20 @@ namespace NEBULA {
         return true;
     }
 
+    std::string encodeReplay(const Recording& record) { return LZ::compress(encode(record).dump(-1, ' ', true)); }
+
     std::optional<std::filesystem::path> saveReplay(const Recording& record, const std::filesystem::path& directory,
                                                    std::string& error) {
         error.clear();
         std::string bytes;
-        try { bytes = LZ::compress(encode(record).dump(-1, ' ', true)); }
+        try { bytes = encodeReplay(record); }
         catch (const std::exception& problem) { error = problem.what(); return std::nullopt; }
+        return saveReplayBytes(bytes, directory, error);
+    }
+
+    std::optional<std::filesystem::path> saveReplayBytes(std::string_view bytes, const std::filesystem::path& directory,
+                                                        std::string& error) {
+        error.clear();
         std::string hash = digest(bytes);
         if (!replayDirectory(directory, error)) return std::nullopt;
         auto path = directory / (hash + ".gior");
@@ -250,6 +258,11 @@ namespace NEBULA {
         error.clear();
         std::string bytes;
         if (!readFile(path, bytes, error)) return false;
+        return loadBytes(bytes, error);
+    }
+
+    bool Replay::loadBytes(std::string_view bytes, std::string& error) {
+        error.clear();
         try {
             auto text = LZ::decompress(bytes);
             auto data = Json::parse(text, [](int depth, Json::parse_event_t, Json&) {

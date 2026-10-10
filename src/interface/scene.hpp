@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <filesystem>
 
 struct Rect {
     float x, y, width, height;
@@ -34,8 +35,9 @@ namespace NEBULA {
         bool spectator() const { return (scene == Scene::Local || scene == Scene::Replay) && !human; }
 
         bool enabled(Tool tool) const {
-            if (tool == Tool::Stop) return active;
+            if (tool == Tool::Stop) return active && scene != Scene::Replay;
             if (tool == Tool::Reset) return !active;
+            if (tool == Tool::Backward && scene == Scene::Replay) return !running && previous;
             if (!active || scene == Scene::Online || scene == Scene::Home) return false;
             if (tool == Tool::Playback) return true;
             if (running || human) return false;
@@ -50,15 +52,19 @@ namespace NEBULA {
         static constexpr double messageHold = 2, messageFade = 1; // seconds.
 
         Scene scene = Scene::Home;
-        bool mainServer = false;
+        int server = 0; // BOT, MAIN, LAN.
+        bool lan() const { return server == 2; }
+        std::filesystem::path directory; // session-wide RD destination; empty disables local recording.
         // online fields stay in memory. the user ID is masked while drawing.
-        std::array<TextInput, 9> fields; // username, user ID, replay path, red command, blue command, online command, directory, room, proxy.
-        std::array<std::array<TextInput, 2>, 2> accounts;
-        void selectServer(bool main) {
-            accounts[mainServer ? 1 : 0] = {fields[0], fields[1]};
-            mainServer = main;
-            fields[0] = accounts[main ? 1 : 0][0];
-            fields[1] = accounts[main ? 1 : 0][1];
+        std::array<TextInput, 8> fields; // username, user ID, replay path, red command, blue command, online command, room, proxy.
+        std::array<std::array<TextInput, 4>, 3> accounts;
+        void selectServer(int selected) {
+            accounts[server] = {fields[0], fields[1], fields[6], fields[7]};
+            server = selected;
+            fields[0] = accounts[server][0];
+            fields[1] = accounts[server][1];
+            fields[6] = accounts[server][2];
+            fields[7] = accounts[server][3];
         }
         int milliseconds = 500; // local and replay half-turn interval, retained between sessions.
         int focus = -1;
@@ -128,7 +134,7 @@ namespace NEBULA {
     inline Rect scoreNamesArea(int width, int height) {
         Rect scores = scoreArea(width, height);
         float scale = barScale(height);
-        return {scores.x, scores.y + scores.height + 6 * scale, scores.width, 40 * scale};
+        return {scores.x, scores.y + scores.height + 10 * scale, scores.width, 64 * scale};
     }
 
     // center the board in the window. use space below the score table when the right margin is too narrow.
@@ -163,7 +169,7 @@ namespace NEBULA {
     }
 
     inline Rect formControl(Scene scene, int index, int width, int height) {
-        int groups = scene == Scene::Online ? 6 : scene == Scene::Local ? 3 : 1;
+        int groups = scene == Scene::Online ? 6 : scene == Scene::Local ? 2 : 1;
         // reserve 24 px for each label and 36 px for its control. six online rows use a tighter, uniform gap.
         float scale = contentScale(width, height);
         float spacing = scene == Scene::Online ? 80.0f : 88.0f;
@@ -179,12 +185,12 @@ namespace NEBULA {
     }
 
     inline bool hasFileButton(Scene scene, int index) {
-        return (scene == Scene::Local && (index == 3 || index == 4 || index == 6)) ||
+        return (scene == Scene::Local && (index == 3 || index == 4)) ||
                (scene == Scene::Online && index == 5) || (scene == Scene::Replay && index == 2);
     }
 
     inline Rect fieldRow(Scene scene, int index, int width, int height) {
-        int group = scene == Scene::Local ? (index == 6 ? 2 : index - 3) : scene == Scene::Replay ? 0 : index >= 7 ? index - 3 : index == 5 ? 1 : index + 2;
+        int group = scene == Scene::Local ? index - 3 : scene == Scene::Replay ? 0 : index >= 6 ? index - 2 : index == 5 ? 1 : index + 2;
         return formControl(scene, group, width, height);
     }
 
@@ -202,8 +208,8 @@ namespace NEBULA {
 
     // the same order drives mouse focus and Tab navigation.
     inline std::array<int, 5> inputOrder(Scene scene) {
-        if (scene == Scene::Local) return {3, 4, 6, -1, -1};
-        if (scene == Scene::Online) return {5, 0, 1, 7, 8};
+        if (scene == Scene::Local) return {3, 4, -1, -1, -1};
+        if (scene == Scene::Online) return {5, 0, 1, 6, 7};
         if (scene == Scene::Replay) return {2, -1, -1, -1, -1};
         return {-1, -1, -1, -1, -1};
     }

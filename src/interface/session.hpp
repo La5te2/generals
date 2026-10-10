@@ -1,5 +1,7 @@
-// shared session interface: let drawing and human controls work with either local or online play.
-// sessions publish display data and accept input here. each session handles its own game updates.
+// shared match data and input contracts keep rendering and human controls independent of each mode's implementation.
+// MatchState and MatchSnapshot describe match progress, observations, players and queued actions for display, including replays.
+// PlayerInput lets human controls submit or cancel moves in local, online and LAN matches through the same interface.
+// game updates, connections, worker threads and snapshot synchronization belong to the individual mode implementations.
 #pragma once
 
 #include "engine/observe.hpp"
@@ -24,6 +26,7 @@ namespace NEBULA {
         std::array<std::string, 2> names{"RED", "BLUE"};
         std::string status;
         int player = -1; // online account's seat, assigned when the server starts the game.
+        int host = -1; // LAN room creator; independent of the machine hosting its matchmaking lobby.
     };
 
     // human input submits or cancels queued moves through the active session.
