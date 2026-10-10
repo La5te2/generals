@@ -1,4 +1,4 @@
-// replay files contain an initial map and timed events. playback reconstructs positions with the rule engine.
+// Encode and decode .gior recordings, save files, and reconstruct requested half-turns with the rule engine.
 #include "replay.hpp"
 #include "lz.hpp"
 #include <nlohmann/json.hpp>
@@ -128,7 +128,7 @@ namespace NEBULA {
             data[Identity] = "local";
             data[Width] = state.board.cols();
             data[Height] = state.board.rows();
-            data[Players] = {"RED", "BLUE"};
+            data[Players] = record.names;
             data[Stars] = {0, 0};
             data[Generals] = {nullptr, nullptr};
             data[Teams] = data[Map] = data[ModifierOptions] = nullptr;

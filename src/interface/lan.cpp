@@ -1,23 +1,15 @@
-// LAN matchmaking and play: a player-hosted WebSocket lobby routes clients to independent rooms.
-// each room owns a local match; its creator owns the room lifetime, not the lobby lifetime.
+// Discover peers on a selected LAN and exchange game data through one direct WebSocket connection.
+// The accepting participant runs the engine. Each window owns its match, network worker and recording.
 #include "lan.hpp"
+#include "discovery.hpp"
 #include "local.hpp"
 #include "proxy.hpp"
 #include <rtc/websocket.hpp>
 #include <rtc/websocketserver.hpp>
 #include <nlohmann/json.hpp>
 #include <atomic>
-#include <charconv>
 #include <deque>
-#include <future>
 #include <random>
-#include <regex>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
 
 namespace NEBULA {
     namespace {
@@ -26,54 +18,19 @@ namespace NEBULA {
         using Time = std::chrono::steady_clock;
         using namespace std::chrono_literals;
         constexpr std::size_t packetLimit = 256 * 1024, recordingLimit = 16 * 1024 * 1024;
+        constexpr int halfTurnMilliseconds = 500;
 
         void require(bool value, const char* error) { if (!value) throw std::runtime_error(error); }
         bool nameValid(const std::string& value) {
             return !value.empty() && value.size() <= 64 &&
                 std::all_of(value.begin(), value.end(), [](unsigned char c) { return c >= 32 && c <= 126; });
         }
-        struct Address { std::string host, url; std::uint16_t port; bool listen; };
-        Address address(std::string text) {
-            if (text.empty()) text = "0.0.0.0:8080";
-            if (text.find("://") == std::string::npos) text = "ws://" + text;
-            std::smatch parts;
-            static const std::regex pattern(R"(^(ws|wss)://(\[[0-9a-fA-F:]+\]|[A-Za-z0-9_.-]+)(?::([0-9]+))?(/[^\s#?]*)?$)");
-            require(std::regex_match(text, parts, pattern), "Use IP:port or ws://host:port/path");
-            bool secure = parts[1] == "wss";
-            unsigned port = secure ? 443 : 8080;
-            if (parts[3].matched) {
-                auto number = parts[3].str();
-                auto [end, error] = std::from_chars(number.data(), number.data() + number.size(), port);
-                require(error == std::errc{} && end == number.data() + number.size() && port > 0 && port <= 65535,
-                        "LAN port must be between 1 and 65535");
-            }
-            std::string host = parts[2];
-            auto target = host == "0.0.0.0" ? "127.0.0.1" : host == "[::]" ? "[::1]" : host;
-            Address result{host, std::string(secure ? "wss://" : "ws://") + target + ":" + std::to_string(port) + parts[4].str(),
-                           static_cast<std::uint16_t>(port), !secure && (!parts[4].matched || parts[4] == "/")};
-            if (host.front() == '[') result.host = host.substr(1, host.size() - 2);
-            return result;
+        std::string identity() {
+            std::random_device random;
+            std::string value;
+            for (int i = 0; i < 32; ++i) value += "0123456789abcdef"[random() & 15];
+            return value;
         }
-        // SO_REUSEADDR permits duplicate listeners on Windows. the worker holds this lock
-        // throughout the listener lifetime so simultaneous launches cannot both become the lobby.
-        struct Listener {
-#ifdef _WIN32
-            HANDLE handle = nullptr;
-            bool held = false;
-            explicit Listener(unsigned port) {
-                auto name = L"Local\\Generals.LAN." + std::to_wstring(port);
-                handle = CreateMutexW(nullptr, FALSE, name.c_str());
-                require(handle != nullptr, "Cannot reserve LAN listener");
-                auto result = WaitForSingleObject(handle, 0);
-                held = result == WAIT_OBJECT_0 || result == WAIT_ABANDONED;
-            }
-            ~Listener() { if (held) ReleaseMutex(handle); if (handle) CloseHandle(handle); }
-            bool available() const { return held; }
-#else
-            explicit Listener(unsigned) {}
-            bool available() const { return true; }
-#endif
-        };
         std::string encode(const Action& action) {
             std::ostringstream stream;
             require(Protocol::writeAction(stream, action), "Invalid LAN action");
@@ -105,300 +62,50 @@ namespace NEBULA {
                 bool overflow;
                 {
                     std::lock_guard lock(mail->mutex);
-                    if (mail->quit) return;
-                    overflow = !text || text->size() > packetLimit || mail->packets.size() >= 512 ||
-                               mail->bytes + (text ? text->size() : 0) > 4 * 1024 * 1024;
+                    overflow = !text || text->size() > packetLimit || mail->packets.size() >= 128 ||
+                               mail->bytes + (text ? text->size() : 0) > 2 * 1024 * 1024;
                     if (!overflow) { mail->bytes += text->size(); mail->packets.push_back({source, std::move(*text)}); }
                 }
                 if (overflow) source->forceClose();
             });
         }
-        void send(const Socket& socket, const Json& message) {
-            require(socket && socket->isOpen(), "LAN connection closed");
-            require(socket->bufferedAmount() < 2 * 1024 * 1024, "LAN connection is not receiving updates");
-            socket->send(message.dump());
+        void send(const Socket& socket, const Json& value) {
+            require(socket && socket->isOpen(), "LAN peer disconnected");
+            require(socket->bufferedAmount() < 2 * 1024 * 1024, "LAN peer is not receiving updates");
+            socket->send(value.dump());
         }
         Json parse(const std::string& text) {
-            auto value = Json::parse(text, [](int depth, Json::parse_event_t, Json&) {
-                require(depth <= 12, "LAN packet nesting is too deep");
-                return true;
+            auto data = Json::parse(text, [](int depth, Json::parse_event_t, Json&) {
+                require(depth <= 12, "LAN packet nesting is too deep"); return true;
             });
-            require(value.is_object(), "Expected LAN packet object");
-            return value;
+            require(data.is_object(), "Expected LAN packet object");
+            return data;
         }
-        Socket connect(const Address& endpoint, const std::shared_ptr<Mail>& mail, std::chrono::milliseconds timeout,
-                       const std::optional<rtc::ProxyServer>& proxy) {
-            rtc::WebSocket::Configuration options;
-            options.proxyServer = proxy;
-            options.connectionTimeout = timeout;
-            options.pingInterval = 5s;
-            options.maxOutstandingPings = 3;
-            options.maxMessageSize = packetLimit;
-            auto socket = std::make_shared<rtc::WebSocket>(options);
-            listen(socket, mail);
-            socket->open(endpoint.url);
-            auto deadline = Time::now() + timeout;
-            while (!socket->isOpen() && !socket->isClosed() && Time::now() < deadline && !mail->leaving)
-                std::this_thread::sleep_for(10ms);
-            if (socket->isOpen()) return socket;
-            socket->forceClose();
-            return {};
+        std::string textField(const Json& message, const char* name) {
+            auto field = message.find(name);
+            return field != message.end() && field->is_string() ? field->get<std::string>() : "";
+        }
+        std::string hex(std::string_view bytes) {
+            std::string result;
+            result.reserve(bytes.size() * 2);
+            for (unsigned char byte : bytes) {
+                result += "0123456789abcdef"[byte >> 4]; result += "0123456789abcdef"[byte & 15];
+            }
+            return result;
+        }
+        void appendBytes(std::string& bytes, const Json& message) {
+            auto offset = message.at("offset").get<std::size_t>();
+            auto text = message.at("data").get<std::string>();
+            require(offset == bytes.size() && text.size() <= 16384 && text.size() % 2 == 0 &&
+                    offset + text.size() / 2 <= recordingLimit, "Invalid LAN recording chunk");
+            for (std::size_t i = 0; i < text.size(); i += 2) {
+                auto digit = [](char c) { return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : -1; };
+                int a = digit(text[i]), b = digit(text[i + 1]);
+                require(a >= 0 && b >= 0, "Invalid LAN recording bytes");
+                bytes += static_cast<char>((a << 4) | b);
+            }
         }
     }
-
-    struct LanMatch::Lobby {
-        struct Client {
-            Socket socket;
-            std::string name, room;
-            int seat = -1;
-            bool ready = true, leaving = false;
-            std::uint64_t ack = 0, game = 0, recorded = 0, revision = 0;
-            std::size_t offset = 0;
-            Time::time_point last = Time::now();
-            std::shared_ptr<const std::array<Observation, 3>> views;
-        };
-        struct Room {
-            std::string key, label;
-            bool publicRoom = false;
-            std::array<std::shared_ptr<Client>, 2> players;
-            std::array<std::string, 2> names{"RED", "BLUE"};
-            LocalMatch match;
-            int milliseconds = 500;
-            std::uint64_t game = 0, revision = 1;
-            std::string replay;
-            bool finished = false;
-            std::optional<Time::time_point> closing;
-        };
-        std::shared_ptr<Mail> mail = std::make_shared<Mail>();
-        std::thread worker;
-        bool opened = false;
-
-        explicit Lobby(Address endpoint) {
-            std::promise<bool> ready;
-            auto result = ready.get_future();
-            worker = std::thread([this, endpoint, ready = std::move(ready)]() mutable { run(endpoint, ready); });
-            opened = result.get();
-        }
-        ~Lobby() { mail->leaving = true; if (worker.joinable()) worker.join(); }
-        void run(const Address& endpoint, std::promise<bool>& ready) {
-            std::vector<std::shared_ptr<Client>> clients;
-            std::vector<std::unique_ptr<Room>> rooms;
-            std::uint64_t number = 0;
-            bool announced = false;
-            auto finish = [](Room& room, int loser) {
-                room.match.stop(loser);
-                for (auto& player : room.players) if (player) player->ready = false;
-                ++room.revision;
-            };
-            auto detach = [&](Room& room, int seat) {
-                finish(room, seat);
-                if (seat == 0) room.closing = Time::now();
-                room.players[seat].reset();
-            };
-            try {
-                Listener reservation(endpoint.port);
-                require(reservation.available(), "LAN listener already reserved");
-                rtc::WebSocketServer::Configuration options;
-                options.port = endpoint.port; options.bindAddress = endpoint.host;
-                options.connectionTimeout = 5s; options.maxMessageSize = packetLimit;
-                rtc::WebSocketServer server(options);
-                server.onClient([inbox = mail](Socket socket) {
-                    bool full;
-                    {
-                        std::lock_guard lock(inbox->mutex);
-                        full = inbox->quit || inbox->accepted.size() >= 16;
-                        if (!full) inbox->accepted.push_back(socket);
-                    }
-                    if (full) socket->forceClose();
-                    else listen(socket, inbox);
-                });
-                ready.set_value(true); announced = true;
-                std::optional<Time::time_point> shutdown;
-                while (!mail->quit) {
-                    auto now = Time::now();
-                    if (mail->leaving && !shutdown) {
-                        shutdown = now;
-                        server.stop();
-                        for (auto& room : rooms) { finish(*room, 0); room->closing = now; }
-                    }
-                    std::deque<Socket> accepted;
-                    std::deque<Packet> packets;
-                    {
-                        std::lock_guard lock(mail->mutex);
-                        accepted.swap(mail->accepted); packets.swap(mail->packets); mail->bytes = 0;
-                    }
-                    for (auto& socket : accepted) {
-                        if (clients.size() >= 128 || shutdown) { socket->close(); continue; }
-                        auto client = std::make_shared<Client>(); client->socket = socket; clients.push_back(client);
-                    }
-                    for (auto& packet : packets) {
-                        auto found = std::find_if(clients.begin(), clients.end(), [&](const auto& client) { return client->socket == packet.socket; });
-                        if (found == clients.end() || !packet.socket->isOpen()) continue;
-                        auto client = *found;
-                        try {
-                            auto message = parse(packet.text);
-                            auto type = message.at("type").get<std::string>();
-                            client->last = now;
-                            if (client->seat < 0) {
-                                require(!shutdown && type == "hello", "Expected LAN room identification");
-                                auto id = message.at("room").get<std::string>();
-                                client->name = message.at("name").get<std::string>();
-                                int duration = message.at("milliseconds").get<int>();
-                                require(nameValid(client->name) && (id.empty() || nameValid(id)), "Invalid LAN username or room ID");
-                                require(duration > 0 && duration <= 60000, "Invalid LAN half-turn duration");
-                                Room* target = nullptr;
-                                // arrival order determines the creator. empty IDs only select public vacancies.
-                                for (auto& room : rooms) {
-                                    if (id.empty() ? (room->publicRoom && !room->closing && room->players[0] && !room->players[1])
-                                                   : (!room->publicRoom && room->label == id)) { target = room.get(); break; }
-                                }
-                                if (!target) {
-                                    require(rooms.size() < 64, "LAN lobby reached its room limit");
-                                    auto room = std::make_unique<Room>();
-                                    room->publicRoom = id.empty();
-                                    room->label = id.empty() ? std::to_string(++number) : id;
-                                    room->key = (id.empty() ? "public:" : "private:") + room->label;
-                                    room->milliseconds = duration;
-                                    target = room.get(); rooms.push_back(std::move(room));
-                                }
-                                require(!target->closing && !target->players[1], "Room is full");
-                                client->seat = target->players[0] ? 1 : 0;
-                                client->room = target->key;
-                                target->players[client->seat] = client;
-                                target->names[client->seat] = client->name;
-                                ++target->revision;
-                                send(client->socket, {{"type", "welcome"}, {"room", target->label}, {"player", client->seat}});
-                                continue;
-                            }
-                            auto foundRoom = std::find_if(rooms.begin(), rooms.end(), [&](const auto& room) { return room->key == client->room; });
-                            require(foundRoom != rooms.end(), "LAN room closed");
-                            auto& room = **foundRoom;
-                            if (type == "ping") { send(client->socket, {{"type", "pong"}}); continue; }
-                            if (type == "recorded") {
-                                require(!room.match.snapshot().running && message.at("game").get<std::uint64_t>() == room.game &&
-                                        client->offset == room.replay.size(), "Unexpected recording acknowledgement");
-                                client->recorded = room.game;
-                                continue;
-                            }
-                            if (type == "leave") {
-                                finish(room, client->seat); client->leaving = true;
-                                if (client->seat == 0) room.closing = now;
-                            } else if (type == "stop") finish(room, client->seat);
-                            else if (type == "ready") {
-                                if (!room.match.snapshot().running && !room.closing && !client->leaving) { client->ready = true; ++room.revision; }
-                            } else if (type == "move" || type == "cancel") {
-                                require(message.at("id").is_number_unsigned(), "Invalid LAN input number");
-                                auto id = message["id"].get<std::uint64_t>();
-                                require(id > client->ack, "LAN input number moved backwards");
-                                client->ack = id; ++room.revision;
-                                if (message.at("game").get<std::uint64_t>() != room.game || client->game != room.game || client->leaving || room.closing) continue;
-                                if (message.contains("tick") && message["tick"].get<std::uint64_t>() != (*room.match.snapshot().views)[client->seat].tick) continue;
-                                if (type == "move") room.match.enqueue(client->seat, decode(message.at("action")));
-                                else room.match.cancel(client->seat, message.at("all").get<bool>());
-                            } else throw std::runtime_error("Unexpected LAN client command");
-                        } catch (const std::exception& error) {
-                            try { send(client->socket, {{"type", "error"}, {"message", error.what()}}); } catch (...) {}
-                            client->socket->close();
-                        }
-                    }
-                    for (auto& owner : rooms) {
-                        auto& room = *owner;
-                        try {
-                        for (int seat = 0; seat < 2; ++seat) {
-                            auto client = room.players[seat];
-                            if (client && (!client->socket->isOpen() || now - client->last > 20s)) {
-                                client->socket->close(); detach(room, seat);
-                            }
-                        }
-                        auto local = room.match.snapshot();
-                        if (room.game && local.state == MatchState::Finished && !room.finished) {
-                            room.finished = true;
-                            for (auto& client : room.players) if (client) client->ready = false;
-                            ++room.revision;
-                        }
-                        if (!room.closing && room.players[0] && room.players[1] && room.players[0]->ready && room.players[1]->ready &&
-                            !local.running && std::all_of(room.players.begin(), room.players.end(), [&](const auto& client) {
-                                return !client->leaving && (!room.game || client->game != room.game || client->recorded == room.game);
-                            })) {
-                            require(room.match.start({}, std::random_device{}(), room.milliseconds, {}, true), "LAN map initialization failed");
-                            ++room.game; ++room.revision; room.finished = false; room.replay.clear();
-                            for (auto& client : room.players) { client->game = room.game; client->ready = false; client->offset = 0; }
-                            local = room.match.snapshot();
-                        }
-                        if (local.completed && room.replay.empty()) {
-                            room.replay = encodeReplay(*local.completed);
-                            require(room.replay.size() <= recordingLimit, "LAN recording exceeds transfer limit");
-                        }
-                        const auto& names = room.names;
-                        for (int seat = 0; seat < 2; ++seat) {
-                            auto client = room.players[seat];
-                            if (!client) continue;
-                            try {
-                                if (client->revision != room.revision || client->views != local.views) {
-                                    if (!client->game || client->game != room.game) {
-                                        send(client->socket, {{"type", "waiting"}, {"ready", client->ready}, {"names", names}});
-                                    } else {
-                                        auto view = (*local.views)[seat];
-                                        auto outcome = view.result; view.result = Phases::Ongoing;
-                                        std::ostringstream observation;
-                                        require(Protocol::writeObservation(observation, view), "Cannot encode LAN observation");
-                                        Json queue = Json::array();
-                                        for (auto& action : local.queued[seat]) queue.push_back(encode(action));
-                                        send(client->socket, {{"type", "state"}, {"game", room.game}, {"rows", view.rows}, {"cols", view.cols},
-                                             {"view", observation.str()}, {"result", static_cast<int>(outcome)}, {"ready", client->ready},
-                                             {"names", names}, {"queued", queue}, {"ack", client->ack}});
-                                    }
-                                    client->views = local.views; client->revision = room.revision;
-                                }
-                                // completed replays reveal the full board, so transfer starts only after game over.
-                                if (client->game == room.game && !room.replay.empty() && client->offset < room.replay.size() && client->socket->bufferedAmount() < 65536) {
-                                    auto end = std::min(room.replay.size(), client->offset + 8192);
-                                    std::string hex;
-                                    for (auto index = client->offset; index < end; ++index) {
-                                        auto byte = static_cast<unsigned char>(room.replay[index]);
-                                        hex += "0123456789abcdef"[byte >> 4]; hex += "0123456789abcdef"[byte & 15];
-                                    }
-                                    send(client->socket, {{"type", "replay"}, {"game", room.game}, {"offset", client->offset},
-                                                         {"data", hex}, {"last", end == room.replay.size()}});
-                                    client->offset = end;
-                                }
-                                bool delivered = !client->game || client->recorded == room.game;
-                                if (room.closing && (delivered || now - *room.closing > 3s)) {
-                                    send(client->socket, {{"type", "closed"}, {"message", "Room closed: its host left"}});
-                                    client->socket->close(); room.players[seat].reset();
-                                } else if (client->leaving && delivered) {
-                                    send(client->socket, {{"type", "closed"}, {"message", "Left LAN room"}});
-                                    client->socket->close(); room.players[seat].reset(); ++room.revision;
-                                }
-                            } catch (...) { client->socket->forceClose(); detach(room, seat); }
-                        }
-                        } catch (const std::exception& error) {
-                            // failure in one match must not close the listener or another room.
-                            room.closing = now;
-                            room.match.stop();
-                            for (auto& client : room.players) if (client) {
-                                try { send(client->socket, {{"type", "error"}, {"message", error.what()}}); } catch (...) {}
-                                client->socket->close(); client.reset();
-                            }
-                        }
-                    }
-                    std::erase_if(rooms, [](const auto& room) { return room->closing && !room->players[0] && !room->players[1]; });
-                    std::erase_if(clients, [&](const auto& client) {
-                        if (client->seat < 0 && now - client->last > 5s) client->socket->close();
-                        return client->socket->isClosed();
-                    });
-                    if (shutdown && (rooms.empty() || now - *shutdown > 3s)) break;
-                    std::this_thread::sleep_for(10ms);
-                }
-                server.stop();
-            } catch (...) {
-                if (!announced) ready.set_value(false);
-            }
-            mail->quit = true;
-            for (auto& client : clients) client->socket->close();
-            { std::lock_guard lock(mail->mutex); mail->packets.clear(); mail->accepted.clear(); }
-        }
-    };
 
     struct LanMatch::Session {
         mutable std::mutex mutex;
@@ -408,252 +115,416 @@ namespace NEBULA {
         std::atomic<bool> open{false};
         LanConfig config;
         std::string unsaved;
-        std::uint64_t game = 0, sequence = 0;
+        std::uint64_t sequence = 0;
         std::deque<Json> pending;
 
+        ~Session() { mail->leaving = true; if (worker.joinable()) worker.join(); }
         MatchSnapshot snapshot() const { std::lock_guard lock(mutex); return published; }
-        void publish(MatchSnapshot value, std::uint64_t next = 0, std::uint64_t ack = 0) {
+        void publish(MatchSnapshot value, std::uint64_t ack = 0) {
             std::lock_guard lock(mutex);
-            game = next;
-            std::erase_if(pending, [&](const Json& item) { return item["id"].get<std::uint64_t>() <= ack || item["game"].get<std::uint64_t>() != game; });
-            if (value.running && value.player >= 0) {
+            std::erase_if(pending, [&](const Json& item) { return item["id"].get<std::uint64_t>() <= ack; });
+            if (value.running() && value.player >= 0) {
                 auto& queue = value.queued[value.player];
-                // overlay unacknowledged edits, so receiving an older queue cannot erase fresh human input.
+                // Preserve input submitted after the host prepared this snapshot.
                 for (auto& item : pending) {
                     if (item["type"] == "move") queue.push_back(decode(item["action"]));
                     else if (item["all"].get<bool>()) queue.clear();
                     else if (!queue.empty()) queue.pop_back();
                 }
-            }
+            } else pending.clear();
             published = std::move(value);
         }
         bool command(Json value) {
             std::lock_guard stateLock(mutex);
             std::lock_guard inboxLock(mail->mutex);
-            if (mail->commands.size() >= Capacity || pending.size() >= Capacity) return false;
-            value["id"] = ++sequence; value["game"] = game;
-            if (value["type"] == "move" || value["type"] == "cancel") {
-                if (published.player < 0) return false;
-                pending.push_back(value);
-                auto& queue = published.queued[published.player];
-                if (value["type"] == "move") queue.push_back(decode(value["action"]));
-                else if (value["all"].get<bool>()) queue.clear();
-                else if (!queue.empty()) queue.pop_back();
-            }
+            if (mail->leaving || !published.running() || mail->commands.size() >= Capacity || pending.size() >= Capacity) return false;
+            value["id"] = ++sequence;
+            pending.push_back(value);
+            auto& queue = published.queued[published.player];
+            if (value["type"] == "move") queue.push_back(decode(value["action"]));
+            else if (value["all"].get<bool>()) queue.clear();
+            else if (!queue.empty()) queue.pop_back();
             mail->commands.push_back(std::move(value));
             return true;
         }
-        void run(Address endpoint, std::vector<std::unique_ptr<Lobby>>& lobbies) {
+        void persist(const std::string& bytes, MatchSnapshot& state) {
+            if (config.directory.empty()) return;
+            std::string error;
+            if (!saveReplayBytes(bytes, config.directory, error)) {
+                std::lock_guard lock(mutex);
+                unsaved = bytes;
+                state.error = error;
+            }
+        }
+
+        void run() {
             MatchSnapshot state;
-            state.state = MatchState::Active;
-            Socket socket;
+            state.state = MatchState::Waiting;
+            state.status = "Searching on LAN";
+            state.names = {config.username, ""};
+            Socket peer;
+            LocalMatch match;
             StrategyProcess agent;
-            bool welcomed = false, agentStarted = false, replied = false;
-            std::uint64_t current = 0, saved = 0, requested = 0, ack = 0;
-            std::string recording, roomLabel;
-            auto directory = config.directory, nextDirectory = config.directory;
-            std::optional<Time::time_point> leaving;
-            auto last = Time::now(), heartbeat = last;
+            std::unique_ptr<rtc::WebSocketServer> server;
+            std::string replay;
+            bool paired = false, hosting = false, saved = false, received = false;
+            std::uint64_t localAck = 0, remoteAck = 0;
+            std::shared_ptr<const std::array<Observation, 3>> sentViews;
+            struct Incoming { Socket socket; Time::time_point arrived; };
+            std::vector<Incoming> incoming;
             try {
+                const auto id = identity();
                 auto proxy = httpProxy(config.proxy);
-                socket = connect(endpoint, mail, 2s, proxy);
-                // proxy failures must not bypass the configured route or open a different local lobby.
-                if (!socket && !proxy && endpoint.listen && !mail->leaving) {
-                    auto lobby = std::make_unique<Lobby>(endpoint);
-                    if (lobby->opened) lobbies.push_back(std::move(lobby));
-                }
-                // another local instance may have reserved the port just before it starts listening.
-                auto retryUntil = Time::now() + 10s;
-                while (!socket && !mail->leaving && Time::now() < retryUntil) {
-                    socket = connect(endpoint, mail, 2s, proxy);
-                    if (!socket) std::this_thread::sleep_for(100ms);
-                }
-                require(socket != nullptr, proxy ? "Cannot connect to LAN IP through the proxy" : "Cannot connect to LAN IP or open a local listener");
-                send(socket, {{"type", "hello"}, {"name", config.username}, {"room", config.room}, {"milliseconds", config.milliseconds}});
-                last = heartbeat = Time::now();
+                rtc::WebSocketServer::Configuration options;
+                options.port = 0; options.bindAddress = config.address.empty() ? "0.0.0.0" : config.address;
+                options.connectionTimeout = 5s; options.maxMessageSize = packetLimit;
+                server = std::make_unique<rtc::WebSocketServer>(options);
+                server->onClient([inbox = mail](Socket socket) {
+                    listen(socket, inbox);
+                    bool full;
+                    {
+                        std::lock_guard lock(inbox->mutex);
+                        full = inbox->quit || inbox->accepted.size() >= 8;
+                        if (!full) inbox->accepted.push_back(socket);
+                    }
+                    if (full) socket->forceClose();
+                });
+                Discovery discovery(config.address, id, config.room, server->port());
+                std::string target, host;
+                bool helloSent = false, agentStarted = false, replied = false;
+                std::uint64_t requested = 0, sentAck = 0;
+                std::size_t offset = 0;
+                auto began = Time::now(), attempt = began, last = began, heartbeat = began;
+                auto retry = began;
+                std::optional<Time::time_point> finished, leaving;
+                publish(state);
+
+                auto finish = [&](int loser) {
+                    if (hosting && paired) match.stop(loser);
+                    if (!finished) finished = Time::now();
+                };
+                auto apply = [&](const Json& command, int seat, std::uint64_t& ack) {
+                    require(command.at("id").is_number_unsigned(), "Invalid LAN input number");
+                    auto next = command["id"].get<std::uint64_t>();
+                    require(next > ack, "LAN input number moved backwards");
+                    ack = next;
+                    auto local = match.snapshot();
+                    if (finished || !local.running()) return;
+                    if (command.contains("tick") && command["tick"].get<std::uint64_t>() != (*local.views)[seat].tick) return;
+                    if (command["type"] == "move") match.enqueue(seat, decode(command.at("action")));
+                    else match.cancel(seat, command.at("all").get<bool>());
+                };
+
                 while (!mail->quit) {
                     auto now = Time::now();
-                    if (mail->leaving && !leaving) { leaving = now; send(socket, {{"type", "leave"}}); }
-                    if (leaving && now - *leaving > 4s) break;
+                    discovery.poll(!paired && !peer && !mail->leaving, paired ? host : "");
+                    if (mail->leaving && !leaving) {
+                        leaving = now;
+                        if (!paired) break;
+                        if (hosting) finish(0);
+                        else send(peer, {{"type", "leave"}});
+                    }
+                    if (leaving && now - *leaving > 5s) break;
+                    std::deque<Socket> accepted;
                     std::deque<Packet> packets;
                     std::deque<Json> commands;
                     {
                         std::lock_guard lock(mail->mutex);
-                        packets.swap(mail->packets); commands.swap(mail->commands); mail->bytes = 0;
+                        accepted.swap(mail->accepted); packets.swap(mail->packets); commands.swap(mail->commands); mail->bytes = 0;
+                    }
+                    for (auto& socket : accepted) {
+                        if (paired || peer || leaving || incoming.size() >= 8) {
+                            try { send(socket, {{"type", "busy"}}); } catch (...) {}
+                            socket->close();
+                        } else incoming.push_back({socket, now});
                     }
                     for (auto& packet : packets) {
-                        if (packet.socket != socket) continue;
-                        auto message = parse(packet.text);
-                        auto type = message.at("type").get<std::string>();
+                        auto candidate = std::find_if(incoming.begin(), incoming.end(), [&](const Incoming& item) { return item.socket == packet.socket; });
+                        if (packet.socket != peer && candidate == incoming.end()) continue;
+                        Json message;
+                        try { message = parse(packet.text); }
+                        catch (...) { if (packet.socket == peer) throw; packet.socket->close(); continue; }
+                        auto type = textField(message, "type");
+                        if (candidate != incoming.end()) {
+                            auto remoteId = textField(message, "id");
+                            auto name = textField(message, "name");
+                            bool known = std::any_of(discovery.peers().begin(), discovery.peers().end(), [&](const Peer& remote) {
+                                return remote.id == remoteId && remote.room == config.room;
+                            });
+                            bool valid = type == "hello" && known && textField(message, "target") == id &&
+                                textField(message, "room") == config.room && remoteId < id && nameValid(name);
+                            // A private ID names one room, including while its first pair is negotiating.
+                            if (!config.room.empty()) {
+                                valid &= std::none_of(discovery.peers().begin(), discovery.peers().end(), [&](const Peer& remote) {
+                                    return remote.id != remoteId && (!remote.available || !remote.host.empty());
+                                });
+                            }
+                            if (!valid || peer || paired || leaving) {
+                                try { send(packet.socket, {{"type", "busy"}}); } catch (...) {}
+                                packet.socket->close();
+                                continue;
+                            }
+                            peer = packet.socket; target = std::move(remoteId);
+                            hosting = true; host = id; attempt = last = now;
+                            state.names = {config.username, std::move(name)};
+                            send(peer, {{"type", "offer"}, {"id", id}, {"target", target}, {"room", config.room}, {"names", state.names}});
+                            incoming.erase(candidate);
+                            continue;
+                        }
                         last = now;
-                        if (type == "error") throw std::runtime_error(message.at("message").get<std::string>());
-                        if (type == "closed") { state.status = message.at("message").get<std::string>(); mail->quit = true; break; }
+                        if (!paired) {
+                            if (type == "busy") { peer->close(); peer.reset(); hosting = helloSent = false; retry = now + 500ms; continue; }
+                            if (!hosting && type == "offer") {
+                                require(message.at("id") == target && message.at("target") == id && message.at("room") == config.room, "Invalid LAN pairing offer");
+                                state.names = message.at("names").get<std::array<std::string, 2>>();
+                                require(nameValid(state.names[0]) && state.names[1] == config.username, "Invalid LAN player names");
+                                host = target;
+                                send(peer, {{"type", "accept"}, {"id", id}, {"target", target}});
+                            } else if (hosting && type == "accept") {
+                                require(message.at("id") == target && message.at("target") == id, "Invalid LAN pairing acceptance");
+                                require(match.start({}, std::random_device{}(), halfTurnMilliseconds, {}, true), "LAN map initialization failed");
+                                paired = true; state.player = state.host = 0;
+                                send(peer, {{"type", "paired"}});
+                            } else if (!hosting && type == "paired" && host == target) {
+                                paired = true; state.player = 1; state.host = 0;
+                            } else throw std::runtime_error("Unexpected LAN pairing packet");
+                            if (paired) {
+                                for (auto& item : incoming) item.socket->close();
+                                incoming.clear();
+                                server->stop();
+                                state.status = "LAN match";
+                            }
+                            continue;
+                        }
+                        if (type == "ping") { send(peer, {{"type", "pong"}}); continue; }
                         if (type == "pong") continue;
-                        if (type == "welcome") {
-                            require(!welcomed, "Repeated LAN welcome");
-                            state.player = message.at("player").get<int>();
-                            require(state.player == 0 || state.player == 1, "Invalid LAN seat");
-                            state.host = 0;
-                            roomLabel = message.at("room").get<std::string>();
-                            require(nameValid(roomLabel), "Invalid LAN room label");
-                            welcomed = true;
-                        } else if (type == "waiting") {
-                            require(welcomed, "LAN waiting state before welcome");
-                            state.names = message.at("names").get<std::array<std::string, 2>>();
-                            state.running = false;
-                            state.state = message.at("ready").get<bool>() ? MatchState::Active : MatchState::Finished;
-                            state.status = "Room " + roomLabel + " - Waiting for peer";
+                        if (hosting) {
+                            if (type == "leave") finish(1);
+                            else if (type == "move" || type == "cancel") apply(message, 1, remoteAck);
+                            else if (type == "recorded") {
+                                require(finished && offset == replay.size(), "Unexpected recording acknowledgement");
+                                received = true;
+                            } else throw std::runtime_error("Unexpected LAN player packet");
                         } else if (type == "state") {
-                            require(welcomed, "LAN state before welcome");
-                            auto next = message.at("game").get<std::uint64_t>();
-                            require(next > 0 && next >= current, "Invalid LAN game number");
                             int rows = message.at("rows").get<int>(), cols = message.at("cols").get<int>();
                             std::istringstream input(message.at("view").get<std::string>());
-                            auto view = Protocol::readObservation(input, {state.player, rows, cols}); input >> std::ws;
+                            auto view = Protocol::readObservation(input, {1, rows, cols}); input >> std::ws;
                             require(view.has_value() && input.eof(), "Invalid LAN observation");
-                            int result = message.at("result").get<int>(); require(result >= 0 && result <= 3, "Invalid LAN result");
+                            int result = message.at("result").get<int>();
+                            require(result >= 0 && result <= 3 && view->tick >= (*state.views)[1].tick, "Invalid LAN result or tick");
                             view->result = static_cast<Phases>(result);
-                            if (next != current) {
-                                agent.stop(); agentStarted = false; recording.clear(); directory = nextDirectory; state.error.clear();
-                            } else if (current) require(view->tick >= (*state.views)[state.player].tick, "LAN tick moved backwards");
-                            current = next;
-                            auto views = std::make_shared<std::array<Observation, 3>>(); (*views)[state.player] = *view; state.views = views;
-                            state.names = message.at("names").get<std::array<std::string, 2>>();
-                            require(nameValid(state.names[0]) && nameValid(state.names[1]), "Invalid LAN player names");
-                            state.running = result == 0;
-                            state.state = state.running || message.at("ready").get<bool>() ? MatchState::Active : MatchState::Finished;
-                            state.status = "Room " + roomLabel + " - " + (result == 0 ? "LAN match" : result == 1 ? "Red wins" : result == 2 ? "Blue wins" : "Draw");
-                            const auto& queue = message.at("queued"); require(queue.is_array() && queue.size() <= Capacity, "Invalid LAN queue");
-                            state.queued[state.player].clear();
-                            for (auto& action : queue) state.queued[state.player].push_back(decode(action));
-                            ack = message.at("ack").get<std::uint64_t>();
+                            auto views = std::make_shared<std::array<Observation, 3>>(); (*views)[1] = *view; state.views = views;
+                            state.state = result == 0 ? MatchState::Playing : MatchState::Finishing;
+                            if (result && !finished) finished = now;
+                            const auto& queue = message.at("queued");
+                            require(queue.is_array() && queue.size() <= Capacity, "Invalid LAN queue");
+                            state.queued[1].clear();
+                            for (auto& action : queue) state.queued[1].push_back(decode(action));
+                            localAck = message.at("ack").get<std::uint64_t>();
                         } else if (type == "replay") {
-                            require(current && !state.running && message.at("game").get<std::uint64_t>() == current && saved != current, "Unexpected LAN recording");
-                            auto offset = message.at("offset").get<std::size_t>();
-                            auto hex = message.at("data").get<std::string>();
-                            require(offset == recording.size() && hex.size() <= 16384 && hex.size() % 2 == 0 &&
-                                    offset + hex.size() / 2 <= recordingLimit, "Invalid LAN recording chunk");
-                            for (std::size_t index = 0; index < hex.size(); index += 2) {
-                                auto digit = [](char c) { return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : -1; };
-                                int a = digit(hex[index]), b = digit(hex[index + 1]); require(a >= 0 && b >= 0, "Invalid LAN recording bytes");
-                                recording += static_cast<char>((a << 4) | b);
-                            }
+                            require(finished && !received, "Unexpected LAN recording");
+                            appendBytes(replay, message);
                             if (message.at("last").get<bool>()) {
-                                if (!directory.empty()) {
-                                    Replay replay;
-                                    std::string error;
-                                    require(replay.loadBytes(recording, error), "Invalid LAN recording");
-                                    if (auto path = saveReplayBytes(recording, directory, error)) state.status += " - Saved " + path->filename().string();
-                                    else {
-                                        state.error = error;
-                                        std::lock_guard lock(mutex);
-                                        unsaved = recording;
-                                    }
-                                }
-                                saved = current;
-                                if (state.error.empty()) recording.clear();
-                                send(socket, {{"type", "recorded"}, {"game", current}});
-                            }
-                        } else throw std::runtime_error("Unexpected LAN server packet");
-                        publish(state, current, ack);
-                    }
-                    for (auto& command : commands) {
-                        if (leaving || mail->quit) break;
-                        if (command["type"] == "ready") {
-                            auto path = command.at("directory").get<std::string>(); nextDirectory = std::u8string(path.begin(), path.end());
-                            command.erase("directory");
-                            if (current && saved != current) { state.error = "Recording is still arriving; retry Reset shortly"; publish(state, current, ack); continue; }
-                            if (!recording.empty()) {
+                                Replay check;
                                 std::string error;
-                                if (nextDirectory.empty() || !saveReplayBytes(recording, nextDirectory, error)) {
-                                    state.error = error.empty() ? "Set RD to save the pending recording before Reset" : error;
-                                    publish(state, current, ack); continue;
-                                }
-                                recording.clear();
-                                { std::lock_guard lock(mutex); unsaved.clear(); }
+                                require(check.loadBytes(replay, error), "Invalid LAN recording");
+                                persist(replay, state); saved = received = true;
+                                send(peer, {{"type", "recorded"}});
                             }
-                            state.error.clear();
-                        }
-                        send(socket, command);
+                        } else if (type == "closed") {
+                            require(finished && received, "Room closed before its recording arrived");
+                            mail->quit = true;
+                        } else throw std::runtime_error("Unexpected LAN host packet");
                     }
-                    if (welcomed && state.running && !config.command.empty() && !leaving && !mail->quit) {
-                        try {
-                            const auto& view = (*state.views)[state.player];
-                            if (!agentStarted) {
-                                require(agent.start(config.command, {state.player, view.rows, view.cols}), "Cannot start LAN agent");
-                                agentStarted = true; requested = view.tick; replied = false; agent.request(view);
-                            } else if (requested != view.tick) { requested = view.tick; replied = false; agent.request(view); }
-                            auto error = agent.error(); if (!error.empty()) throw std::runtime_error(error);
-                            if (!replied) if (auto action = agent.reply(requested, now)) {
-                                replied = true;
-                                if (action->type == ActionType::Move) command({{"type", "move"}, {"tick", requested}, {"action", encode(*action)}});
-                            }
-                        } catch (const std::exception& error) {
-                            agent.stop(); agentStarted = false; send(socket, {{"type", "stop"}});
-                            state.error = error.what(); state.running = false; publish(state, current, ack);
+                    std::erase_if(incoming, [&](const Incoming& item) {
+                        if (now - item.arrived > 3s) item.socket->close();
+                        return item.socket->isClosed();
+                    });
+                    if (!paired) {
+                        if (peer && (peer->isClosed() || now - attempt > 5s)) {
+                            peer->forceClose(); peer.reset(); host.clear(); hosting = helloSent = false; retry = now + 500ms;
+                            if (proxy) throw std::runtime_error("LAN connection through PROXY failed; no direct fallback was attempted");
                         }
-                    } else if (agentStarted) { agent.stop(); agentStarted = false; }
-                    if (!socket->isOpen() && !mail->quit) throw std::runtime_error("LAN lobby disconnected");
-                    if (now - last > (welcomed ? 20s : 10s)) throw std::runtime_error("LAN connection timed out");
-                    if (now - heartbeat > 5s && !mail->quit) { send(socket, {{"type", "ping"}}); heartbeat = now; }
+                        if (peer && !hosting && peer->isOpen() && !helloSent) {
+                            send(peer, {{"type", "hello"}, {"id", id}, {"target", target}, {"room", config.room}, {"name", config.username}});
+                            helloSent = true;
+                        }
+                        if (!peer && now >= retry && now - began >= 1s) {
+                            if (!config.room.empty() && std::any_of(discovery.peers().begin(), discovery.peers().end(), [](const Peer& p) { return !p.host.empty(); }))
+                                throw std::runtime_error("Room is full");
+                            std::vector<std::string> available{id};
+                            bool reserved = false;
+                            for (auto& remote : discovery.peers()) {
+                                // Private reservations remain in the election while their handshake is in flight.
+                                if (remote.available || !config.room.empty()) available.push_back(remote.id);
+                                reserved |= !remote.available;
+                            }
+                            std::sort(available.begin(), available.end());
+                            auto rank = static_cast<std::size_t>(std::find(available.begin(), available.end(), id) - available.begin());
+                            // Adjacent IDs pair; only the lower ID initiates. A pending socket reserves this window.
+                            if (rank % 2 == 0 && rank + 1 < available.size() && (config.room.empty() || (rank == 0 && !reserved))) {
+                                target = available[rank + 1];
+                                auto remote = std::find_if(discovery.peers().begin(), discovery.peers().end(), [&](const Peer& p) { return p.id == target; });
+                                rtc::WebSocket::Configuration transport;
+                                transport.proxyServer = proxy; transport.connectionTimeout = 3s;
+                                transport.pingInterval = 5s; transport.maxMessageSize = packetLimit;
+                                peer = std::make_shared<rtc::WebSocket>(transport); listen(peer, mail);
+                                peer->open("ws://" + remote->address + ":" + std::to_string(remote->port));
+                                attempt = last = now; hosting = helloSent = false;
+                            }
+                        }
+                        state.state = peer ? MatchState::Connecting : MatchState::Waiting;
+                        publish(state);
+                        std::this_thread::sleep_for(10ms);
+                        continue;
+                    }
+
+                    for (auto& command : commands) {
+                        if (finished || leaving) break;
+                        if (hosting) apply(command, 0, localAck);
+                        else send(peer, command);
+                    }
+                    if (hosting) {
+                        if (!peer->isOpen()) finish(1);
+                        auto local = match.snapshot();
+                        state.views = local.views; state.queued = local.queued;
+                        state.state = local.running() ? MatchState::Playing : MatchState::Finishing;
+                        if (local.state == MatchState::Finished && !finished) finished = now;
+                        if (peer->isOpen() && (sentViews != local.views || sentAck != remoteAck)) {
+                            auto view = (*local.views)[1];
+                            auto result = view.result; view.result = Phases::Ongoing;
+                            std::ostringstream observation;
+                            require(Protocol::writeObservation(observation, view), "Cannot encode LAN observation");
+                            Json queue = Json::array();
+                            for (auto& action : local.queued[1]) queue.push_back(encode(action));
+                            send(peer, {{"type", "state"}, {"rows", view.rows}, {"cols", view.cols}, {"view", observation.str()},
+                                        {"result", static_cast<int>(result)}, {"queued", queue}, {"ack", remoteAck}});
+                            sentViews = local.views; sentAck = remoteAck;
+                        }
+                        if (finished && local.completed && replay.empty()) {
+                            auto record = *local.completed; record.names = state.names;
+                            replay = encodeReplay(record);
+                            require(replay.size() <= recordingLimit, "LAN recording exceeds transfer limit");
+                            persist(replay, state); saved = true;
+                        }
+                        if (finished && peer->isOpen() && offset < replay.size() && peer->bufferedAmount() < 65536) {
+                            auto count = std::min(std::size_t{8192}, replay.size() - offset);
+                            send(peer, {{"type", "replay"}, {"offset", offset}, {"data", hex(std::string_view(replay).substr(offset, count))},
+                                        {"last", offset + count == replay.size()}});
+                            offset += count;
+                        }
+                        if (finished && (received || !peer->isOpen() || now - *finished > 4s)) {
+                            if (peer->isOpen()) send(peer, {{"type", "closed"}});
+                            break;
+                        }
+                    } else if (!peer->isOpen() && !mail->quit) {
+                        require(received, "LAN host disconnected before the final recording arrived");
+                        break;
+                    }
+                    if (state.running() && !finished && !leaving && !config.command.empty()) {
+                        const auto& view = (*state.views)[state.player];
+                        if (view.rows > 0) {
+                            try {
+                                if (!agentStarted) {
+                                    require(agent.start(config.command, {state.player, view.rows, view.cols}), "Cannot start LAN agent");
+                                    agentStarted = true;
+                                    requested = view.tick;
+                                    replied = false;
+                                    agent.request(view);
+                                } else if (requested != view.tick) {
+                                    requested = view.tick;
+                                    replied = false;
+                                    agent.request(view);
+                                }
+                                require(agent.error().empty(), "LAN agent stopped or returned an invalid action");
+                                if (!replied) if (auto action = agent.reply(requested, now)) {
+                                    replied = true;
+                                    if (action->type == ActionType::Move)
+                                        command({{"type", "move"}, {"tick", requested}, {"action", encode(*action)}});
+                                }
+                            } catch (const std::exception& error) {
+                                state.error = error.what();
+                                agent.stop();
+                                agentStarted = false;
+                                leaving = now;
+                                if (hosting) finish(0);
+                                else send(peer, {{"type", "leave"}});
+                            }
+                        }
+                    }
+                    if (finished && agentStarted) { agent.stop(); agentStarted = false; }
+                    if (now - last > 20s) throw std::runtime_error("LAN peer timed out");
+                    if (finished && !hosting && now - *finished > 6s) throw std::runtime_error("LAN recording transfer timed out");
+                    if (now - heartbeat > 5s && peer->isOpen() && !mail->quit) { send(peer, {{"type", "ping"}}); heartbeat = now; }
+                    publish(state, localAck);
                     std::this_thread::sleep_for(10ms);
                 }
-            } catch (const std::exception& error) { state.error = error.what(); state.status = "LAN connection ended"; }
-            mail->quit = true; agent.stop(); if (socket) socket->close();
-            { std::lock_guard lock(mail->mutex); mail->packets.clear(); mail->commands.clear(); }
-            state.state = MatchState::Finished; state.running = false; publish(state, current, ack); open = false;
+            } catch (const std::exception& error) { state.error = error.what(); }
+            if (hosting && paired) {
+                match.stop(state.error.empty() ? 0 : 1);
+                auto local = match.snapshot(); state.views = local.views;
+                if (!saved && local.completed) {
+                    try { auto record = *local.completed; record.names = state.names; persist(encodeReplay(record), state); }
+                    catch (const std::exception& error) { state.error = error.what(); }
+                }
+            }
+            mail->quit = true;
+            if (server) server->stop();
+            if (peer) peer->close();
+            for (auto& item : incoming) item.socket->close();
+            agent.stop();
+            {
+                std::lock_guard lock(mail->mutex);
+                mail->packets.clear(); mail->accepted.clear(); mail->commands.clear();
+            }
+            state.state = MatchState::Finished;
+            auto result = state.player >= 0 ? (*state.views)[state.player].result : Phases::Ongoing;
+            state.status = result == Phases::RedWin ? "Red wins" : result == Phases::BlueWin ? "Blue wins" : "LAN room closed";
+            publish(state); open = false;
         }
     };
 
     LanMatch::LanMatch() : session(std::make_unique<Session>()) {}
-    LanMatch::~LanMatch() { leave(); }
+    LanMatch::~LanMatch() = default;
     bool LanMatch::start(const LanConfig& config) {
         if (opened()) return false;
-        leave();
-        std::string pendingError;
-        if (!savePending(config.directory, pendingError)) {
-            auto state = snapshot(); state.error = pendingError; session->publish(state); return false;
+        if (session->worker.joinable()) session->worker.join();
+        std::string error;
+        if (!savePending(config.directory, error)) {
+            auto state = snapshot(); state.error = error; session->publish(state); return false;
         }
         session = std::make_unique<Session>();
         try {
             require(nameValid(config.username), "LAN username must contain 1-64 printable ASCII characters");
             require(config.room.empty() || nameValid(config.room), "Room ID must contain at most 64 printable ASCII characters");
-            require(config.milliseconds > 0 && config.milliseconds <= 60000, "LAN half-turn must be between 1 and 60000 ms");
-            std::string error;
             require(config.directory.empty() || replayDirectory(config.directory, error), "Recording directory is unavailable");
             require(config.command.empty() || StrategyProcess::available(config.command), "Cannot open LAN player program");
             httpProxy(config.proxy);
-            auto endpoint = address(config.address); session->config = config; session->open = true;
-            MatchSnapshot pending; pending.state = MatchState::Active; pending.status = "Connecting to LAN lobby"; session->publish(pending);
-            session->worker = std::thread([this, endpoint] { session->run(endpoint, lobbies); });
+            session->config = config; session->open = true;
+            MatchSnapshot state; state.state = MatchState::Connecting; state.status = "Searching on LAN"; session->publish(state);
+            session->worker = std::thread([this] { session->run(); });
             return true;
         } catch (const std::exception& error) {
-            session->open = false; MatchSnapshot failed; failed.error = error.what(); session->publish(failed); return false;
+            session->open = false; MatchSnapshot state; state.error = error.what(); session->publish(state); return false;
         }
     }
-    void LanMatch::leave() {
-        session->mail->leaving = true;
-        if (session->worker.joinable()) session->worker.join();
-        session->open = false;
-    }
+    void LanMatch::leave() { session->mail->leaving = true; }
+    void LanMatch::stop() { leave(); }
     bool LanMatch::opened() const { return session->open; }
     MatchSnapshot LanMatch::snapshot() const { return session->snapshot(); }
     bool LanMatch::savePending(const std::filesystem::path& directory, std::string& error) {
         std::lock_guard lock(session->mutex);
+        error.clear();
         if (session->unsaved.empty()) return true;
+        if (opened()) { error = "Wait for the LAN recording transfer to finish before retrying RD"; return false; }
         if (directory.empty()) { error = "Set RD to save the pending LAN recording"; return false; }
         if (!saveReplayBytes(session->unsaved, directory, error)) return false;
-        session->unsaved.clear();
+        session->unsaved.clear(); session->published.error.clear();
         return true;
-    }
-    void LanMatch::stop() { if (opened()) session->command({{"type", "stop"}}); }
-    void LanMatch::restart(const std::filesystem::path& directory) {
-        auto path = directory.u8string();
-        if (opened()) session->command({{"type", "ready"}, {"directory", std::string(path.begin(), path.end())}});
     }
     bool LanMatch::enqueue(int player, const Action& action) {
         auto state = snapshot();
-        if (!opened() || player < 0 || player > 1 || player != state.player || !state.running || !session->config.command.empty()) return false;
+        if (!opened() || player < 0 || player > 1 || player != state.player || !state.running() || !session->config.command.empty()) return false;
         const auto& view = (*state.views)[player];
         int row = action.row, col = action.col;
         if (action.type != ActionType::Move || row < 0 || col < 0 || row >= view.rows || col >= view.cols) return false;
@@ -669,7 +540,7 @@ namespace NEBULA {
     }
     std::optional<Action> LanMatch::cancel(int player, bool all) {
         auto state = snapshot();
-        if (!opened() || player < 0 || player > 1 || player != state.player || !state.running || state.queued[player].empty()) return std::nullopt;
+        if (!opened() || player < 0 || player > 1 || player != state.player || !state.running() || state.queued[player].empty()) return std::nullopt;
         auto removed = all ? state.queued[player].front() : state.queued[player].back();
         if (!session->command({{"type", "cancel"}, {"all", all}})) return std::nullopt;
         return removed;

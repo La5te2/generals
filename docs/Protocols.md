@@ -128,7 +128,7 @@ Malformed replies, oversized lines, and premature process exit end the agent's s
 
 Each action line allows up to 255 bytes before LF. With CRLF endings, CR counts toward that limit. Fields are whitespace-separated integers, and each line follows the field count specified above.
 
-LOCAL deadlines follow the configured half-turn duration. LAN timing follows the room host, while main- and bot-server timing follows server updates. An agent sends its reply as soon as its decision is ready.
+LOCAL deadlines follow the configured half-turn duration. The LAN host advances the game at a fixed 500 ms interval, while main- and bot-server timing follows server updates. An agent sends its reply as soon as its decision is ready.
 
 ### Minimal Agent
 
@@ -161,14 +161,14 @@ Each submission contains one command. Command names are case-insensitive, so `TU
 - `man` takes zero arguments and displays the game and interface manual.
 - `back` takes zero arguments and returns to the previous scene. From a match, it ends the session and returns to configuration.
 - `quit` takes zero arguments and ends the session before closing the application. A recording save failure defers exit until the recording can be saved.
-- `turn MS` accepts a positive integer and sets the LOCAL and REPLAY half-turn duration in milliseconds. A newly created LAN room uses this setting, restricted to `1` through `60000`; an existing room retains its creator's duration, including after Reset. Main- and bot-server speed is unaffected.
+- `turn MS` accepts a positive integer and sets the LOCAL and REPLAY half-turn duration in milliseconds, regardless of the currently selected mode. It does not affect current or future ONLINE sessions: LAN uses a fixed 500 ms interval, while main- and bot-server timing follows the server.
 - `win WIDTH HEIGHT` sets the window's content size. Width must be from `720` through `7680`, and height from `560` through `4320`. The result is limited to the monitor's usable area. `win 0 0` selects borderless fullscreen; a single zero is invalid.
 - `rd "folder path"` selects the recording directory for new LOCAL and LAN games. `rd ""` disables saving for new games.
 - `auto N` accepts `0` for manual Reset or `1` for automatic Reset after a 1000 ms delay following normal completion or manual Stop.
 
-`auto` defaults to `0`. With automatic Reset enabled, LOCAL starts a new game, main- and bot-server sessions reconnect and join the queue, and REPLAY restarts the current file. In an open LAN room, Reset marks the player ready; both players must be ready before another game starts. REPLAY has no Stop operation. `back` and `quit` cancel a pending automatic Reset. Sessions ending in an error await manual retry.
+`auto` defaults to `0`. With automatic Reset enabled, LOCAL starts a new game, main- and bot-server sessions reconnect and join the queue, LAN starts fresh matchmaking after its room closes and recording cleanup finishes, and REPLAY restarts the current file. REPLAY has no Stop operation. `back` and `quit` cancel a pending automatic Reset. Sessions ending in an error await manual retry.
 
-The recording directory is empty at application startup. Its value is shared across modes and is not persisted across application launches. The double quotes around the `RD` path are mandatory, even without spaces. Backslashes are literal path characters, not escape sequences; embedded double quotes are unsupported. A nonempty directory is created if necessary. An invalid directory leaves the previous setting unchanged. An ongoing game keeps the directory selected when it started. The path is local to each participant and is never sent to a LAN peer.
+The recording directory is empty at application startup. Its value is shared across modes and is not persisted across application launches. The double quotes around the `RD` path are mandatory, even without spaces. Backslashes are literal path characters, not escape sequences; embedded double quotes are unsupported. A nonempty directory is created if necessary. An invalid directory leaves the previous setting unchanged. An ongoing game keeps the directory selected when it started. A completed recording whose write failed is retried immediately at the new directory, without starting another game. An empty directory cannot discard a pending recording. The path is local to each participant and is never sent to a LAN peer.
 
 ```text
 win 1280 800
@@ -262,60 +262,62 @@ Board updates describe the account's perspective, while scores provide both play
 
 ## LAN Rooms
 
-### Transport and Address
+### Network Discovery
 
-LAN uses a WebSocket connection with one JSON object per text frame. Every message has a case-sensitive `type` field. There are no Engine.IO or Socket.IO prefixes. Binary frames are unsupported, and each message must fit within 256 KiB.
+Each window advertises on IPv4 multicast group `239.255.42.17`, UDP port `42817`, with TTL `1` and multicast loopback enabled. The IP configuration field selects a local adapter address without a port, not a remote peer. Empty selects all available IPv4 adapters. A physical or virtual LAN must carry this multicast traffic and allow connections between participants. There is no directory server, forwarding endpoint or NAT traversal.
 
-The address accepts `host:port`, `ws://host:port`, or a WebSocket URL with a forwarding path. The default port is `8080` for `ws` and `443` for `wss`. Ports range from `1` through `65535`. Query strings and fragments are unsupported. IPv6 literals use square brackets.
-
-An empty address selects the local endpoint `127.0.0.1:8080` and permits listening on `0.0.0.0:8080`. It does not discover other computers on the network. If a direct connection fails, a plain `ws` endpoint without a forwarding path can start a listener when the address belongs to this computer. Other players connect to that listener's reachable LAN address or forwarding address. A configured proxy disables automatic local listening. Secure forwarding can use `wss`, but the local listener itself serves plain WebSocket.
-
-One listener can serve multiple independent rooms. The listener's owner and an individual room's creator need not be the same participant. A Room ID selects a room; it is not a password or an account credential.
-
-### Joining
-
-The first client message identifies the player and requested room:
+The discovery datagram is a JSON object:
 
 ```json
-{"type":"hello","name":"Alice","room":"","milliseconds":500}
+{"type":"generals-lan","id":"0123456789abcdef0123456789abcdef","room":"","port":49152,"available":true,"host":""}
 ```
 
-`name` must contain 1 through 64 printable ASCII characters. A nonempty `room` has the same limits and is case-sensitive. `milliseconds` must be an integer from `1` through `60000`. The first participant creates the room and determines its half-turn duration; later participants cannot change it.
+`id` is a fresh random 32-character hexadecimal instance ID for this matchmaking attempt. `port` is its independently allocated TCP listening port. The source IP of the datagram supplies the peer address. `available` means the instance is accepting pairing requests; an in-flight connection reserves it. Once paired, `host` identifies the accepting instance. Announcements repeat every 500 ms and when availability changes; unseen peers expire after three seconds. IDs distinguish windows, including several windows on the same computer.
 
-An empty `room` requests public matchmaking. The listener selects a public vacancy or creates a new public room with an automatically assigned label. Full rooms are skipped: the third and fourth arrivals can form a second game. A nonempty `room` creates or joins that private room; joining a full or closing private room is rejected. Public and private rooms have separate namespaces, so entering a public label as a nonempty ID does not select that public room. Once assigned, a participant remains in that room until leaving or disconnecting.
+An empty `room` participates in public matching. A nonempty ID identifies one private room within the discovery network and matches only the same case-sensitive ID, with 1-64 printable ASCII characters. An occupied private room reports `Room is full`; public participants skip occupied peers and wait or form another pair. Room IDs do not authenticate participants. Discovery is unauthenticated and belongs on a trusted network.
 
-The listener replies with the assigned room label and seat:
+The optional HTTP CONNECT proxy applies to outgoing WebSocket connections, without direct fallback. It must be able to reach the discovered address. Discovery itself stays on the selected network and exposes that local adapter address; the proxy does not anonymize discovery.
+
+### Pairing
+
+Available instance IDs are ordered lexicographically and adjacent instances pair. The lower ID initiates the connection; the higher ID accepts and becomes the host. Private matching selects the first pair; an advertised in-flight reservation blocks another pair from claiming the same Room ID. Each window reserves at most one connection. Pairing uses these messages in order:
 
 ```json
-{"type":"welcome","room":"1","player":0}
-{"type":"waiting","ready":true,"names":["Alice","BLUE"]}
+{"type":"hello","id":"00000000000000000000000000000001","target":"00000000000000000000000000000002","room":"","name":"Bob"}
+{"type":"offer","id":"00000000000000000000000000000002","target":"00000000000000000000000000000001","room":"","names":["Alice","Bob"]}
+{"type":"accept","id":"00000000000000000000000000000001","target":"00000000000000000000000000000002"}
+{"type":"paired"}
 ```
 
-Seat `0` is red and owns the room; seat `1` is blue and joins it. `names` is always ordered red, blue. `waiting.ready` describes the receiving player's readiness. New participants are ready initially, so the first game begins once both seats are occupied. Later games require both participants to send `ready` again.
+`name` must contain 1 through 64 printable ASCII characters. The receiver validates both instance IDs and the room. A reserved or unavailable participant replies with `{"type":"busy"}` and closes the extra connection. Pairing attempts time out after five seconds and release the reservation. Proxy failures report an error rather than retrying directly.
+
+After confirmation, both listeners stop accepting new connections. The host owns seat `0` (red); the initiating participant owns seat `1` (blue). The host advances the engine once every 500 ms, independently of either participant's `turn` setting, and `names` remains in red/blue order. Each connection carries exactly one game. Other pairs do not depend on either participant.
+
+Game messages are one JSON object per WebSocket text frame, at most 256 KiB each. Every message has a case-sensitive `type`. Binary frames and Engine.IO/Socket.IO prefixes are unsupported.
 
 ### Observations and Queues
 
-During and after a game, the listener sends `state` messages. The following example uses a complete three-by-three observation:
+During and after a game, the host sends `state` messages. The following example uses a complete three-by-three observation:
 
 ```json
-{"type":"state","game":1,"rows":3,"cols":3,"view":"8 2 6 3 12\n4 1 2\n1 1 1\n0 0 5\n1 1 0\n0 0 0\n0 0 0\n5 1 0\n0 0 0\n0 0 0\n","result":0,"ready":false,"names":["Alice","Bob"],"queued":[],"ack":0}
+{"type":"state","rows":3,"cols":3,"view":"8 2 6 3 12\n4 1 2\n1 1 1\n0 0 5\n1 1 0\n0 0 0\n0 0 0\n5 1 0\n0 0 0\n0 0 0\n","result":0,"queued":[],"ack":0}
 ```
 
-`game` is a positive identifier that increases within the room at each new game. `rows` and `cols` are the board dimensions. `view` is the complete external-agent observation text, without an initialization line; ownership is relative to the recipient. `result` is `0` for ongoing, `1` for red victory, `2` for blue victory, or `3` for a draw. Terminal states still include the final observation. Each client receives only its own field of view, not the full board.
+`rows` and `cols` are the board dimensions. `view` is the complete external-agent observation text, without initialization; ownership is relative to the recipient. `result` is `0` for ongoing, `1` for red victory, `2` for blue victory, or `3` for a draw. Terminal states include the final observation. The guest receives only its own field of view, not the full board.
 
-`queued` contains only the receiving player's pending actions, each encoded as a five-integer action string. `ack` is the highest processed input ID, initially zero. It confirms processing of a queue edit, not execution of a move. States may repeat a tick when only queue or readiness information changes. Ticks cannot decrease within one game; a new game begins at tick zero.
+`queued` contains the receiving player's pending actions as five-integer strings. `ack` is the highest processed input ID, initially zero. It confirms processing of a queue edit, not execution of a move. States may repeat a tick when only the queue changes. Ticks cannot decrease; a game begins at tick zero.
 
 ### Actions
 
-Queue edits carry a strictly increasing positive `id` and the current `game`. IDs are unsigned 64-bit integers and continue increasing across games on the same connection.
+Queue edits carry a strictly increasing positive unsigned 64-bit `id` within this connection.
 
 ```json
-{"type":"move","id":1,"game":1,"action":"0 1 1 0 0\n"}
-{"type":"move","id":2,"game":1,"tick":8,"action":"0 1 1 3 1\n"}
-{"type":"cancel","id":3,"game":1,"all":false}
+{"type":"move","id":1,"action":"0 1 1 0 0\n"}
+{"type":"move","id":2,"tick":8,"action":"0 1 1 3 1\n"}
+{"type":"cancel","id":3,"all":false}
 ```
 
-`action` uses the external-agent action format and may contain at most 100 bytes. An optional `tick` restricts acceptance to that exact host tick. External-agent moves carry this restriction; human queued moves omit it. A stale game or tick causes the request to be ignored while its input ID is still acknowledged. This prevents an old request from entering a later game or a later decision step.
+`action` uses the external-agent action format and may contain at most 100 bytes. Optional `tick` restricts acceptance to that exact host tick. Agent moves carry it; human queued moves omit it. Stale ticks are ignored but acknowledged. A later game uses a new connection, so old inputs cannot enter it.
 
 `cancel` removes the newest pending move when `all` is false, or clears the queue when true. Move legality is checked against the game state, including at execution time. A correctly formatted but illegal move does not imply a transport failure.
 
@@ -324,33 +326,30 @@ Queue edits carry a strictly increasing positive `id` and the current `game`. ID
 The following client commands have no additional required fields:
 
 ```json
-{"type":"stop"}
-{"type":"ready"}
 {"type":"leave"}
 {"type":"ping"}
 ```
 
-`stop` surrenders the requesting player's side if a game is ongoing, but keeps the room open. Natural completion also leaves the room open. Both players become unready after completion. `ready` marks the sender ready for the next game; it does not interrupt an ongoing game. The next game waits for both players' readiness and acknowledgment of the preceding replay transfer.
+Stop, Back and Quit request departure. `leave` surrenders an ongoing game and ends the room for both participants. Natural completion also ends the room. An orderly end transfers the final replay before closing; an abrupt disconnection may prevent delivery. A closed room never accepts a replacement player.
 
-`leave` exits the room and surrenders an ongoing game. If the joining player leaves or disconnects, the creator's room remains available for another participant. If the creator leaves or disconnects, the room closes and the remaining participant is notified. Returning to configuration or Home sends `leave`. Closing the program that provides the listener also disconnects the rooms it serves.
+The interface may retain the final position. Reset or automatic Reset starts a new discovery and pairing attempt with the current configuration; it is not readiness within the previous room.
 
-The listener answers `ping` with `{"type":"pong"}`. Clients send heartbeat messages every five seconds; a connection with no incoming activity for twenty seconds is considered lost.
+Both peers answer `ping` with `{"type":"pong"}`. Heartbeats are sent every five seconds; twenty seconds without incoming activity is a connection failure.
 
-Rejections and orderly closure use:
+Orderly closure uses:
 
 ```json
-{"type":"error","message":"Room is full"}
-{"type":"closed","message":"Room closed: its host left"}
+{"type":"closed"}
 ```
 
 The connection closes after these messages. Unexpected transport loss may close it without a final message.
 
 ### Replay Transfer
 
-At completion, both participants receive the same compressed GIOR bytes in ordered chunks:
+At completion, the host preserves the recording locally and sends the same compressed GIOR bytes to the guest in ordered chunks:
 
 ```json
-{"type":"replay","game":1,"offset":0,"data":"0012abff","last":false}
+{"type":"replay","offset":0,"data":"0012abff","last":false}
 ```
 
 `data` is lowercase hexadecimal, with two characters per byte. `offset` counts decoded bytes, begins at zero and must equal the end of the previous chunk. A chunk contains at most 8192 bytes, and a complete transfer at most 16 MiB. `last` marks the final chunk. The example illustrates chunk framing, not a complete replay.
@@ -358,7 +357,7 @@ At completion, both participants receive the same compressed GIOR bytes in order
 The recipient acknowledges completion with:
 
 ```json
-{"type":"recorded","game":1}
+{"type":"recorded"}
 ```
 
 This acknowledgment confirms receipt, not successful disk persistence. Transfer and acknowledgment are required even when local recording is disabled. Each participant independently applies its `RD` setting. An orderly departure allows the completed replay to be delivered before closure, but transport loss can prevent delivery.

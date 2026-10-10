@@ -15,7 +15,6 @@
 #include <vector>
 
 namespace NEBULA {
-    std::array<Observation, 3> matchViews(const States& state);
     struct LocalSnapshot : MatchSnapshot {
         std::filesystem::path saved;
         bool unsaved = false;
@@ -29,6 +28,7 @@ namespace NEBULA {
         bool start(const std::array<std::string, 2>& commands, std::uint32_t seed, int milliseconds = 500,
                    const std::filesystem::path& directory = {}, bool retainRecording = false);
         void stop(int surrender = -1); // a supplied seat forfeits; LAN uses this for departure or Stop.
+        bool savePending(const std::filesystem::path& destination, std::string& error);
         void pause();
         void resume();
         // begin a full interval with the new duration, retaining the current running or paused state.
@@ -56,7 +56,8 @@ namespace NEBULA {
         std::thread worker;
         Engine engine;
         Clock clock;
-        MatchState phase = MatchState::Empty;
+        enum class Phase { Empty, Active, Finished };
+        Phase phase = Phase::Empty;
         std::array<std::unique_ptr<StrategyProcess>, 2> strategies;
         struct Pending { Action action; Clock::Time received; };
         std::array<std::deque<Pending>, 2> inputs;

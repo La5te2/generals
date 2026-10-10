@@ -21,7 +21,7 @@ bash train.sh --profile check --device cpu
 On Windows:
 
 ```powershell
-.\train.bat --profile check --device cpu
+python -B train.py --profile check --device cpu
 ```
 
 `check` uses a small network and two brief updates to exercise sampling, optimization and saving. The default profile, `paper`, selects the seven-layer model and large rollout configuration. The scripts use `python3` on Unix and `python` on Windows; set `PYTHON` to an executable path to override this. They preserve the calling directory, so relative output and resume paths resolve from where the command is run.

@@ -1,5 +1,5 @@
-// LAN play: join a player-hosted WebSocket lobby and its public or private two-player rooms.
-// the room creator controls room lifetime; a locally opened lobby survives returning to the menu.
+// LAN play: discover peers on a selected local network and run one direct two-player room per window.
+// leaving either side closes the room; a new session discovers and matches peers again.
 #pragma once
 
 #include "session.hpp"
@@ -7,10 +7,9 @@
 
 namespace NEBULA {
     struct LanConfig {
-        std::string address, username, room, command;
-        int milliseconds = 500;
+        std::string address, username, room, command; // address selects a local IPv4 adapter, not a remote endpoint.
         std::filesystem::path directory;
-        std::string proxy; // outgoing HTTP CONNECT connection; empty permits direct connection and local hosting.
+        std::string proxy; // HTTP CONNECT for outgoing game connections; discovery stays on the selected LAN.
     };
 
     class LanMatch : public PlayerInput {
@@ -20,9 +19,8 @@ namespace NEBULA {
         LanMatch(const LanMatch&) = delete;
         LanMatch& operator=(const LanMatch&) = delete;
         bool start(const LanConfig& config);
-        void stop(); // surrender this match while keeping the room connection.
-        void restart(const std::filesystem::path& directory = {}); // both players must be ready for the next match.
-        void leave();
+        void stop(); // surrender and close the room, retaining the final snapshot.
+        void leave(); // asynchronous; opened() stays true until replay transfer and cleanup finish.
         bool opened() const;
         MatchSnapshot snapshot() const;
         bool savePending(const std::filesystem::path& directory, std::string& error);
@@ -30,9 +28,7 @@ namespace NEBULA {
         std::optional<Action> cancel(int player, bool all) override;
 
     private:
-        struct Lobby;
         struct Session;
-        std::vector<std::unique_ptr<Lobby>> lobbies;
         std::unique_ptr<Session> session;
     };
 }

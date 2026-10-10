@@ -27,10 +27,8 @@ inline bool legit(const States& state, int player, const Action& action) {
     }
 
     const Cell& source = state.board.at(action.row, action.col);
-    int dx[] = {0, 0, -1, 1}; // Up, Down, Left, Right
-    int dy[] = {-1, 1, 0, 0}; // Up, Down, Left, Right
-    int ad = static_cast<int>(action.direction);
-    int tr = action.row + dy[ad], tc = action.col + dx[ad]; // target row and column based on direction.
+    auto offset = directionOffsets[static_cast<int>(action.direction)];
+    int tr = action.row + offset.row, tc = action.col + offset.col;
 
     legitimacy &= (source.owner == player);
     legitimacy &= (source.army > 1);
@@ -47,10 +45,8 @@ inline bool legit(const States& state, int player, const Action& action) {
 inline bool execute(States& state, int player, const Action& action) {
     if (!legit(state, player, action))  return false; // action is not legitimate, do not modify the state.
     if (action.type == ActionType::Pass) return true; // a Pass leaves the board unchanged.
-    int dx[] = {0, 0, -1, 1}; // Up, Down, Left, Right
-    int dy[] = {-1, 1, 0, 0}; // Up, Down, Left, Right
-    int ad = static_cast<int>(action.direction);
-    int tr = action.row + dy[ad], tc = action.col + dx[ad]; // target row and column based on direction.
+    auto offset = directionOffsets[static_cast<int>(action.direction)];
+    int tr = action.row + offset.row, tc = action.col + offset.col;
     Cell& source = state.board.at(action.row, action.col);
     Cell& target = state.board.at(tr, tc);
     std::int64_t army = action.half ? source.army / 2 : source.army - 1;
@@ -90,15 +86,17 @@ inline void grow(States& state) {
 inline void step(States& state, const std::array<Action, 2>& actions) {
     if (state.result != Phases::Ongoing) return;
 
-    // record both players' armies and land before either move for a possible timeout decision.
+    // Only a possible timeout needs pre-move totals; moves and growth must not affect this comparison.
     std::array<std::int64_t, 2> totals{};
     std::array<int, 2> land{};
-    for (int row = 0; row < state.board.rows(); ++row) {
-        for (int col = 0; col < state.board.cols(); ++col) {
-            const Cell& cell = state.board.at(row, col);
-            if (cell.owner == 0 || cell.owner == 1) {
-                totals[cell.owner] += cell.army;
-                ++land[cell.owner];
+    if (state.tick > tickLimit || state.idle >= idleLimit) {
+        for (int row = 0; row < state.board.rows(); ++row) {
+            for (int col = 0; col < state.board.cols(); ++col) {
+                const Cell& cell = state.board.at(row, col);
+                if (cell.owner == 0 || cell.owner == 1) {
+                    totals[cell.owner] += cell.army;
+                    ++land[cell.owner];
+                }
             }
         }
     }
@@ -107,14 +105,12 @@ inline void step(States& state, const std::array<Action, 2>& actions) {
     // each player may pass or move once per half-turn.
     // board storage stays fixed during a step.
     std::array<Cell*, 2> source{}, target{};
-    int dx[] = {0, 0, -1, 1}; // Up, Down, Left, Right
-    int dy[] = {-1, 1, 0, 0}; // Up, Down, Left, Right
     for (int player = 0; player < 2; ++player) {
         const Action& action = actions[player];
         if (action.type != ActionType::Move || !legit(state, player, action)) continue;
-        int ad = static_cast<int>(action.direction);
+        auto offset = directionOffsets[static_cast<int>(action.direction)];
         source[player] = &state.board.at(action.row, action.col);
-        target[player] = &state.board.at(action.row + dy[ad], action.col + dx[ad]);
+        target[player] = &state.board.at(action.row + offset.row, action.col + offset.col);
     }
 
     // determines move order from the board before either player acts.

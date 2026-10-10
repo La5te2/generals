@@ -1,4 +1,5 @@
 // shared page definitions: keep input handling and drawing consistent about page state and control positions.
+// Own form values, focus, notification state, layout rectangles and control availability; do not run sessions or draw.
 #pragma once
 
 #include "console.hpp"
@@ -7,6 +8,7 @@
 #include <array>
 #include <chrono>
 #include <filesystem>
+#include <stdexcept>
 
 struct Rect {
     float x, y, width, height;
@@ -18,10 +20,19 @@ struct Rect {
 
 enum class Tool { None, Backward, Playback, Forward, Stop, Reset };
 
+inline Rect viewButton(int view, float scale) {
+    return {16 + (44 + view * 64) * scale, 12, 64 * scale, 28 * scale};
+}
+inline Rect toolButton(Tool tool, int width, float scale) {
+    float offset = 28 + (static_cast<int>(Tool::Reset) - static_cast<int>(tool)) * 36.0f;
+    return {width - 16.0f - offset * scale, 12, 28 * scale, 28 * scale};
+}
+
 // page status and layout definition
 namespace NEBULA {
     // configuration state and layout are shared by interface.cpp's input handling and renderer.cpp's drawing.
     enum class Scene { Home, Local, Online, Replay };
+    enum class Field { None, Username, Identity, Replay, Red, Blue, Player, Room, Address, Proxy };
     inline constexpr std::array tools{Tool::Backward, Tool::Playback, Tool::Forward, Tool::Stop, Tool::Reset};
 
     // drawing, mouse input and shortcuts share the same availability rules.
@@ -55,28 +66,36 @@ namespace NEBULA {
         int server = 0; // BOT, MAIN, LAN.
         bool lan() const { return server == 2; }
         std::filesystem::path directory; // session-wide RD destination; empty disables local recording.
-        // online fields stay in memory. the user ID is masked while drawing.
-        std::array<TextInput, 8> fields; // username, user ID, replay path, red command, blue command, online command, room, proxy.
-        std::array<std::array<TextInput, 4>, 3> accounts;
-        void selectServer(int selected) {
-            accounts[server] = {fields[0], fields[1], fields[6], fields[7]};
-            server = selected;
-            fields[0] = accounts[server][0];
-            fields[1] = accounts[server][1];
-            fields[6] = accounts[server][2];
-            fields[7] = accounts[server][3];
+        struct Account { TextInput username, identity, room, proxy; };
+        std::array<Account, 3> accounts;
+        TextInput replay, red, blue, player, address;
+        void selectServer(int selected) { if (selected >= 0 && selected < 3) server = selected; }
+        template<class Self> static auto& access(Self& self, Field field) {
+            switch (field) {
+                case Field::Username: return self.accounts[self.server].username;
+                case Field::Identity: return self.accounts[self.server].identity;
+                case Field::Room: return self.accounts[self.server].room;
+                case Field::Address: return self.address;
+                case Field::Proxy: return self.accounts[self.server].proxy;
+                case Field::Replay: return self.replay;
+                case Field::Red: return self.red;
+                case Field::Blue: return self.blue;
+                case Field::Player: return self.player;
+                default: throw std::out_of_range("No configuration field selected");
+            }
         }
+        TextInput& field(Field id) { return access(*this, id); }
+        const TextInput& field(Field id) const { return access(*this, id); }
         int milliseconds = 500; // local and replay half-turn interval, retained between sessions.
-        int focus = -1;
-        int fileHover = -1;
+        Field focus = Field::None;
+        Field fileHover = Field::None;
         std::string message;
         Timer::time_point messageTime{};
 
         // a blank or whitespace-only player command selects keyboard and mouse control.
-        // fields 3 and 4 select the local red and blue players. field 5 selects the online player.
-        bool humanPlayer(int field) const {
-            return (field == 3 || field == 4 || field == 5) &&
-                fields[field].input.find_first_not_of(" \t\r\n") == std::string::npos;
+        bool humanPlayer(Field id) const {
+            return (id == Field::Red || id == Field::Blue || id == Field::Player) &&
+                field(id).input.find_first_not_of(" \t\r\n") == std::string::npos;
         }
 
         // every notification starts a fresh display interval, including repeated text.
@@ -85,7 +104,6 @@ namespace NEBULA {
             messageTime = now;
         }
 
-        // store the current message and its display time, for fading out after a few seconds
         // hold at full opacity, then fade linearly using elapsed real time.
         float messageOpacity(Timer::time_point now = Timer::now()) const {
             if (message.empty()) return 0;
@@ -184,40 +202,60 @@ namespace NEBULA {
         return {row.x + (span + gap) * choice, row.y, span, row.height};
     }
 
-    inline bool hasFileButton(Scene scene, int index) {
-        return (scene == Scene::Local && (index == 3 || index == 4)) ||
-               (scene == Scene::Online && index == 5) || (scene == Scene::Replay && index == 2);
+    // This order determines both row positions and keyboard navigation.
+    inline std::array<Field, 5> inputOrder(const Setup& setup) {
+        if (setup.scene == Scene::Local) return {Field::Red, Field::Blue};
+        if (setup.scene == Scene::Online) {
+            if (setup.lan()) return {Field::Player, Field::Username, Field::Room, Field::Address, Field::Proxy};
+            return {Field::Player, Field::Username, Field::Identity, Field::Room, Field::Proxy};
+        }
+        if (setup.scene == Scene::Replay) return {Field::Replay};
+        return {};
     }
-
-    inline Rect fieldRow(Scene scene, int index, int width, int height) {
-        int group = scene == Scene::Local ? index - 3 : scene == Scene::Replay ? 0 : index >= 6 ? index - 2 : index == 5 ? 1 : index + 2;
-        return formControl(scene, group, width, height);
+    inline bool hasFileButton(Field field) {
+        return field == Field::Red || field == Field::Blue || field == Field::Player || field == Field::Replay;
+    }
+    inline std::string_view fieldLabel(const Setup& setup, Field field) {
+        switch (field) {
+            case Field::Username: return "USERNAME";
+            case Field::Identity: return "USER ID";
+            case Field::Room: return setup.lan() ? "ROOM ID" : "PRIVATE ROOM";
+            case Field::Address: return "IP";
+            case Field::Proxy: return "PROXY";
+            case Field::Red: return "RED PLAYER";
+            case Field::Blue: return "BLUE PLAYER";
+            case Field::Player: return "PLAYER";
+            case Field::Replay: return "REPLAY FILE";
+            default: return "";
+        }
+    }
+    inline Rect fieldRow(const Setup& setup, Field field, int width, int height) {
+        auto order = inputOrder(setup);
+        int group = static_cast<int>(std::find(order.begin(), order.end(), field) - order.begin()) + (setup.scene == Scene::Online ? 1 : 0);
+        return formControl(setup.scene, group, width, height);
     }
 
     // a file button occupies one square at the row's right edge, separated from the input by 8 scaled pixels.
-    inline Rect inputField(Scene scene, int index, int width, int height) {
-        Rect row = fieldRow(scene, index, width, height);
-        if (hasFileButton(scene, index)) row.width -= row.height + 8 * contentScale(width, height);
+    inline Rect inputField(const Setup& setup, Field field, int width, int height) {
+        Rect row = fieldRow(setup, field, width, height);
+        if (hasFileButton(field)) row.width -= row.height + 8 * contentScale(width, height);
         return row;
     }
 
-    inline Rect fileButton(Scene scene, int index, int width, int height) {
-        Rect row = fieldRow(scene, index, width, height);
+    inline Rect fileButton(const Setup& setup, Field field, int width, int height) {
+        Rect row = fieldRow(setup, field, width, height);
         return {row.x + row.width - row.height, row.y, row.height, row.height};
-    }
-
-    // the same order drives mouse focus and Tab navigation.
-    inline std::array<int, 5> inputOrder(Scene scene) {
-        if (scene == Scene::Local) return {3, 4, -1, -1, -1};
-        if (scene == Scene::Online) return {5, 0, 1, 6, 7};
-        if (scene == Scene::Replay) return {2, -1, -1, -1, -1};
-        return {-1, -1, -1, -1, -1};
     }
 
     inline Rect startButton(int width, float scale) {
         return {width - 16.0f - 180 * scale, 12 - 4 * scale, 180 * scale, 36 * scale};
     }
     inline Rect backButton(float scale) { return {16, 12, 28 * scale, 28 * scale}; }
-    // operation feedback sits below the top bar, independently of the centered form.
-    inline Rect messageArea(int width, float scale) { return {16, 40 + 28 * scale, width - 32.0f, 36 * scale}; }
+    // Configuration feedback sits below the top bar; board feedback sits below the player names and tooltips.
+    inline Rect messageArea(int width, int height, bool board) {
+        float scale = barScale(height);
+        if (!board) return {16, 40 + 28 * scale, width - 32.0f, 36 * scale};
+        Rect names = scoreNamesArea(width, height);
+        return {names.x, names.y + names.height + 44 * scale, names.width, 36 * scale};
+    }
 }

@@ -30,7 +30,7 @@ namespace NEBULA {
         const auto& view = (*snapshot.views)[side];
         // a queued route may end on neutral or enemy land. once the queue is empty,
         // clear the selection if the latest observation shows that the cell belongs to someone else or is neutral.
-        if (snapshot.state != MatchState::Active || selected >= view.rows * view.cols || (selected >= 0 && snapshot.queued[side].empty() &&
+        if (!snapshot.acceptsInput() || selected >= view.rows * view.cols || (selected >= 0 && snapshot.queued[side].empty() &&
             view.cells[selected].owner != side)) {
             selected = -1;
             halfArmy = false;
@@ -38,7 +38,7 @@ namespace NEBULA {
     }
 
     void Human::move(PlayerInput& match, const MatchSnapshot& snapshot, Direction direction) {
-        if (side < 0 || selected < 0 || snapshot.state != MatchState::Active) return;
+        if (side < 0 || selected < 0 || !snapshot.acceptsInput()) return;
         const auto& view = (*snapshot.views)[side];
         int row = selected / view.cols, col = selected % view.cols;
         int nextRow = row, nextCol = col;
@@ -60,7 +60,7 @@ namespace NEBULA {
     }
 
     void Human::click(PlayerInput& match, const MatchSnapshot& snapshot, double x, double y, int width, int height) {
-        if (side < 0 || snapshot.state != MatchState::Active) return;
+        if (side < 0 || !snapshot.acceptsInput()) return;
         const auto& view = (*snapshot.views)[side];
         Rect board = boardArea(view.rows, view.cols, width, height);
         if (!board.contains(x, y)) return;
@@ -87,7 +87,7 @@ namespace NEBULA {
     }
 
     void Human::key(PlayerInput& match, const MatchSnapshot& snapshot, int key, int action, int mods) {
-        if (side < 0 || snapshot.state != MatchState::Active ||
+        if (side < 0 || !snapshot.acceptsInput() ||
             (action != GLFW_PRESS && action != GLFW_REPEAT) || (mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER | GLFW_MOD_ALT))) return;
         switch (key) {
             case GLFW_KEY_W: case GLFW_KEY_UP: move(match, snapshot, Direction::Up); break;

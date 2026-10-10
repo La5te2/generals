@@ -308,14 +308,13 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
             text(name, row.x, row.y - 24 * scale, 1.5f * scale, muted);
             return row;
         };
-        auto fileInput = [&](std::string_view name, int field, int index) {
-            group(name, index);
-            Rect entry = inputField(setup.scene, field, width, height);
-            input(setup.fields[field], entry, setup.focus == field, false, scale);
+        auto fileInput = [&](Field field) {
+            Rect entry = inputField(setup, field, width, height);
+            input(setup.field(field), entry, setup.focus == field, false, scale);
             if (setup.focus != field && setup.humanPlayer(field)) {
                 text("HUMAN", entry.x + 10 * scale, entry.y + 11 * scale, 1.5f * scale, muted);
             }
-            Rect bounds = fileButton(setup.scene, field, width, height);
+            Rect bounds = fileButton(setup, field, width, height);
             rectangle(bounds, {.06f, .08f, .09f});
             Color symbol = setup.fileHover == field ? Color{.40f, .82f, .68f} : white;
             // the folder outline uses the same scaled coordinates as the surrounding controls.
@@ -330,22 +329,18 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
                 label("SELECT FILE", tooltip, white, 1.25f * scale);
             }
         };
-        if (setup.scene == Scene::Local) {
-            fileInput("RED PLAYER", 3, 0);
-            fileInput("BLUE PLAYER", 4, 1);
-        } else if (setup.scene == Scene::Online) {
+        if (setup.scene == Scene::Online) {
             Rect server = group("SERVER", 0);
             button("BOT", choiceButton(server, 0, 3), setup.server == 0, true, scale);
             button("MAIN", choiceButton(server, 1, 3), setup.server == 1, true, scale);
             button("LAN", choiceButton(server, 2, 3), setup.lan(), true, scale);
-            fileInput("PLAYER", 5, 1);
-            input(setup.fields[0], group("USERNAME", 2), setup.focus == 0, false, scale);
-            input(setup.fields[1], group(setup.lan() ? "ROOM ID" : "USER ID", 3), setup.focus == 1, !setup.lan(), scale);
-            Rect room = group(setup.lan() ? "IP" : "PRIVATE ROOM", 4);
-            input(setup.fields[6], room, setup.focus == 6, false, scale);
-            input(setup.fields[7], group("PROXY", 5), setup.focus == 7, false, scale);
-        } else {
-            fileInput("REPLAY FILE", 2, 0);
+        }
+        for (Field field : inputOrder(setup)) {
+            if (field == Field::None) continue;
+            Rect row = fieldRow(setup, field, width, height);
+            text(fieldLabel(setup, field), row.x, row.y - 24 * scale, 1.5f * scale, muted);
+            if (hasFileButton(field)) fileInput(field);
+            else input(setup.field(field), row, setup.focus == field, field == Field::Identity, scale);
         }
     }
     drawMessage(setup, width, height);
@@ -359,11 +354,7 @@ void Renderer::drawMessage(const NEBULA::Setup& setup, int width, int height, bo
     std::string_view message = setup.message;
     float opacity = setup.messageOpacity();
     Color feedback{.62f, .66f, .68f, opacity};
-    Rect row = NEBULA::messageArea(width, textScale);
-    if (board) {
-        Rect names = NEBULA::scoreNamesArea(width, height);
-        row = {names.x, names.y + names.height + 44 * textScale, names.width, row.height};
-    }
+    Rect row = NEBULA::messageArea(width, height, board);
     auto columns = static_cast<std::size_t>(std::max(1.0f, row.width / (10 * textScale)));
     float top = row.y;
     while (!message.empty()) {

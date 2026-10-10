@@ -347,8 +347,7 @@ namespace NEBULA {
             socket.onClosed([fail] { fail("Server connection closed"); });
 
             MatchSnapshot state;
-            state.state = MatchState::Active;
-            state.running = true;
+            state.state = MatchState::Connecting;
             state.status = "Connecting";
             state.names = {"", ""};
             OnlineProtocol::Board board;
@@ -386,6 +385,7 @@ namespace NEBULA {
                 else emit(Json::array({"stars_and_rank", config.userId, nullptr}));
                 emit(join(config));
                 joined = true;
+                state.state = MatchState::Waiting;
                 state.status = config.room.empty() ? "Waiting for 1v1" : "Joining private room";
                 // ranked queues can stay silent until matched. private rooms acknowledge entry with queue_update.
                 queueDeadline = config.room.empty() ? Time::time_point::max() : Time::now() + 30s;
@@ -446,7 +446,7 @@ namespace NEBULA {
                         mail->moves.confirm(data);
                     }
                     gameDeadline = Time::now() + 30s;
-                    if (!completed) state.status = "Playing";
+                    if (!completed) { state.status = "Playing"; state.state = MatchState::Playing; }
                     publishView();
                     if (completed || !advanced) return;
                     acted = false;
@@ -462,7 +462,7 @@ namespace NEBULA {
                     board.view.result = winner == 0 ? Phases::RedWin : Phases::BlueWin;
                     state.status = name == "game_won" ? "Victory" : "Defeat";
                     completed = true;
-                    state.running = false;
+                    state.state = MatchState::Finishing;
                     // the result announces the winner. keep receiving final map diffs for up to two seconds.
                     // this keeps automatic matchmaking from disconnecting before the remaining updates arrive.
                     finishDeadline = Time::now() + 2s;
@@ -586,7 +586,6 @@ namespace NEBULA {
             socket.resetCallbacks();
             socket.forceClose();
             state.state = MatchState::Finished;
-            state.running = false;
             if (!state.error.empty()) state.status = "Connection ended";
             else if (!completed) state.status = "Stopped";
             {
@@ -602,7 +601,7 @@ namespace NEBULA {
     OnlineMatch::~OnlineMatch() { stop(); }
 
     bool OnlineMatch::start(const OnlineConfig& config) {
-        if (snapshot().state == MatchState::Active) return false;
+        if (snapshot().active()) return false;
         auto text = [](std::string_view value, std::size_t maximum) {
             return !value.empty() && value.size() <= maximum &&
                 std::all_of(value.begin(), value.end(), [](unsigned char ch) { return ch >= 32 && ch != 127; });
@@ -629,8 +628,7 @@ namespace NEBULA {
         session = std::make_unique<Session>();
         session->mail->human = config.command.empty();
         auto& published = session->mail->published;
-        published.state = MatchState::Active;
-        published.running = true;
+        published.state = MatchState::Connecting;
         published.status = "Connecting";
         published.names = {"", ""};
         try {
@@ -640,13 +638,11 @@ namespace NEBULA {
                     std::lock_guard lock(state->mail->mutex);
                     state->mail->closing = true;
                     state->mail->published.state = MatchState::Finished;
-                    state->mail->published.running = false;
                     state->mail->published.error = "Online session initialization failed";
                 }
             });
         } catch (const std::exception&) {
             published.state = MatchState::Finished;
-            published.running = false;
             published.error = "Online worker could not start";
             return false;
         }
@@ -664,7 +660,7 @@ namespace NEBULA {
         auto& mail = *session->mail;
         std::lock_guard lock(mail.mutex);
         const auto& shown = mail.published;
-        if (mail.closing || !mail.human || shown.state != MatchState::Active || !shown.running || player < 0 || player != shown.player) return false;
+        if (mail.closing || !mail.human || !shown.running() || player < 0 || player != shown.player) return false;
         if (!mail.moves.append((*shown.views)[player], action)) return false;
         mail.publishQueue();
         mail.changed.notify_all();
@@ -674,7 +670,7 @@ namespace NEBULA {
     std::optional<Action> OnlineMatch::cancel(int player, bool all) {
         auto& mail = *session->mail;
         std::lock_guard lock(mail.mutex);
-        if (mail.closing || !mail.published.running || player < 0 || player != mail.published.player) return {};
+        if (mail.closing || !mail.published.running() || player < 0 || player != mail.published.player) return {};
         auto removed = mail.moves.cancel(all);
         mail.publishQueue();
         mail.changed.notify_all();

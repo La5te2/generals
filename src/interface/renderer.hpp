@@ -1,3 +1,5 @@
+// OpenGL presentation: draw observations and UI state using the shared scene layout.
+// Own GPU resources and drawing primitives; input handling, session updates and repaint scheduling stay with the caller.
 #pragma once
 
 #include "engine/observe.hpp"
@@ -8,15 +10,6 @@
 #include <span>
 #include <string_view>
 #include <vector>
-
-// drawing and mouse input use the same logical window coordinates.
-inline Rect viewButton(int view, float scale) {
-    return {16 + (44 + view * 64) * scale, 12, 64 * scale, 28 * scale};
-}
-inline Rect toolButton(Tool tool, int width, float scale) {
-    float offset = 28 + (static_cast<int>(Tool::Reset) - static_cast<int>(tool)) * 36.0f;
-    return {width - 16.0f - offset * scale, 12, 28 * scale, 28 * scale};
-}
 
 class Renderer {
 public:

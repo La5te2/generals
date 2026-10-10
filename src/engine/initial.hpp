@@ -259,7 +259,7 @@ namespace InitialDetail {
             return CityInfo{red - blue, red + blue, red == blue || (red >= 17 && blue >= 17)};
         }
 
-        // the pair deficit is the absolute difference between the two total distances.
+        // order by red-blue distance difference, then subtract the second total distance from the first.
         static int pairDeficit(const CityInfo& first, const CityInfo& second) {
             return first.difference <= second.difference ? first.total - second.total : second.total - first.total;
         }

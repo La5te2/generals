@@ -53,6 +53,10 @@ inline Observation observe(const States& state, int player) {
     for (int row = 0; row < state.board.rows(); ++row) {
         for (int col = 0; col < state.board.cols(); ++col) {
             const Cell& cell = state.board.at(row, col);
+            if (cell.owner == 0 || cell.owner == 1) {
+                view.armies[cell.owner] += cell.army;
+                ++view.land[cell.owner];
+            }
             ViewCell& viewCell = view.cells[row * state.board.cols() + col];
             if (visible[row * view.cols + col]) {
                 switch (cell.terrain) {
@@ -65,17 +69,6 @@ inline Observation observe(const States& state, int player) {
                 viewCell.army = cell.army;
             } else if (cell.terrain == Terrain::Mountain || cell.terrain == Terrain::City) {
                 viewCell.terrain = ViewTerrain::Obstacle;
-            }
-        }
-    }
-
-    // calculate public totals for armies and land.
-    for (int row = 0; row < state.board.rows(); ++row) {
-        for (int col = 0; col < state.board.cols(); ++col) {
-            const Cell& cell = state.board.at(row, col);
-            if (cell.owner == 0 || cell.owner == 1) {
-                view.armies[cell.owner] += cell.army;
-                ++view.land[cell.owner];
             }
         }
     }

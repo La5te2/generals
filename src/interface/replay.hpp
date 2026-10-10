@@ -1,4 +1,6 @@
-// replay storage and playback: share .gior files between local recordings and downloaded games.
+// Replay data: store local recordings and read .gior files from local or downloaded games.
+// Decode and validate recorded actions, then reconstruct requested positions with the engine and cached checkpoints.
+// Playback timing and controls belong to playback.hpp; this module has no wall-clock playback state.
 #pragma once
 
 #include "engine/engine.hpp"
@@ -17,6 +19,7 @@ namespace NEBULA {
         States initial, previous;
         std::vector<ReplayMove> moves;
         std::optional<int> surrendered;
+        std::array<std::string, 2> names{"RED", "BLUE"};
 
         explicit Recording(const States& state) : initial(state), previous(state) {}
         // store moves against the position where they were submitted. empty half-turns are implicit.
