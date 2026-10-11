@@ -6,7 +6,7 @@ This document describes how external agent programs exchange observations and ac
 
 An external agent runs as a separate program. To use it in the graphical interface, specify the program in that player's **Player** field. For each game, the interface starts one program per external player and connects its standard input and output to the game through pipes.
 
-From the agent's perspective, initialization and observations are input, and actions are output. The agent reads game data from `stdin`, computes a decision, and writes its reply to `stdout`. This exchange applies to agents implemented in any language. An integration layer can use `engine/protocol.hpp` to convert these messages to and from `Observation` and `Action`, while delegating decisions to the agent's implementation.
+From the agent's perspective, initialization and observations are input, and actions are output. The agent reads game data from `stdin`, computes a decision, and writes its reply to `stdout`. This exchange applies to agents implemented in any language. The functions in `engine/protocol.hpp` read observations into `Observation` objects and write `Action` objects in the required message format.
 
 ### Streams and Lifecycle
 
@@ -113,7 +113,7 @@ A half move right from the same cell is written as
 0 0 0 3 1
 ```
 
-These are alternative replies to one observation. The agent chooses one, writes that line, and flushes its output. With the C++ helper, constructing the corresponding `Action` and calling `Protocol::writeAction(std::cout, action)` produces the same text. The **Protocol Integration** example at the end of this section shows the complete exchange.
+These are alternative replies to one observation. The agent chooses one, writes that line, and flushes its output. A program that uses `protocol.hpp` constructs the corresponding `Action` and calls `Protocol::writeAction(std::cout, action)` to produce the same text. The **Agent Protocol API** section below describes these functions and includes pseudocode for the complete exchange.
 
 The direction determines the adjacent destination: up changes the row by `-1`, down by `+1`, left changes the column by `-1`, and right by `+1`. At execution time, a legal move starts from an owned cell with at least two soldiers and targets a cell inside the board whose terrain is a plain, city, or general. Its success in capturing that cell depends on the armies present when it executes.
 
@@ -137,55 +137,59 @@ An action line must contain exactly five integers and may occupy at most 255 byt
 
 Observations describe ongoing positions. When the session ends, the interface closes the input stream, so EOF serves as the agent's session-end notification. The agent handles EOF and exits. A program that remains blocked can be terminated.
 
-### Protocol Integration
+### Agent Protocol API
 
-The C++ integration layer includes `engine/protocol.hpp`, which supplies the `Observation` and `Action` definitions and inline serialization functions. Passing `std::cin` and `std::cout` to those functions connects the integration layer to the streams established by the interface.
+The program in the following example connects an external agent to the interface by using the functions in `engine/protocol.hpp` to receive game data and submit actions. The interface sends initialization and observations to the program's standard input and reads action replies from its standard output. Accordingly, the program reads from `std::cin` and writes to `std::cout`.
 
-`Protocol::readInit(input)` reads initialization. `Protocol::readObservation(input, init)` reads a complete observation using its fixed dimensions. Both return `std::nullopt` on invalid input, EOF, or a read failure. `Protocol::writeAction(output, action)` writes one action line and reports output success. The caller must flush the stream afterward.
+The program first reads initialization, then uses the received board dimensions to read each observation:
 
-The protocol reader converts relative ownership codes in the text stream to absolute player indices in `Observation`:
+- `Protocol::readInit(std::cin)` reads the initialization line and returns an `std::optional<Protocol::Init>`. On success, `*init` contains the player's seat and the board dimensions in `player`, `rows`, and `cols`.
+- `Protocol::readObservation(std::cin, *init)` reads the statistics line and all three matrices using those dimensions. It returns an `std::optional<Observation>`, whose value is accessed as `*view` in the pseudocode.
 
-- `view.player` is `0` for red or `1` for blue.
+Both functions return `std::nullopt` on invalid input, EOF, or a read failure. The program checks each return value before accessing its contents.
+
+Within the decoded `Observation`, the fields describe the received position as follows:
+
+- `view.player`, `view.rows`, and `view.cols` retain the initialization values. `view.tick` contains the received half-turn counter.
 - `view.cells[row * view.cols + col].owner` is `-1` for neutral or hidden, `0` for red, or `1` for blue. A cell belongs to the agent when `cell.owner == view.player`.
 - `view.land[player]` and `view.armies[player]` use the same red/blue indices. The agent's totals are at `view.player`, and the opponent's are at `1 - view.player`.
-- Terrain values are represented by `ViewTerrain`. Only the first `view.rows * view.cols` cells belong to the board.
+- Each cell's `terrain` field has type `ViewTerrain`, and its `army` field contains the received army count. The cells are ordered row by row, and the first `view.rows * view.cols` entries form the board.
 
-An `Action` contains `type`, source `row` and `col`, `direction`, and the boolean `half`. Default construction produces Pass. For example, this constructs the half move right from `(0, 0)`:
+Thus, ownership codes in the text message are relative to the receiving agent, while owners and player-indexed totals in the decoded object use absolute red/blue indices.
+
+For its reply, the program represents the agent's decision as an `Action`. This object contains `type`, source `row` and `col`, `direction`, and the boolean `half`. Default construction produces Pass. For a move, `half = false` selects full-army movement and `half = true` selects half-army movement. For example, the program can represent a half move right from `(0, 0)` with the following object:
 
 ```cpp
 Action action{ActionType::Move, 0, 0, Direction::Right, true};
 ```
 
-`Protocol::writeAction(std::cout, action)` serializes that object as `0 0 0 3 1` followed by a newline. Calling `std::cout.flush()` then sends the reply through the pipe.
+The program sends the reply by calling `Protocol::writeAction(std::cout, action)`, which writes the five action integers followed by a newline and returns whether writing succeeded. For the object above, the output is `0 0 0 3 1` followed by a newline. The program then flushes `std::cout` so that the interface receives the reply before the program waits for another observation.
 
-An agent may also use the public engine for local simulation by including `engine/engine.hpp`. `Engine::reset(rows, cols, seed)` creates a game and returns whether initialization succeeded. After a successful reset, `Engine::observe(player)` returns an `std::optional<Observation>` for that player, and `Engine::step(actions)` resolves one half-turn using `actions[0]` for red and `actions[1]` for blue. Simulation runs inside the agent's program. The agent returns its decisions to the interface through the same input/output loop.
-
-The following pseudocode shows this integration layer around an abstract `Agent`. `Agent` and its methods represent the author's agent implementation or runtime binding, which may invoke C++, Python, or another language. `initialize` supplies the seat and board dimensions. `decide` passes an observation to that implementation and returns its decision as an `Action`. The `Protocol` calls use the public API directly:
+The pseudocode below combines these operations into a complete exchange. `Agent` stands for the agent supplied by the author, regardless of its implementation language. The program passes initialization to the agent through the schematic call `agent.initialize(*init)`. For each observation, it obtains the agent's decision through `agent.decide(*view)` and sends that decision with `Protocol::writeAction`:
 
 ```cpp
 #include "engine/protocol.hpp"
 #include <iostream>
 
 int main() {
-    Agent agent; // Abstract agent implementation or runtime binding.
+    Agent agent; // Represents the author's agent, regardless of its implementation language.
 
-    // The interface writes "player rows cols\n" to the agent's stdin pipe.
-    // readInit consumes that line from std::cin. For "0 3 3\n", init holds
-    // player = 0 (red), rows = 3, and cols = 3.
+    // The interface supplies "player rows cols\n" through this program's stdin.
+    // readInit reads that line from std::cin and returns an optional Protocol::Init.
+    // For "0 3 3\n", the returned object has player = 0 (red), rows = 3, cols = 3.
     auto init = Protocol::readInit(std::cin);
     if (!init) return 1;
     agent.initialize(*init); // Supply this game's seat and board dimensions.
 
     while (std::cin.peek() != std::char_traits<char>::eof()) {
-        // The same stdin pipe next supplies "tick my_land my_army opp_land opp_army\n",
-        // followed by rows terrain lines, rows ownership lines, and rows army lines.
-        // Each matrix line contains cols integers. For init = {0, 3, 3}, this call
-        // reads all 10 lines of the observation shown above and returns an Observation.
+        // The next message on stdin begins with "tick my_land my_army opp_land opp_army\n".
+        // It continues with init.rows terrain rows, then ownership rows, then army rows.
+        // Each matrix has init.rows rows of init.cols integers. For a 3-by-3 board,
+        // readObservation consumes all 10 lines and returns an optional Observation.
         auto view = Protocol::readObservation(std::cin, *init);
         if (!view) return 1;
 
-        // Invoke the agent's decision implementation with the received observation.
-        // The integration layer represents its decision as an Action.
+        // Pass the decoded observation to the agent and receive its chosen Action.
         Action action = agent.decide(*view);
         // Write "kind row col direction split\n" to stdout for the interface to read.
         // Pass becomes "1 0 0 0 0\n". A half move right from (0, 0)
