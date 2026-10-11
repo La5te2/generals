@@ -6,7 +6,7 @@ This document describes how external agent programs exchange observations and ac
 
 An external agent runs as a separate program. To use it in the graphical interface, specify the program in that player's **Player** field. For each game, the interface starts one program per external player and connects its standard input and output to the game through pipes.
 
-From the agent's perspective, initialization and observations are input, and actions are output. The agent reads game data from `stdin`, computes a decision, and writes its reply to `stdout`. This exchange applies to agents implemented in any language. A C++ integration layer can use `engine/protocol.hpp` to convert these messages to and from `Observation` and `Action`, while delegating decisions to the agent's implementation.
+From the agent's perspective, initialization and observations are input, and actions are output. The agent reads game data from `stdin`, computes a decision, and writes its reply to `stdout`. This exchange applies to agents implemented in any language. An integration layer can use `engine/protocol.hpp` to convert these messages to and from `Observation` and `Action`, while delegating decisions to the agent's implementation.
 
 ### Streams and Lifecycle
 
