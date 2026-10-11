@@ -1,31 +1,26 @@
 # Protocols
 
-This document defines the external agent protocol, interface console commands, supported online messages, LAN room messages, and the GIOR replay format. Each section specifies the data exchanged, its meaning, and the order of communication.
+This document describes how external agent programs exchange observations and actions with the interface, including message formats, reply timing, and session termination. It also specifies the GIOR replay file format.
 
 ## External Agents
 
-### Program Commands
+An external agent runs as a separate program. To use it in the graphical interface, specify the program in that player's **Player** field. For each game, the interface starts one program per external player and connects its standard input and output to the game through pipes.
 
-The Player field contains an executable followed by its arguments. Whitespace separates arguments; single or double quotes group an argument containing spaces. Quotes must be balanced, and backslashes remain literal. The command is passed directly to process creation: shell operators, variable expansion and redirection are not interpreted.
-
-```text
-"D:\Games\simple.exe" "D:\Models\policy.pt"
-python -B "D:\Agents\agent.py" "D:\Models\policy.eqx"
-```
-
-An empty Player field selects human input instead of an external program. The recording directory is a path, not an executable command; its console syntax is defined under `RD` below.
+From the agent's perspective, initialization and observations are input, and actions are output. The agent reads game data from `stdin`, computes a decision, and writes its reply to `stdout`. This exchange applies to agents implemented in any language. A C++ integration layer can use `engine/protocol.hpp` to convert these messages to and from `Observation` and `Action`, while delegating decisions to the agent's implementation.
 
 ### Streams and Lifecycle
 
-An agent receives initialization and observations through `stdin`, sends actions through `stdout`, and writes diagnostics to `stderr`.
+The interface supplies the agent's input automatically through `stdin` and reads its replies from `stdout`. The agent writes logs, loading messages, and other diagnostics to `stderr`, keeping `stdout` dedicated to action lines.
 
-An action is one line of integers followed by a newline. The agent flushes `stdout` immediately after each reply so that the session can read it before the half-turn deadline. Agent commands are `Move` and `Pass`. Interface commands such as `help` and `back` belong to the GUI console.
+Messages contain decimal integers separated by spaces, with each line terminated by LF. CRLF is also accepted. The line layouts below specify how many integers belong on each line.
 
-Each connection serves one game. Initialization appears once, followed by observations and replies. EOF on `stdin` signals the end of the game.
+The exchange begins with one initialization line. The interface then sends a complete observation, and the agent responds with one action line. After writing the line, the agent flushes `stdout` so that the interface can receive it immediately, then reads the next observation. This observation/reply cycle continues until EOF on `stdin` signals session termination.
+
+The interface obtains the player's identity from that program's initialization and associates each reply with its preceding observation. The reply therefore contains the five action fields defined under **Actions**.
 
 ### Initialization
 
-The first line contains three decimal integers:
+The first line read from the agent's `stdin` contains three decimal integers:
 
 ```text
 player rows cols
@@ -41,7 +36,7 @@ For example, `1 20 23` assigns the agent to blue on a board with 20 rows and 23 
 
 ### Observations
 
-Each observation contains one statistics line followed by three matrices, for a total of $1 + 3H$ lines. Each matrix has $H$ rows of exactly $W$ integers, ordered from top to bottom and left to right.
+After initialization, the agent reads each observation from `stdin`. An observation contains one statistics line followed by three matrices, for a total of $1 + 3H$ lines. Each matrix has $H$ rows of exactly $W$ integers, ordered from top to bottom and left to right.
 
 ```text
 tick my_land my_army opp_land opp_army
@@ -50,9 +45,11 @@ tick my_land my_army opp_land opp_army
 <H rows of army counts>
 ```
 
-`tick` counts half-turns. LOCAL and LAN start at `0`. Main- and bot-server sessions use the server's `turn` value, starting from `1`.
+The angle-bracketed lines above stand for matrix rows. In an actual message, they are replaced by integers. The agent reads all terrain rows first, then all ownership rows, and finally all army rows. Initialization fixes the dimensions, so reading these $1 + 3H$ lines completes one observation.
 
-`my_land` and `my_army` give the agent's total land and army. `opp_land` and `opp_army` give the opponent's public totals. These statistics cover each player's entire territory, while the matrices describe the agent's current field of view.
+`tick` is the half-turn counter associated with the observation. LOCAL and LAN begin at `0`; main- and bot-server games retain the server's counter, which starts at `1`. The first observation delivered to an agent may have a later tick, so the agent uses the received value for game timing.
+
+`my_land` and `my_army` give the agent's total land and army. `opp_land` and `opp_army` give the opponent's public totals. These statistics cover each player's entire territory, while the matrices describe the agent's current field of view. Land counts satisfy $0 \le L \le HW$, army totals satisfy $0 \le A \le 2^{63}-1$, and `tick` is an unsigned 64-bit integer.
 
 Terrain codes are:
 
@@ -63,34 +60,34 @@ Terrain codes are:
 - `4`: visible general.
 - `5`: a hidden obstacle, representing a mountain or city under fog.
 
-Ownership is relative to the receiving agent: `0` means neutral or hidden, `1` means self, and `2` means opponent. Thus, both red and blue programs identify their own cells using `owner == 1` on the wire.
+Ownership is relative to the receiving agent: `0` means neutral or hidden, `1` means self, and `2` means opponent. Terrain codes distinguish visible neutral cells from hidden cells.
 
 Army counts use signed 64-bit integers in the range $0 \le A \le 2^{63}-1$. Cells with terrain code `0` or `5` carry zero ownership and army values as placeholders for hidden information. On visible cells, an army value of `0` represents an actual empty garrison.
 
-The following observation describes a three-by-three board. The agent's general is at `(0, 0)` with five soldiers, and its other cell has one soldier. The opponent's public totals are three tiles and twelve soldiers.
+For example, after initialization `0 3 3`, the following observation describes the red agent's view of a three-by-three board. Its general is at `(0, 0)` with five soldiers, and its other cell is at `(1, 0)` with one soldier. An enemy cell at `(1, 1)` contains four soldiers. The opponent's public totals are three tiles and twelve soldiers; the remaining enemy cells are hidden. Within this message, the first line contains statistics, the next three lines contain terrain, the next three contain ownership, and the final three contain armies.
 
 ```text
 8 2 6 3 12
-4 1 2
-1 1 1
-0 0 5
+4 1 5
 1 1 0
+1 1 0
+1 0 0
+1 2 0
 0 0 0
-0 0 0
-5 1 0
-0 0 0
+5 0 0
+1 4 0
 0 0 0
 ```
 
 ### Actions
 
-The agent replies to each observation with exactly five decimal integers:
+After reading a complete observation, the agent writes exactly five decimal integers to `stdout`, separated by spaces and followed by a newline:
 
 ```text
 kind row col direction split
 ```
 
-`kind` selects `0` for Move or `1` for Pass. For a move, `row` and `col` identify the source cell. Coordinates start at `(0, 0)` in the top-left corner, with rows increasing downward and columns increasing rightward.
+`kind` selects `0` for Move or `1` for Pass. For a move, `row` and `col` identify the source cell, with $0 \le \text{row} < H$ and $0 \le \text{col} < W$. Coordinates start at `(0, 0)` in the top-left corner, with rows increasing downward and columns increasing rightward.
 
 `direction` selects `0` for up, `1` for down, `2` for left, or `3` for right. `split` selects `0` for a full move or `1` for a half move. Given source army $A \ge 2$ at execution time and split flag $s$, the number sent is
 
@@ -104,276 +101,118 @@ $$
 
 For example, a source with nine soldiers sends eight on a full move or four on a half move. The standard Pass line is `1 0 0 0 0`. The final four integers are placeholders for Pass.
 
-```text
-0 4 7 0 0
-0 4 7 3 1
-1 0 0 0 0
-```
-
-These are three independent replies: a full move upward from `(4, 7)`, a half move rightward from the same cell, and a pass.
-
-Move legality is determined by the board at execution time. A legal move starts from an owned cell with at least two soldiers and targets an adjacent cell within the board that the rules allow it to enter.
-
-### Timing and Failures
-
-The exchange follows a request/reply sequence. The agent reads one complete observation, replies with exactly one action, and then reads the next observation. Each reply belongs to the tick of the preceding observation.
-
-For LOCAL, a matching reply received by the deadline participates in that half-turn. If the deadline arrives while the session is still waiting, the action for that half-turn becomes Pass. A slow agent may receive observations with gaps in their tick values.
-
-For main- and bot-server sessions, a move is eligible for submission while its observation tick matches the latest received board. Pass waits for the next observation, and replies to older ticks expire. Submitted moves remain pending until server confirmation. The server checks move legality at execution time and advances the processed index for both executed and discarded moves.
-
-LAN agent replies also expire when their observation tick is no longer current. The host checks the tick again when it receives the move. Acknowledgment confirms receipt and processing of the request, not execution of the move; the following observations describe its outcome. A slow agent may skip intermediate observations. Pass submits no queued move.
-
-Malformed replies, oversized lines, and premature process exit end the agent's session. In an ongoing LAN game, an agent failure also surrenders that player's side.
-
-Each action line allows up to 255 bytes before LF. With CRLF endings, CR counts toward that limit. Fields are whitespace-separated integers, and each line follows the field count specified above.
-
-LOCAL deadlines follow the configured half-turn duration. The LAN host advances the game at a fixed 500 ms interval, while main- and bot-server timing follows server updates. An agent sends its reply as soon as its decision is ready.
-
-### Minimal Agent
-
-This Python program consumes complete observations and replies with Pass. An agent can replace the final output with a calculated action while retaining the same input sequence and immediate flush.
-
-```python
-import sys
-
-def read_grid(rows):
-    return [list(map(int, sys.stdin.readline().split())) for row in range(rows)]
-
-initial = sys.stdin.readline()
-if initial:
-    player, rows, cols = map(int, initial.split())
-    for header in sys.stdin:
-        tick, my_land, my_army, opp_land, opp_army = map(int, header.split())
-        terrain = read_grid(rows)
-        owner = read_grid(rows)
-        army = read_grid(rows)
-        print("1 0 0 0 0", flush=True)
-```
-
-An external C++ agent can implement the same exchange through the standard process protocol.
-
-## Interface Console
-
-Each submission contains one command. Command names are case-insensitive, so `TURN 250` and `turn 250` are equivalent. Numeric arguments are whitespace-separated decimal integers. Paths retain their case, and `RD` requires the quoting described below. Extra arguments invalidate a command.
-
-- `help` takes zero arguments and displays the command list.
-- `man` takes zero arguments and displays the game and interface manual.
-- `back` takes zero arguments and returns to the previous scene. From a match, it ends the session and returns to configuration.
-- `quit` takes zero arguments and ends the session before closing the application. A recording save failure defers exit until the recording can be saved.
-- `turn MS` accepts a positive integer and sets the LOCAL and REPLAY half-turn duration in milliseconds, regardless of the currently selected mode. It does not affect current or future ONLINE sessions: LAN uses a fixed 500 ms interval, while main- and bot-server timing follows the server.
-- `win WIDTH HEIGHT` sets the window's content size. Width must be from `720` through `7680`, and height from `560` through `4320`. The result is limited to the monitor's usable area. `win 0 0` selects borderless fullscreen; a single zero is invalid.
-- `rd "folder path"` selects the recording directory for new LOCAL and LAN games. `rd ""` disables saving for new games.
-- `auto N` accepts `0` for manual Reset or `1` for automatic Reset after a 1000 ms delay following normal completion or manual Stop.
-
-`auto` defaults to `0`. With automatic Reset enabled, LOCAL starts a new game, main- and bot-server sessions reconnect and join the queue, LAN starts fresh matchmaking after its room closes and recording cleanup finishes, and REPLAY restarts the current file. REPLAY has no Stop operation. `back` and `quit` cancel a pending automatic Reset. Sessions ending in an error await manual retry.
-
-The recording directory is empty at application startup. Its value is shared across modes and is not persisted across application launches. The double quotes around the `RD` path are mandatory, even without spaces. Backslashes are literal path characters, not escape sequences; embedded double quotes are unsupported. A nonempty directory is created if necessary. An invalid directory leaves the previous setting unchanged. An ongoing game keeps the directory selected when it started. A completed recording whose write failed is retried immediately at the new directory, without starting another game. An empty directory cannot discard a pending recording. The path is local to each participant and is never sent to a LAN peer.
+For the observation above, a full move down from `(0, 0)` is written as
 
 ```text
-win 1280 800
-win 0 0
-rd "D:\Games\Replays"
-rd ""
+0 0 0 1 0
 ```
 
-## Online Servers
-
-### Connection and Identity
-
-Online sessions use the Engine.IO 4 WebSocket transport and the Socket.IO default namespace. The current endpoints are:
+A half move right from the same cell is written as
 
 ```text
-Main: wss://ws.generals.io/socket.io/?EIO=4&transport=websocket
-Bot:  wss://botws.generals.io/socket.io/?EIO=4&transport=websocket
+0 0 0 3 1
 ```
 
-The User ID identifies the account in join requests. The server supplies public usernames in `game_start`. A private-game request includes the room ID, while ranked play uses `join_1v1`.
+These are alternative replies to one observation. The agent chooses one, writes that line, and flushes its output. With the C++ helper, constructing the corresponding `Action` and calling `Protocol::writeAction(std::cout, action)` produces the same text. The **Protocol Integration** example at the end of this section shows the complete exchange.
 
-The optional Proxy field accepts an anonymous HTTP CONNECT proxy, for example `http://127.0.0.1:7890`. The `http://` prefix and explicit port are required. Proxy credentials, paths and query strings are unsupported. An empty field uses a direct connection. A configured proxy does not fall back to a direct connection on failure. These proxy semantics also apply to LAN connections.
+The direction determines the adjacent destination: up changes the row by `-1`, down by `+1`, left changes the column by `-1`, and right by `+1`. At execution time, a legal move starts from an owned cell with at least two soldiers and targets a cell inside the board whose terrain is a plain, city, or general. Its success in capturing that cell depends on the armies present when it executes.
 
-### Message Framing
+### Timing and Observation Gaps
 
-Numeric prefixes describe the transport packet, and the string inside an event array names the game event. Connection setup proceeds as follows:
+The game may advance while the agent is calculating. The interface waits for that observation's reply before sending another observation to the agent. If several half-turns have elapsed, the next observation is the latest available one. Consequently, consecutive received ticks may skip half-turns. Each observation contains complete current matrices; the agent maintains any history it needs.
 
-1. The server sends `0{...}` with the Engine.IO session identifier and heartbeat parameters.
-2. The client sends `40` to connect to the Socket.IO default namespace.
-3. The server confirms with `40{"sid":"..."}`.
-4. During the connection, the client answers each Engine.IO ping `2` with pong `3`.
+If calculation outlasts a half-turn, the agent still completes that request by sending one action, including Pass if appropriate. This completes the exchange for the preceding observation and allows the interface to send the latest one. The reply to the older tick expires.
 
-Game events use `42["event", ...]`. An acknowledgment identifier appears between the prefix and the payload. For example, `420["queue_count"]` requests queue information with acknowledgment ID `0`, and `430[...]` carries its response. Packet `41` disconnects the default namespace.
+In LOCAL, each half-turn has a settlement deadline. An action participates only if its observation tick matches the half-turn being settled and its complete reply arrived by that deadline. An absent or late reply becomes Pass for that half-turn. After a missed deadline, the agent session continues with the same request/reply sequence. The interval follows the configured LOCAL half-turn duration.
 
-### Joining and Moving
+In LAN, the game advances every 500 ms. Agent replies are eligible while their observation tick remains current; a move that reaches the receiving peer after the tick changes is discarded. Main- and bot-server games advance on server board updates and also discard replies to older observation ticks. Pass completes the response to that observation and contributes a passing action for that player.
 
-The following events cover queue queries, account lookup, and game entry. The examples use symbolic `USER_ID`, `ROOM`, and `CLIENT_KEY` values. `CLIENT_KEY` is a public client identifier, while `USER_ID` is the account credential.
+The game clock continues during calculation. The agent should complete resource loading promptly and send each decision as soon as it is ready.
 
-Bot-server account lookup and ranked entry use:
+### Action Outcomes and Session End
 
-```text
-42["stars_and_rank", USER_ID, null]
-42["join_1v1", USER_ID, null, 0]
+Execution depends on timely acceptance and move legality at execution time. An action may expire before acceptance or become illegal before execution. The agent determines action outcomes from subsequent observations of the position.
+
+An action line must contain exactly five integers and may occupy at most 255 bytes before LF. With CRLF, CR counts toward that limit. A malformed or oversized reply, a broken stream, or premature agent exit ends the agent session. A correctly formatted but illegal move leaves that player's action ineffective while the agent session continues. In LAN, agent failure also surrenders that player's side.
+
+Observations describe ongoing positions. When the session ends, the interface closes the input stream; EOF is the agent's session-end notification. The agent handles EOF and exits. A program that remains blocked can be terminated.
+
+### Protocol Integration
+
+The C++ integration layer includes `engine/protocol.hpp`, which supplies the `Observation` and `Action` definitions and inline serialization functions. Passing `std::cin` and `std::cout` to those functions connects the integration layer to the streams established by the interface.
+
+`Protocol::readInit(input)` reads initialization. `Protocol::readObservation(input, init)` reads a complete observation using its fixed dimensions. Both return `std::nullopt` on invalid input, EOF, or a read failure. `Protocol::writeAction(output, action)` writes one action line and reports output success; the caller must flush the stream afterward.
+
+The protocol reader converts relative ownership codes in the text stream to absolute player indices in `Observation`:
+
+- `view.player` is `0` for red or `1` for blue.
+- `view.cells[row * view.cols + col].owner` is `-1` for neutral or hidden, `0` for red, or `1` for blue. A cell belongs to the agent when `cell.owner == view.player`.
+- `view.land[player]` and `view.armies[player]` use the same red/blue indices. The agent's totals are at `view.player`; the opponent's are at `1 - view.player`.
+- Terrain values are represented by `ViewTerrain`. Only the first `view.rows * view.cols` cells belong to the board.
+
+An `Action` contains `type`, source `row` and `col`, `direction`, and the boolean `half`. Default construction produces Pass. For example, this constructs the half move right from `(0, 0)`:
+
+```cpp
+Action action{ActionType::Move, 0, 0, Direction::Right, true};
 ```
 
-Main-server account lookup and ranked entry use:
+`Protocol::writeAction(std::cout, action)` serializes that object as `0 0 0 3 1` followed by a newline. Calling `std::cout.flush()` then sends the reply through the pipe.
 
-```text
-42["stars_and_rank", USER_ID]
-42["join_1v1", USER_ID, CLIENT_KEY, 0, null, true]
+An agent may also use the public engine for local simulation by including `engine/engine.hpp`. `Engine::reset(rows, cols, seed)` creates a game and returns whether initialization succeeded. After a successful reset, `Engine::observe(player)` returns an `std::optional<Observation>` for that player, and `Engine::step(actions)` resolves one half-turn using `actions[0]` for red and `actions[1]` for blue. Simulation runs inside the agent's program; its decisions are returned to the interface through the same input/output loop.
+
+The following pseudocode shows this integration layer around an abstract `Agent`. `Agent` and its methods represent the author's agent implementation or runtime binding, which may invoke C++, Python, or another language. `initialize` supplies the seat and board dimensions; `decide` passes an observation to that implementation and returns its decision as an `Action`. The `Protocol` calls use the public API directly:
+
+```cpp
+#include "engine/protocol.hpp"
+#include <iostream>
+
+int main() {
+    Agent agent; // Abstract agent implementation or runtime binding.
+
+    // The interface writes "player rows cols\n" to the agent's stdin pipe.
+    // readInit consumes that line from std::cin. For "0 3 3\n", init holds
+    // player = 0 (red), rows = 3, and cols = 3.
+    auto init = Protocol::readInit(std::cin);
+    if (!init) return 1;
+    agent.initialize(*init); // Supply this game's seat and board dimensions.
+
+    while (std::cin.peek() != std::char_traits<char>::eof()) {
+        // The same stdin pipe next supplies "tick my_land my_army opp_land opp_army\n",
+        // followed by rows terrain lines, rows ownership lines, and rows army lines.
+        // Each matrix line contains cols integers. For init = {0, 3, 3}, this call
+        // reads all 10 lines of the observation shown above and returns an Observation.
+        auto view = Protocol::readObservation(std::cin, *init);
+        if (!view) return 1;
+
+        // Invoke the agent's decision implementation with the received observation.
+        // The integration layer represents its decision as an Action.
+        Action action = agent.decide(*view);
+        // Write "kind row col direction split\n" to stdout for the interface to read.
+        // Pass becomes "1 0 0 0 0\n"; a half move right from (0, 0)
+        // would be Action{ActionType::Move, 0, 0, Direction::Right, true},
+        // producing "0 0 0 3 1\n".
+        if (!Protocol::writeAction(std::cout, action)) return 1;
+        // Deliver the complete reply before waiting for the next observation.
+        std::cout.flush();
+        if (!std::cout) return 1;
+    }
+    // EOF means that the interface has ended this agent's game session.
+    return std::cin.bad() ? 1 : 0;
+}
 ```
-
-Private-game entry uses the corresponding `join_private` event:
-
-```text
-Bot:  42["join_private", ROOM, USER_ID]
-Main: 42["join_private", ROOM, USER_ID, CLIENT_KEY, null]
-```
-
-Movement uses `42["attack", from, to, half, index]`. The `half` argument is a JSON boolean. The client assigns increasing positive integer indices within each game, including after cancellation. Source and destination use row-major indices, where $r$ is the row, $c$ is the column, and $W$ is the board width:
-
-$$
-i = rW + c, \qquad 0 \le r < H, \quad 0 \le c < W.
-$$
-
-`42["cancel"]` leaves the matchmaking queue, and `42["leave_game"]` leaves a game.
-
-`42["undo_move"]` removes the newest queued move on the server. `42["clear_moves"]` clears the server's movement queue. These events affect moves still awaiting execution when the server receives them.
-
-### Game Events
-
-`queue_update` reports queue status, and `pre_game_start` announces an upcoming game. `game_start` supplies `playerIndex`, the `usernames` array, and game options. This section covers mainstream 1v1 with two opposing players, using indices `0` for red and `1` for blue.
-
-Within `game_update`, `turn` is the half-turn counter. `map_diff` patches the previous map array, and `cities_diff` patches the previous city-index array. `generals` gives both general indices, with `-1` for a hidden general. Entries in `scores` identify players through `i` and provide land through `tiles` and army through `total`.
-
-`attackIndex` identifies the latest processed move. Pending moves with indices at or below this value have been processed, including moves discarded as illegal. Subsequent board data describes the actual outcome. A missing or null `attackIndex` leaves the previous confirmation in effect.
-
-A diff alternates a count of old values to copy with a count of replacement values and the replacements themselves. A trailing copy count can stand alone. Both copied and replaced runs advance the cursor in the old array. For example:
-
-```text
-previous: [10, 20, 30, 40]
-diff:     [1, 2, 21, 31, 1]
-result:   [10, 21, 31, 40]
-```
-
-The decoded map contains `width`, `height`, an army layer, and an ownership/terrain layer in that order. Each layer contains $HW$ row-major values. Supported mainstream maps may also carry an appended all-zero tunnel layer. This layer participates in subsequent map diffs. In the ownership/terrain layer, `0` and `1` identify the players, `-1` marks neutral land, `-2` marks mountains, `-3` marks fog, and `-4` marks hidden obstacles. City and general indices refine the visible terrain.
-
-Board updates describe the account's perspective, while scores provide both players' public totals. Diffs apply in arrival order, including updates with a repeated `turn`.
-
-`game_won` and `game_lost` describe victory and defeat relative to the account.
-
-## LAN Rooms
-
-### Network Discovery
-
-Each window advertises on IPv4 multicast group `239.255.42.17`, UDP port `42817`, with TTL `1` and multicast loopback enabled. The IP configuration field selects a local adapter address without a port, not a remote peer. Empty selects all available IPv4 adapters. A physical or virtual LAN must carry this multicast traffic and allow connections between participants. There is no directory server, forwarding endpoint or NAT traversal.
-
-The discovery datagram is a JSON object:
-
-```json
-{"type":"generals-lan","id":"0123456789abcdef0123456789abcdef","room":"","port":49152,"available":true,"host":""}
-```
-
-`id` is a fresh random 32-character hexadecimal instance ID for this matchmaking attempt. `port` is its independently allocated TCP listening port. The source IP of the datagram supplies the peer address. `available` means the instance is accepting pairing requests; an in-flight connection reserves it. Once paired, `host` identifies the accepting instance. Announcements repeat every 500 ms and when availability changes; unseen peers expire after three seconds. IDs distinguish windows, including several windows on the same computer.
-
-An empty `room` participates in public matching. A nonempty ID identifies one private room within the discovery network and matches only the same case-sensitive ID, with 1-64 printable ASCII characters. An occupied private room reports `Room is full`; public participants skip occupied peers and wait or form another pair. Room IDs do not authenticate participants. Discovery is unauthenticated and belongs on a trusted network.
-
-The optional HTTP CONNECT proxy applies to outgoing WebSocket connections, without direct fallback. It must be able to reach the discovered address. Discovery itself stays on the selected network and exposes that local adapter address; the proxy does not anonymize discovery.
-
-### Pairing
-
-Available instance IDs are ordered lexicographically and adjacent instances pair. The lower ID initiates the connection; the higher ID accepts and becomes the host. Private matching selects the first pair; an advertised in-flight reservation blocks another pair from claiming the same Room ID. Each window reserves at most one connection. Pairing uses these messages in order:
-
-```json
-{"type":"hello","id":"00000000000000000000000000000001","target":"00000000000000000000000000000002","room":"","name":"Bob"}
-{"type":"offer","id":"00000000000000000000000000000002","target":"00000000000000000000000000000001","room":"","names":["Alice","Bob"]}
-{"type":"accept","id":"00000000000000000000000000000001","target":"00000000000000000000000000000002"}
-{"type":"paired"}
-```
-
-`name` must contain 1 through 64 printable ASCII characters. The receiver validates both instance IDs and the room. A reserved or unavailable participant replies with `{"type":"busy"}` and closes the extra connection. Pairing attempts time out after five seconds and release the reservation. Proxy failures report an error rather than retrying directly.
-
-After confirmation, both listeners stop accepting new connections. The host owns seat `0` (red); the initiating participant owns seat `1` (blue). The host advances the engine once every 500 ms, independently of either participant's `turn` setting, and `names` remains in red/blue order. Each connection carries exactly one game. Other pairs do not depend on either participant.
-
-Game messages are one JSON object per WebSocket text frame, at most 256 KiB each. Every message has a case-sensitive `type`. Binary frames and Engine.IO/Socket.IO prefixes are unsupported.
-
-### Observations and Queues
-
-During and after a game, the host sends `state` messages. The following example uses a complete three-by-three observation:
-
-```json
-{"type":"state","rows":3,"cols":3,"view":"8 2 6 3 12\n4 1 2\n1 1 1\n0 0 5\n1 1 0\n0 0 0\n0 0 0\n5 1 0\n0 0 0\n0 0 0\n","result":0,"queued":[],"ack":0}
-```
-
-`rows` and `cols` are the board dimensions. `view` is the complete external-agent observation text, without initialization; ownership is relative to the recipient. `result` is `0` for ongoing, `1` for red victory, `2` for blue victory, or `3` for a draw. Terminal states include the final observation. The guest receives only its own field of view, not the full board.
-
-`queued` contains the receiving player's pending actions as five-integer strings. `ack` is the highest processed input ID, initially zero. It confirms processing of a queue edit, not execution of a move. States may repeat a tick when only the queue changes. Ticks cannot decrease; a game begins at tick zero.
-
-### Actions
-
-Queue edits carry a strictly increasing positive unsigned 64-bit `id` within this connection.
-
-```json
-{"type":"move","id":1,"action":"0 1 1 0 0\n"}
-{"type":"move","id":2,"tick":8,"action":"0 1 1 3 1\n"}
-{"type":"cancel","id":3,"all":false}
-```
-
-`action` uses the external-agent action format and may contain at most 100 bytes. Optional `tick` restricts acceptance to that exact host tick. Agent moves carry it; human queued moves omit it. Stale ticks are ignored but acknowledged. A later game uses a new connection, so old inputs cannot enter it.
-
-`cancel` removes the newest pending move when `all` is false, or clears the queue when true. Move legality is checked against the game state, including at execution time. A correctly formatted but illegal move does not imply a transport failure.
-
-### Completion and Room Lifetime
-
-The following client commands have no additional required fields:
-
-```json
-{"type":"leave"}
-{"type":"ping"}
-```
-
-Stop, Back and Quit request departure. `leave` surrenders an ongoing game and ends the room for both participants. Natural completion also ends the room. An orderly end transfers the final replay before closing; an abrupt disconnection may prevent delivery. A closed room never accepts a replacement player.
-
-The interface retains the final position. Once the complete recording is available and the session has ended, RED, BLUE and ALL select the final player views or the full board, initially ALL. This does not require an `RD` destination. Reset or automatic Reset starts a new discovery and pairing attempt with the current configuration; it is not readiness within the previous room.
-
-Both peers answer `ping` with `{"type":"pong"}`. Heartbeats are sent every five seconds; twenty seconds without incoming activity is a connection failure.
-
-Orderly closure uses:
-
-```json
-{"type":"closed"}
-```
-
-The connection closes after these messages. Unexpected transport loss may close it without a final message.
-
-### Replay Transfer
-
-At completion, the host preserves the recording locally and sends the same compressed GIOR bytes to the guest in ordered chunks:
-
-```json
-{"type":"replay","offset":0,"data":"0012abff","last":false}
-```
-
-`data` is lowercase hexadecimal, with two characters per byte. `offset` counts decoded bytes, begins at zero and must equal the end of the previous chunk. A chunk contains at most 8192 bytes, and a complete transfer at most 16 MiB. `last` marks the final chunk. The example illustrates chunk framing, not a complete replay.
-
-The recipient acknowledges completion with:
-
-```json
-{"type":"recorded"}
-```
-
-This acknowledgment confirms receipt, not successful disk persistence. Transfer and acknowledgment are required even when local recording is disabled. Each participant independently applies its `RD` setting. An orderly departure allows the completed replay to be delivered before closure, but transport loss can prevent delivery.
 
 ## Replays
 
 ### File Structure
 
-LOCAL recordings, LAN recordings and downloaded games share the `.gior` format used by generals.io. The file contains a positional JSON array compressed with LZ-String's `compressToUint8Array`. Compressed 16-bit words appear as two bytes each, high byte first. Text decoding follows UTF-16 semantics, preserving Unicode player names.
+After decompression, a GIOR file contains a JSON array, denoted here by `data`. Each array position identifies a field. The first field, `data[0]`, stores the **GIOR file format version number**; for example, `data[0] = 19` identifies version `19`.
 
-The current writer emits format revision `19`. The reader accepts revisions `15` through `19` for mainstream 1v1. These revisions share the movement priorities used by the local engine. Supported games contain two opposing players, plains, mountains, cities and generals.
+The interface accepts format versions `15` through `19` for games between two opposing players, using plains, mountains, cities, and generals. The complete version `19` layout contains 38 fields, listed below. A file may omit trailing fields while retaining at least the first 18 fields, from `data[0]` through `data[17]`. Optional list fields that are omitted or set to `null` have the same meaning as `[]`.
 
-The initial array fields are:
+The numbers on the left identify positions in `data`. Each list-valued field contains a nested JSON array:
 
 ```text
-0   format revision
+0   GIOR format version
 1   replay ID
 2   width
 3   height
@@ -389,48 +228,232 @@ The initial array fields are:
 13  map metadata
 14  initial army override indices
 15  initial army override values
+16  swamps
+17  chat
+18  player colors
+19  lights
+20  game settings
+21  modifiers
+22  observatories
+23  lookouts
+24  deserts
+25  player transforms
+26  pings
+27  general trades
+28  tunnels
+29  tunnel limits
+30  clock times
+31  stronghold density
+32  stronghold minimum army
+33  stronghold maximum army
+34  stronghold indices
+35  stronghold armies
+36  clock timestamps
+37  modifier options
 ```
 
-An index addresses a cell in row-major order. City indices and armies have matching lengths. Generals start with one soldier, and the army override arrays replace the initial army on their listed cells.
+Fields `2` and `3` specify the board width $W$ and height $H$, with $1 \le W,H \le 40$. Within this board, map locations are represented by **cell indices**. Cells are numbered row by row, beginning at the top-left corner. Thus, a cell at row $r$ and column $c$ has index $i$, where
 
-Later fields carry special terrain, chat, colors, settings, modifiers, transforms, pings, general trades and clock metadata. The field layout follows the [generals.io replay serializer](https://generals.io/generals-main-prod-v31.4.3-485dbf55.js). Mainstream recordings use empty arrays for special terrain and modifiers. Format revision `19` occupies 38 array positions.
+$$
+i = rW + c, \qquad 0 \le i < HW.
+$$
 
-### Moves
+Conversely, the row and column corresponding to a cell index are
 
-Each replay move has five integer fields:
+$$
+r = \left\lfloor i/W \right\rfloor, \qquad c = i \bmod W.
+$$
+
+Fields `4` and `8` associate each player with a name and a starting general cell: `data[4] = [redName, blueName]` and `data[8] = [redGeneral, blueGeneral]`. Each array therefore contains exactly two entries, and each name is a JSON string whose UTF-8 representation occupies at most 256 bytes. The two general cells start under their respective players' ownership, and their Manhattan distance is at least three. Field `12` describes team membership; for opposing players, it contains `null`, `[]`, or two distinct integer team IDs.
+
+Together with the general cells in field `8`, the city cells in field `6` and mountain cells in field `9` define the initial terrain. Every listed position is a valid cell index, and each cell has one terrain assignment. The remaining cells are neutral plains; cities also start neutral.
+
+Initial armies are specified separately from terrain. Each general starts with one soldier, and each plain starts with zero. For cities, fields `6` and `7` form a pair of equally sized arrays: the city at `data[6][j]` starts with `data[7][j]` soldiers. Fields `14` and `15` form another such pair, assigning `data[15][j]` soldiers to the cell at `data[14][j]`. These assignments replace the initial army counts, including those on generals, while preserving terrain and ownership. Every assigned army count is a nonnegative integer, and its cell must be a plain, city, or general.
+
+Fields `10` and `11` then describe how play proceeds from this initial position: they contain moves and surrender events, respectively. Their record formats are specified under **Moves and Endings** below.
+
+The remaining fields carry additional terrain, game settings, and replay metadata. Their values are described below, followed by examples of a minimal replay and a replay with populated map and metadata fields.
+
+### List Fields and Metadata
+
+A list field uses `[]` when it contains zero entries. For a populated list, the element format depends on the field: terrain lists contain cell indices, paired army lists contain counts, and record lists contain nested arrays. The examples below use a board with width `4` and height `3`, whose cell indices are
+
+```text
+ 0  1  2  3
+ 4  5  6  7
+ 8  9 10 11
+```
+
+For the initial map, list entries are written as follows:
+
+```javascript
+data[6] = [2];             // one city, at row 0, column 2
+data[7] = [4];             // that city begins with 4 soldiers
+data[9] = [5, 6];          // mountains at row 1, columns 1 and 2
+data[14] = [0, 4, 11];     // cells with custom initial armies
+data[15] = [12, 2, 8];     // 12 on cell 0, 2 on cell 4, 8 on cell 11
+```
+
+The positions in a paired list correspond by order. For example, the third entry of field `15` assigns eight soldiers to the third cell listed in field `14`, which is cell `11`. With generals at `[0, 11]`, this gives red twelve starting soldiers, blue eight, and the neutral plain at cell `4` two.
+
+Fields associated with individual players also use player order. Field `5` stores their star ratings, for example `[12, 8]`; `null` may represent an unavailable rating. Field `18` stores player color IDs, with `[0, 1]` selecting the usual red and blue colors. Field `25` stores per-player view-transform codes, with `[0, 0]` selecting the original board orientation for both. Moves and map cells use the board's original cell indices.
+
+Chat and map-marker lists contain records rather than single values:
+
+```javascript
+data[17] = [
+    ["Ready.", "", 0, 0],       // text, display prefix, player, tick
+    ["Good game.", "", 1, 3]
+];
+data[26] = [
+    [0, 1, 2],                 // player, tick, cell index: red marks cell 2 at tick 1
+    [1, 2, 10]                 // blue marks cell 10 at tick 2
+];
+```
+
+Each chat record has the form `[text, prefix, player, tick]`, where `text` and `prefix` are strings. An empty prefix is `""`. Each map-marker record has the form `[player, tick, cell]`. In both lists, `player` is `0` for red or `1` for blue, and `tick` locates the record on the replay timeline. A record of a general trade in field `27` has the form `[playerA, playerB, tick]`; for example, `[[0, 1, 20]]` records a trade between the two players at tick `20`. These records describe occurrences in the recorded game.
+
+Field `20` contains nine game-setting values in this order:
+
+```text
+[speed, cityDensity, mountainDensity, swampDensity,
+ cityFairness, spawnFairness, desertDensity, lookoutDensity, observatoryDensity]
+```
+
+The examples use `[1, 0.5, 0.5, 0, 0.5, 0.5, 0, 0, 0]`. The explicit terrain lists specify the recorded map; density and fairness values describe its generation settings. Field `13` can contain the custom map's name as a string, such as `"example-map"`, or `null`.
+
+For ordinary two-player recordings, the special-terrain and modifier lists in fields `16`, `19`, `21`, `22`, `23`, `24`, `28`, and `34` are required to be empty. Their paired lists, tunnel limits (`29`) and stronghold armies (`35`), therefore use `[]` as well. Fields `31`, `32`, and `33` use `0`, `10`, and `25`, respectively, and modifier options in field `37` use `null`.
+
+Clock metadata uses seconds. Field `30`, when populated, contains one list per player, with each list recording remaining time at successive ticks, such as `[[60, 59.5], [60, 60]]`. Field `36` contains elapsed times of half-turn execution, such as `[0, 0.5]`. The examples use `[]` for both fields because they record ordinary fixed-interval games.
+
+### File Encoding
+
+The `.gior` file contains the bytes returned by LZ-String's `compressToUint8Array` applied to the JSON text of the array described above. Compression uses UTF-16 code units, and each compressed 16-bit word is stored as two bytes, high byte first. JSON strings may contain Unicode characters directly or represent them with JSON Unicode escapes.
+
+The interface accepts `.gior` files up to 16 MiB in size.
+
+### Moves and Endings
+
+Field `10` contains the replay's move records. Each record is an array of five integers:
 
 ```text
 [player, from, to, half, tick]
 ```
 
-`player` selects `0` for red or `1` for blue. `from` and `to` identify adjacent cells, and `half` selects `0` for a full move or `1` for a half move. `tick` identifies the position before the move executes, beginning at `0`. Records appear in increasing tick order, with at most one move per player per half-turn. A half-turn with an empty move list represents both players passing.
+`player` selects `0` for red or `1` for blue. `from` and `to` are the cell indices of the source and destination, which must be orthogonally adjacent. `half` selects `0` for a full move or `1` for a half move. `tick` is the half-turn at which the move executes, with `0` identifying the initial position before any action.
 
-The agent protocol also contains five integers, with a different purpose and field order:
+The list is ordered by tick, with at most one move per player per half-turn. Both players may have a record at the same tick. A player passes at any tick for which that player has no move record. Thus, a tick with a record for one player includes a Pass for the other, and a tick with no records includes two Passes. Each recorded move must be legal in the position at its tick, and all records must precede the game's end.
 
-```text
-kind row column direction split
+Field `11` contains surrender records, each in the form `[player, tick]`, using the same player indices and tick convention as moves. At that tick, the surrendering player's action is Pass; the half-turn includes the other player's action and scheduled growth, and the other player wins. Surrender records are ordered by tick, with at most one surrender per half-turn. General captures and game-rule limits also determine termination, so a replay may end with an empty surrender list.
+
+### Minimal Valid Example
+
+This example uses GIOR format version `19` on a board with one row and four columns. Red's general occupies cell `0`, and blue's general occupies cell `3`. Both players pass at ticks `0` and `1`. At tick `2`, red moves its full available army from cell `0` to cell `1`. Blue surrenders at tick `3`, and red wins.
+
+With the Node.js package `lz-string` installed, the following program writes `example.gior`:
+
+```javascript
+const { writeFileSync } = require("node:fs");
+const { compressToUint8Array } = require("lz-string");
+
+const data = [
+    19,                           // 0: GIOR format version
+    "example",                    // 1: replay ID
+    4,                            // 2: width
+    1,                            // 3: height
+    ["RED", "BLUE"],              // 4: player names
+    [0, 0],                       // 5: player stars
+    [],                           // 6: city indices (empty)
+    [],                           // 7: city armies (empty)
+    [0, 3],                       // 8: red and blue general indices
+    [],                           // 9: mountain indices (empty)
+    [[0, 0, 1, 0, 2]],             // 10: red moves from 0 to 1, full army, tick 2
+    [[1, 3]],                     // 11: blue surrenders at tick 3
+    null,                         // 12: teams
+    null,                         // 13: map metadata
+    [],                           // 14: initial army override indices (empty)
+    [],                           // 15: initial army override values (empty)
+    [],                           // 16: swamps (empty)
+    [],                           // 17: chat (empty)
+    [0, 1],                       // 18: red and blue player colors
+    [],                           // 19: lights (empty)
+    [1, 0.5, 0.5, 0, 0.5, 0.5, 0, 0, 0], // 20: game settings
+    [],                           // 21: modifiers (empty)
+    [],                           // 22: observatories (empty)
+    [],                           // 23: lookouts (empty)
+    [],                           // 24: deserts (empty)
+    [0, 0],                       // 25: player transforms
+    [],                           // 26: pings (empty)
+    [],                           // 27: general trades (empty)
+    [],                           // 28: tunnels (empty)
+    [],                           // 29: tunnel limits (empty)
+    [],                           // 30: clock times (empty)
+    0,                            // 31: stronghold density
+    10,                           // 32: stronghold minimum army
+    25,                           // 33: stronghold maximum army
+    [],                           // 34: stronghold indices (empty)
+    [],                           // 35: stronghold armies (empty)
+    [],                           // 36: clock timestamps (empty)
+    null                          // 37: modifier options
+];
+
+writeFileSync("example.gior", compressToUint8Array(JSON.stringify(data)));
 ```
 
-The replay reader translates between cell indices and the engine's coordinates and direction. Player identity and tick come from the recording session. Existing agent replies retain their original format.
+Opening `example.gior` in REPLAY provides four half-turns of playback with player names `RED` and `BLUE`. In the ALL view, the board progresses as follows; each number is the army on that cell:
 
-### Endings
+```text
+tick 0: [RED general: 1] [neutral: 0]   [neutral: 0] [BLUE general: 1]
+tick 2: [RED general: 2] [neutral: 0]   [neutral: 0] [BLUE general: 2]
+tick 3: [RED general: 1] [RED plain: 1] [neutral: 0] [BLUE general: 2]
+tick 4: [RED general: 2] [RED plain: 1] [neutral: 0] [BLUE general: 3]
+```
 
-General captures and time limits derive their results from the game rules. A surrender event has the form `[player, tick]`. It ends that player's participation before the moves at `tick`, and the half-turn completes its scheduled growth. In 1v1, the remaining player wins.
+The two initial passes allow both generals to reach two soldiers at tick `2`. Red's full move sends one soldier to cell `1` and leaves one on its general. Blue's surrender at tick `3` ends the game after that half-turn's growth, producing the final position at tick `4` and the result `RED WINS`. Surrender preserves the remaining territory, so blue's general stays blue.
 
-Stopping an ongoing local human match records the human player's surrender. With two programs, Stop compares army totals, then land totals, with blue winning an exact tie. The losing player surrenders at the next unresolved half-turn. The resulting file uses the existing surrender event.
+### Populated Example
 
-In LAN, Stop or departure surrenders the requesting or disconnected player's side, whether human or external agent. Both recipients receive the same completed recording. No additional replay event is needed for a manual stop.
+The following code can be appended to the minimal example's JavaScript program. It copies that example's complete field layout, then supplies a larger map, custom initial armies, moves by both players, and chat and map-marker records. 
 
-### Filenames
+```javascript
+const populated = structuredClone(data);
+populated[1] = "populated";
+populated[2] = 4;
+populated[3] = 3;
+populated[5] = [12, 8];
+populated[6] = [2];
+populated[7] = [4];
+populated[8] = [0, 11];
+populated[9] = [5, 6];
+populated[10] = [
+    [0, 0, 1, 0, 0],     // tick 0: red moves its full army right
+    [1, 11, 10, 1, 0],   // tick 0: blue moves half its army left
+    [0, 1, 2, 0, 1],     // tick 1: red captures the city
+    [0, 2, 3, 1, 2]      // tick 2: red moves half its city army right
+];
+populated[11] = [[1, 3]];
+populated[12] = [0, 1];
+populated[13] = "example-map";
+populated[14] = [0, 4, 11];
+populated[15] = [12, 2, 8];
+populated[17] = [["Ready.", "", 0, 0], ["Good game.", "", 1, 3]];
+populated[26] = [[0, 1, 2], [1, 2, 10]];
 
-LOCAL and LAN recordings are saved to the directory selected through `RD`. Filenames consist of an eight-character lowercase hexadecimal digest followed by `.gior`. Downloaded files keep their original names. The digest is 32-bit FNV-1a over the compressed file bytes $b_0, \ldots, b_{n-1}$:
+writeFileSync("populated.gior", compressToUint8Array(JSON.stringify(populated)));
+```
 
-$$
-h_0 = 2166136261,
-\qquad
-h_{k+1} = \bigl((h_k \mathbin{\oplus} b_k) \times 16777619\bigr) \bmod 2^{32}.
-$$
+The initial board in the ALL view is
 
-Here, $\oplus$ denotes bitwise XOR. The final value $h_n$ becomes eight lowercase hexadecimal characters, padded with leading zeroes. The filename identifies the local recording, while the binary contents retain the GIOR structure.
+```text
+[RED general: 12] [neutral: 0] [neutral city: 4] [neutral: 0]
+[neutral: 2]      [mountain]   [mountain]        [neutral: 0]
+[neutral: 0]      [neutral: 0] [neutral: 0]      [BLUE general: 8]
+```
 
-An existing file with identical contents is reused. If the same digest names different contents, saving reports an error instead of overwriting that recording. The short digest is not a guarantee of uniqueness or authenticity.
+At tick `0`, red sends eleven soldiers to cell `1`, and blue sends four to cell `10`. At tick `1`, red sends ten soldiers from cell `1` into the four-soldier city, captures it with six remaining, and gains one city soldier from the growth that produces tick `2`. Red then sends three of its seven city soldiers to cell `3`. Blue surrenders at tick `3`; after the final growth, the replay ends at tick `4` with `RED WINS` and this board:
+
+```text
+[RED general: 3] [RED plain: 1] [RED city: 5]   [RED plain: 3]
+[neutral: 2]     [mountain]      [mountain]     [neutral: 0]
+[neutral: 0]     [neutral: 0]    [BLUE plain: 4] [BLUE general: 6]
+```
