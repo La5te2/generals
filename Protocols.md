@@ -47,7 +47,7 @@ tick my_land my_army opp_land opp_army
 
 The angle-bracketed lines above stand for matrix rows. In an actual message, they are replaced by integers. The agent reads all terrain rows first, then all ownership rows, and finally all army rows. Initialization fixes the dimensions, so reading these $1 + 3H$ lines completes one observation.
 
-`tick` is the half-turn counter associated with the observation. LOCAL and LAN begin at `0`; main- and bot-server games retain the server's counter, which starts at `1`. The first observation delivered to an agent may have a later tick, so the agent uses the received value for game timing.
+`tick` is the half-turn counter associated with the observation. LOCAL and LAN begin at `0`. Main- and bot-server games retain the server's counter, which starts at `1`. The first observation delivered to an agent may have a later tick, so the agent uses the received value for game timing.
 
 `my_land` and `my_army` give the agent's total land and army. `opp_land` and `opp_army` give the opponent's public totals. These statistics cover each player's entire territory, while the matrices describe the agent's current field of view. Land counts satisfy $0 \le L \le HW$, army totals satisfy $0 \le A \le 2^{63}-1$, and `tick` is an unsigned 64-bit integer.
 
@@ -64,7 +64,7 @@ Ownership is relative to the receiving agent: `0` means neutral or hidden, `1` m
 
 Army counts use signed 64-bit integers in the range $0 \le A \le 2^{63}-1$. Cells with terrain code `0` or `5` carry zero ownership and army values as placeholders for hidden information. On visible cells, an army value of `0` represents an actual empty garrison.
 
-For example, after initialization `0 3 3`, the following observation describes the red agent's view of a three-by-three board. Its general is at `(0, 0)` with five soldiers, and its other cell is at `(1, 0)` with one soldier. An enemy cell at `(1, 1)` contains four soldiers. The opponent's public totals are three tiles and twelve soldiers; the remaining enemy cells are hidden. Within this message, the first line contains statistics, the next three lines contain terrain, the next three contain ownership, and the final three contain armies.
+For example, after initialization `0 3 3`, the following observation describes the red agent's view of a three-by-three board. Its general is at `(0, 0)` with five soldiers, and its other cell is at `(1, 0)` with one soldier. An enemy cell at `(1, 1)` contains four soldiers. The opponent's public totals are three tiles and twelve soldiers, including the remaining enemy cells hidden from view. Within this message, the first line contains statistics, the next three lines contain terrain, the next three contain ownership, and the final three contain armies.
 
 ```text
 8 2 6 3 12
@@ -119,13 +119,13 @@ The direction determines the adjacent destination: up changes the row by `-1`, d
 
 ### Timing and Observation Gaps
 
-The game may advance while the agent is calculating. The interface waits for that observation's reply before sending another observation to the agent. If several half-turns have elapsed, the next observation is the latest available one. Consequently, consecutive received ticks may skip half-turns. Each observation contains complete current matrices; the agent maintains any history it needs.
+The game may advance while the agent is calculating. The interface waits for that observation's reply before sending another observation to the agent. If several half-turns have elapsed, the next observation is the latest available one. Consequently, consecutive received ticks may skip half-turns. Each observation contains complete current matrices. The agent maintains any history it needs.
 
 If calculation outlasts a half-turn, the agent still completes that request by sending one action, including Pass if appropriate. This completes the exchange for the preceding observation and allows the interface to send the latest one. The reply to the older tick expires.
 
 In LOCAL, each half-turn has a settlement deadline. An action participates only if its observation tick matches the half-turn being settled and its complete reply arrived by that deadline. An absent or late reply becomes Pass for that half-turn. After a missed deadline, the agent session continues with the same request/reply sequence. The interval follows the configured LOCAL half-turn duration.
 
-In LAN, the game advances every 500 ms. Agent replies are eligible while their observation tick remains current; a move that reaches the receiving peer after the tick changes is discarded. Main- and bot-server games advance on server board updates and also discard replies to older observation ticks. Pass completes the response to that observation and contributes a passing action for that player.
+In LAN, the game advances every 500 ms. Agent replies are eligible while their observation tick remains current. A move that reaches the receiving peer after the tick changes is discarded. Main- and bot-server games advance on server board updates and also discard replies to older observation ticks. Pass completes the response to that observation and contributes a passing action for that player.
 
 The game clock continues during calculation. The agent should complete resource loading promptly and send each decision as soon as it is ready.
 
@@ -135,19 +135,19 @@ Execution depends on timely acceptance and move legality at execution time. An a
 
 An action line must contain exactly five integers and may occupy at most 255 bytes before LF. With CRLF, CR counts toward that limit. A malformed or oversized reply, a broken stream, or premature agent exit ends the agent session. A correctly formatted but illegal move leaves that player's action ineffective while the agent session continues. In LAN, agent failure also surrenders that player's side.
 
-Observations describe ongoing positions. When the session ends, the interface closes the input stream; EOF is the agent's session-end notification. The agent handles EOF and exits. A program that remains blocked can be terminated.
+Observations describe ongoing positions. When the session ends, the interface closes the input stream, so EOF serves as the agent's session-end notification. The agent handles EOF and exits. A program that remains blocked can be terminated.
 
 ### Protocol Integration
 
 The C++ integration layer includes `engine/protocol.hpp`, which supplies the `Observation` and `Action` definitions and inline serialization functions. Passing `std::cin` and `std::cout` to those functions connects the integration layer to the streams established by the interface.
 
-`Protocol::readInit(input)` reads initialization. `Protocol::readObservation(input, init)` reads a complete observation using its fixed dimensions. Both return `std::nullopt` on invalid input, EOF, or a read failure. `Protocol::writeAction(output, action)` writes one action line and reports output success; the caller must flush the stream afterward.
+`Protocol::readInit(input)` reads initialization. `Protocol::readObservation(input, init)` reads a complete observation using its fixed dimensions. Both return `std::nullopt` on invalid input, EOF, or a read failure. `Protocol::writeAction(output, action)` writes one action line and reports output success. The caller must flush the stream afterward.
 
 The protocol reader converts relative ownership codes in the text stream to absolute player indices in `Observation`:
 
 - `view.player` is `0` for red or `1` for blue.
 - `view.cells[row * view.cols + col].owner` is `-1` for neutral or hidden, `0` for red, or `1` for blue. A cell belongs to the agent when `cell.owner == view.player`.
-- `view.land[player]` and `view.armies[player]` use the same red/blue indices. The agent's totals are at `view.player`; the opponent's are at `1 - view.player`.
+- `view.land[player]` and `view.armies[player]` use the same red/blue indices. The agent's totals are at `view.player`, and the opponent's are at `1 - view.player`.
 - Terrain values are represented by `ViewTerrain`. Only the first `view.rows * view.cols` cells belong to the board.
 
 An `Action` contains `type`, source `row` and `col`, `direction`, and the boolean `half`. Default construction produces Pass. For example, this constructs the half move right from `(0, 0)`:
@@ -158,9 +158,9 @@ Action action{ActionType::Move, 0, 0, Direction::Right, true};
 
 `Protocol::writeAction(std::cout, action)` serializes that object as `0 0 0 3 1` followed by a newline. Calling `std::cout.flush()` then sends the reply through the pipe.
 
-An agent may also use the public engine for local simulation by including `engine/engine.hpp`. `Engine::reset(rows, cols, seed)` creates a game and returns whether initialization succeeded. After a successful reset, `Engine::observe(player)` returns an `std::optional<Observation>` for that player, and `Engine::step(actions)` resolves one half-turn using `actions[0]` for red and `actions[1]` for blue. Simulation runs inside the agent's program; its decisions are returned to the interface through the same input/output loop.
+An agent may also use the public engine for local simulation by including `engine/engine.hpp`. `Engine::reset(rows, cols, seed)` creates a game and returns whether initialization succeeded. After a successful reset, `Engine::observe(player)` returns an `std::optional<Observation>` for that player, and `Engine::step(actions)` resolves one half-turn using `actions[0]` for red and `actions[1]` for blue. Simulation runs inside the agent's program. The agent returns its decisions to the interface through the same input/output loop.
 
-The following pseudocode shows this integration layer around an abstract `Agent`. `Agent` and its methods represent the author's agent implementation or runtime binding, which may invoke C++, Python, or another language. `initialize` supplies the seat and board dimensions; `decide` passes an observation to that implementation and returns its decision as an `Action`. The `Protocol` calls use the public API directly:
+The following pseudocode shows this integration layer around an abstract `Agent`. `Agent` and its methods represent the author's agent implementation or runtime binding, which may invoke C++, Python, or another language. `initialize` supplies the seat and board dimensions. `decide` passes an observation to that implementation and returns its decision as an `Action`. The `Protocol` calls use the public API directly:
 
 ```cpp
 #include "engine/protocol.hpp"
@@ -188,7 +188,7 @@ int main() {
         // The integration layer represents its decision as an Action.
         Action action = agent.decide(*view);
         // Write "kind row col direction split\n" to stdout for the interface to read.
-        // Pass becomes "1 0 0 0 0\n"; a half move right from (0, 0)
+        // Pass becomes "1 0 0 0 0\n". A half move right from (0, 0)
         // would be Action{ActionType::Move, 0, 0, Direction::Right, true},
         // producing "0 0 0 3 1\n".
         if (!Protocol::writeAction(std::cout, action)) return 1;
@@ -205,7 +205,7 @@ int main() {
 
 ### File Structure
 
-After decompression, a GIOR file contains a JSON array, denoted here by `data`. Each array position identifies a field. The first field, `data[0]`, stores the **GIOR file format version number**; for example, `data[0] = 19` identifies version `19`.
+After decompression, a GIOR file contains a JSON array, denoted here by `data`. Each array position identifies a field. The first field, `data[0]`, stores the **GIOR file format version number**. For example, `data[0] = 19` identifies version `19`.
 
 The interface accepts format versions `15` through `19` for games between two opposing players, using plains, mountains, cities, and generals. The complete version `19` layout contains 38 fields, listed below. A file may omit trailing fields while retaining at least the first 18 fields, from `data[0]` through `data[17]`. Optional list fields that are omitted or set to `null` have the same meaning as `[]`.
 
@@ -264,9 +264,9 @@ $$
 r = \left\lfloor i/W \right\rfloor, \qquad c = i \bmod W.
 $$
 
-Fields `4` and `8` associate each player with a name and a starting general cell: `data[4] = [redName, blueName]` and `data[8] = [redGeneral, blueGeneral]`. Each array therefore contains exactly two entries, and each name is a JSON string whose UTF-8 representation occupies at most 256 bytes. The two general cells start under their respective players' ownership, and their Manhattan distance is at least three. Field `12` describes team membership; for opposing players, it contains `null`, `[]`, or two distinct integer team IDs.
+Fields `4` and `8` associate each player with a name and a starting general cell: `data[4] = [redName, blueName]` and `data[8] = [redGeneral, blueGeneral]`. Each array therefore contains exactly two entries, and each name is a JSON string whose UTF-8 representation occupies at most 256 bytes. The two general cells start under their respective players' ownership, and their Manhattan distance is at least three. Field `12` describes team membership. For opposing players, it contains `null`, `[]`, or two distinct integer team IDs.
 
-Together with the general cells in field `8`, the city cells in field `6` and mountain cells in field `9` define the initial terrain. Every listed position is a valid cell index, and each cell has one terrain assignment. The remaining cells are neutral plains; cities also start neutral.
+Together with the general cells in field `8`, the city cells in field `6` and mountain cells in field `9` define the initial terrain. Every listed position is a valid cell index, and each cell has one terrain assignment. The remaining cells are neutral plains. Cities also start neutral.
 
 Initial armies are specified separately from terrain. Each general starts with one soldier, and each plain starts with zero. For cities, fields `6` and `7` form a pair of equally sized arrays: the city at `data[6][j]` starts with `data[7][j]` soldiers. Fields `14` and `15` form another such pair, assigning `data[15][j]` soldiers to the cell at `data[14][j]`. These assignments replace the initial army counts, including those on generals, while preserving terrain and ownership. Every assigned army count is a nonnegative integer, and its cell must be a plain, city, or general.
 
@@ -296,7 +296,7 @@ data[15] = [12, 2, 8];     // 12 on cell 0, 2 on cell 4, 8 on cell 11
 
 The positions in a paired list correspond by order. For example, the third entry of field `15` assigns eight soldiers to the third cell listed in field `14`, which is cell `11`. With generals at `[0, 11]`, this gives red twelve starting soldiers, blue eight, and the neutral plain at cell `4` two.
 
-Fields associated with individual players also use player order. Field `5` stores their star ratings, for example `[12, 8]`; `null` may represent an unavailable rating. Field `18` stores player color IDs, with `[0, 1]` selecting the usual red and blue colors. Field `25` stores per-player view-transform codes, with `[0, 0]` selecting the original board orientation for both. Moves and map cells use the board's original cell indices.
+Fields associated with individual players also use player order. Field `5` stores their star ratings, for example `[12, 8]`, with `null` representing an unavailable rating. Field `18` stores player color IDs, with `[0, 1]` selecting the usual red and blue colors. Field `25` stores per-player view-transform codes, with `[0, 0]` selecting the original board orientation for both. Moves and map cells use the board's original cell indices.
 
 Chat and map-marker lists contain records rather than single values:
 
@@ -311,7 +311,7 @@ data[26] = [
 ];
 ```
 
-Each chat record has the form `[text, prefix, player, tick]`, where `text` and `prefix` are strings. An empty prefix is `""`. Each map-marker record has the form `[player, tick, cell]`. In both lists, `player` is `0` for red or `1` for blue, and `tick` locates the record on the replay timeline. A record of a general trade in field `27` has the form `[playerA, playerB, tick]`; for example, `[[0, 1, 20]]` records a trade between the two players at tick `20`. These records describe occurrences in the recorded game.
+Each chat record has the form `[text, prefix, player, tick]`, where `text` and `prefix` are strings. An empty prefix is `""`. Each map-marker record has the form `[player, tick, cell]`. In both lists, `player` is `0` for red or `1` for blue, and `tick` locates the record on the replay timeline. A record of a general trade in field `27` has the form `[playerA, playerB, tick]`. For example, `[[0, 1, 20]]` records a trade between the two players at tick `20`. These records describe occurrences in the recorded game.
 
 Field `20` contains nine game-setting values in this order:
 
@@ -320,7 +320,7 @@ Field `20` contains nine game-setting values in this order:
  cityFairness, spawnFairness, desertDensity, lookoutDensity, observatoryDensity]
 ```
 
-The examples use `[1, 0.5, 0.5, 0, 0.5, 0.5, 0, 0, 0]`. The explicit terrain lists specify the recorded map; density and fairness values describe its generation settings. Field `13` can contain the custom map's name as a string, such as `"example-map"`, or `null`.
+The examples use `[1, 0.5, 0.5, 0, 0.5, 0.5, 0, 0, 0]`. The explicit terrain lists specify the recorded map, while density and fairness values describe its generation settings. Field `13` can contain the custom map's name as a string, such as `"example-map"`, or `null`.
 
 For ordinary two-player recordings, the special-terrain and modifier lists in fields `16`, `19`, `21`, `22`, `23`, `24`, `28`, and `34` are required to be empty. Their paired lists, tunnel limits (`29`) and stronghold armies (`35`), therefore use `[]` as well. Fields `31`, `32`, and `33` use `0`, `10`, and `25`, respectively, and modifier options in field `37` use `null`.
 
@@ -344,7 +344,7 @@ Field `10` contains the replay's move records. Each record is an array of five i
 
 The list is ordered by tick, with at most one move per player per half-turn. Both players may have a record at the same tick. A player passes at any tick for which that player has no move record. Thus, a tick with a record for one player includes a Pass for the other, and a tick with no records includes two Passes. Each recorded move must be legal in the position at its tick, and all records must precede the game's end.
 
-Field `11` contains surrender records, each in the form `[player, tick]`, using the same player indices and tick convention as moves. At that tick, the surrendering player's action is Pass; the half-turn includes the other player's action and scheduled growth, and the other player wins. Surrender records are ordered by tick, with at most one surrender per half-turn. General captures and game-rule limits also determine termination, so a replay may end with an empty surrender list.
+Field `11` contains surrender records, each in the form `[player, tick]`, using the same player indices and tick convention as moves. At that tick, the surrendering player's action is Pass. The half-turn includes the other player's action and scheduled growth, and the other player wins. Surrender records are ordered by tick, with at most one surrender per half-turn. General captures and game-rule limits also determine termination, so a replay may end with an empty surrender list.
 
 ### Minimal Valid Example
 
@@ -400,7 +400,7 @@ const data = [
 writeFileSync("example.gior", compressToUint8Array(JSON.stringify(data)));
 ```
 
-Opening `example.gior` in REPLAY provides four half-turns of playback with player names `RED` and `BLUE`. In the ALL view, the board progresses as follows; each number is the army on that cell:
+Opening `example.gior` in REPLAY provides four half-turns of playback with player names `RED` and `BLUE`. The following timeline shows the board in the ALL view, with each number giving the army on that cell:
 
 ```text
 tick 0: [RED general: 1] [neutral: 0]   [neutral: 0] [BLUE general: 1]
@@ -450,7 +450,7 @@ The initial board in the ALL view is
 [neutral: 0]      [neutral: 0] [neutral: 0]      [BLUE general: 8]
 ```
 
-At tick `0`, red sends eleven soldiers to cell `1`, and blue sends four to cell `10`. At tick `1`, red sends ten soldiers from cell `1` into the four-soldier city, captures it with six remaining, and gains one city soldier from the growth that produces tick `2`. Red then sends three of its seven city soldiers to cell `3`. Blue surrenders at tick `3`; after the final growth, the replay ends at tick `4` with `RED WINS` and this board:
+At tick `0`, red sends eleven soldiers to cell `1`, and blue sends four to cell `10`. At tick `1`, red sends ten soldiers from cell `1` into the four-soldier city, captures it with six remaining, and gains one city soldier from the growth that produces tick `2`. Red then sends three of its seven city soldiers to cell `3`. Blue surrenders at tick `3`. After the final growth, the replay ends at tick `4` with `RED WINS` and this board:
 
 ```text
 [RED general: 3] [RED plain: 1] [RED city: 5]   [RED plain: 3]
