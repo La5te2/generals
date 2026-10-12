@@ -3,7 +3,7 @@
 // coordinate session controls and display updates, then release resources when the application closes.
 #include "local.hpp"
 #include "online.hpp"
-#include "lan.hpp"
+#include "client.hpp"
 #include "playback.hpp"
 #include "dialog.hpp"
 #include "renderer.hpp"
@@ -28,14 +28,14 @@ namespace NEBULA {
     struct WindowState {
         LocalMatch local;
         OnlineMatch online;
-        LanMatch lan;
+        ClientMatch client;
         Playback replay;
         Human human; // keyboard and mouse controls for the player's selected cell and queued moves.
         Renderer renderer;
         Console console;
         Setup setup;
         MatchSnapshot displayed = local.snapshot();
-        bool showingBoard = false, closing = false, quitRequested = false, leavingLan = false;
+        bool showingBoard = false, closing = false, quitRequested = false, leavingRoom = false;
         unsigned int repaintTimer = 0; // native repaint interval in milliseconds. zero means the timer is stopped.
         bool painting = false;
         bool observingMatch = false;
@@ -46,15 +46,15 @@ namespace NEBULA {
 
         bool active() const { return displayed.active(); }
         bool running() const { return displayed.running(); }
-        bool live() const { return quitRequested || leavingLan || (showingBoard && (running() || (setup.scene == Scene::Online && active()))); }
+        bool live() const { return quitRequested || leavingRoom || (showingBoard && (running() || (setup.scene == Scene::Online && active()))); }
         // true while an unfinished match has a keyboard-and-mouse player, including a paused local match.
         bool hasHuman() const { return active() && human.player() >= 0; }
         PlayerInput& inputSession() {
             if (setup.scene != Scene::Online) return local;
-            return setup.lan() ? static_cast<PlayerInput&>(lan) : online;
+            return setup.custom() ? static_cast<PlayerInput&>(client) : online;
         }
         BoardControls controls() const {
-            bool review = setup.scene == Scene::Online && setup.lan() && !active() && (*displayed.views)[2].cols > 0;
+            bool review = setup.scene == Scene::Online && setup.custom() && !active() && (*displayed.views)[2].cols > 0;
             return {setup.scene, active(), running(), hasHuman(), hover, setup.scene == Scene::Replay && replay.cursor() > 0, review};
         }
         const Observation& view() const { return (*displayed.views)[perspective]; }
@@ -64,7 +64,7 @@ namespace NEBULA {
             bool wasRunning = running();
             bool wasSpectator = controls().spectator();
             if (setup.scene == Scene::Replay) displayed = replay.snapshot();
-            else if (setup.scene == Scene::Online) displayed = setup.lan() ? lan.snapshot() : online.snapshot();
+            else if (setup.scene == Scene::Online) displayed = setup.custom() ? client.snapshot() : online.snapshot();
             else displayed = local.snapshot();
             if (setup.scene == Scene::Online && displayed.player >= 0) {
                 if (!controls().spectator()) perspective = displayed.player;
@@ -100,14 +100,14 @@ namespace NEBULA {
         bool refresh() {
             bool changed = false;
             if (!setup.message.empty() && setup.messageOpacity() == 0) { setup.message.clear(); changed = true; }
-            if (leavingLan && !lan.opened()) {
-                leavingLan = false;
-                auto result = lan.snapshot();
+            if (leavingRoom && !client.opened()) {
+                leavingRoom = false;
+                auto result = client.snapshot();
                 if (!result.error.empty()) setup.notify(result.error);
                 if (!showingBoard) displayed = {};
                 changed = true;
             }
-            if (quitRequested && !lan.opened()) { finishQuit(); changed = true; }
+            if (quitRequested && !client.opened()) { finishQuit(); changed = true; }
             if (!showingBoard) return changed;
             if (setup.scene == Scene::Replay) {
                 if (!replay.advance()) return changed;
@@ -132,18 +132,18 @@ namespace NEBULA {
 
         // validate the selected mode before replacing the match and starting its timer.
         void start() {
-            if (leavingLan || quitRequested) { setup.notify("Finishing the previous room"); return; }
+            if (leavingRoom || quitRequested) { setup.notify("Finishing the previous room"); return; }
             if (active()) { setup.notify("A match is already active"); return; }
             // consume a pending reset before starting, so a failed attempt stays available for manual retry.
             resetAt.reset();
             int player = -1;
             if (setup.scene == Scene::Online) {
                 std::string command = setup.humanPlayer(Field::Player) ? "" : setup.field(Field::Player).input;
-                if (setup.lan()) {
-                    if (lan.opened()) { setup.notify("Finishing the previous room"); return; }
-                    LanConfig config{setup.field(Field::Address).input, setup.field(Field::Username).input,
+                if (setup.custom()) {
+                    if (client.opened()) { setup.notify("Finishing the previous room"); return; }
+                    ClientConfig config{setup.field(Field::Address).input, setup.field(Field::Username).input,
                         setup.field(Field::Room).input, command, setup.directory, setup.field(Field::Proxy).input};
-                    if (!lan.start(config)) { setup.notify(lan.snapshot().error); return; }
+                    if (!client.start(config)) { setup.notify(client.snapshot().error); return; }
                 } else {
                     OnlineConfig config{setup.server == 1 ? Server::Main : Server::Bot,
                         setup.field(Field::Username).input, setup.field(Field::Identity).input,
@@ -191,9 +191,9 @@ namespace NEBULA {
         void stop() {
             if (!showingBoard) return;
             if (active()) {
-                if (setup.scene == Scene::Online && setup.lan()) {
-                    lan.stop(); human.deselect(); hover = Tool::None;
-                    return; // the LAN worker reports completion after the room settles the surrender.
+                if (setup.scene == Scene::Online && setup.custom()) {
+                    client.stop(); human.deselect(); hover = Tool::None;
+                    return; // the client reports completion after the server settles the surrender.
                 }
                 if (setup.scene == Scene::Replay) replay.stop();
                 else if (setup.scene == Scene::Online) online.stop();
@@ -222,7 +222,7 @@ namespace NEBULA {
         void back() {
             if (showingBoard) {
                 stop();
-                if (setup.scene == Scene::Online && setup.lan()) { lan.leave(); leavingLan = lan.opened(); update(); }
+                if (setup.scene == Scene::Online && setup.custom()) { client.leave(); leavingRoom = client.opened(); update(); }
                 observingMatch = false;
                 showingBoard = false;
                 human.reset(-1, view());
@@ -235,17 +235,17 @@ namespace NEBULA {
 
         void quit() {
             stop();
-            lan.leave();
+            client.leave();
             resetAt.reset();
             quitRequested = true;
-            if (!lan.opened()) finishQuit();
+            if (!client.opened()) finishQuit();
         }
 
         void finishQuit() {
             quitRequested = false;
             observingMatch = false;
             std::string error;
-            if (!local.savePending(setup.directory, error) || !lan.savePending(setup.directory, error)) {
+            if (!local.savePending(setup.directory, error) || !client.savePending(setup.directory, error)) {
                 setup.notify(error);
                 console.feedback = error;
                 return;
@@ -254,7 +254,7 @@ namespace NEBULA {
         }
 
         // TURN <ms> sets the local half-turn duration and calls Playback::setInterval for replay speed.
-        // ONLINE, including future LAN rooms, never reads this setting.
+        // ONLINE, including custom-server rooms, never reads this setting.
         bool setTurn(int milliseconds) {
             if (!local.setInterval(milliseconds)) return false;
             setup.milliseconds = milliseconds;
@@ -326,7 +326,7 @@ namespace NEBULA {
                 std::filesystem::path directory = std::u8string(command.text.begin(), command.text.end());
                 std::string error;
                 if (!directory.empty() && !replayDirectory(directory, error)) { console.feedback = error; return; }
-                if (!local.savePending(directory, error) || !lan.savePending(directory, error)) { console.feedback = error; return; }
+                if (!local.savePending(directory, error) || !client.savePending(directory, error)) { console.feedback = error; return; }
                 setup.directory = std::move(directory);
                 if (showingBoard) update();
                 console.feedback = command.text.empty() ? "Recording disabled for new matches" : "New matches record to: " + command.text;
@@ -549,7 +549,6 @@ namespace NEBULA {
             std::span<const Action> queued;
             if (app.human.player() >= 0) queued = app.displayed.queued[app.human.player()];
             auto names = app.displayed.names;
-            if (app.displayed.host >= 0) names[app.displayed.host] += " [HOST]";
             app.renderer.draw(app.view(), app.perspective, width, height, app.controls(), app.setup, app.console, app.human, queued, names, app.displayed.status);
         } else app.renderer.drawSetup(app.setup, width, height, app.console);
         // draw() or drawSetup() fills the back buffer, then this swap presents the completed frame.

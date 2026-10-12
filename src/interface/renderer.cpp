@@ -333,7 +333,7 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
             Rect server = group("SERVER", 0);
             button("BOT", choiceButton(server, 0, 3), setup.server == 0, true, scale);
             button("MAIN", choiceButton(server, 1, 3), setup.server == 1, true, scale);
-            button("LAN", choiceButton(server, 2, 3), setup.lan(), true, scale);
+            button("CUSTOM", choiceButton(server, 2, 3), setup.custom(), true, scale);
         }
         for (Field field : inputOrder(setup)) {
             if (field == Field::None) continue;

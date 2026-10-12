@@ -1,6 +1,6 @@
 // shared match data and input contracts keep rendering and human controls independent of each mode's implementation.
 // MatchState and MatchSnapshot describe match progress, observations, players and queued actions for display, including replays.
-// PlayerInput lets human controls submit or cancel moves in local, online and LAN matches through the same interface.
+// PlayerInput lets human controls submit or cancel moves in local and network matches through the same interface.
 // game updates, connections, worker threads and snapshot synchronization belong to the individual mode implementations.
 #pragma once
 
@@ -24,7 +24,7 @@ namespace NEBULA {
 
     // one published value keeps observations, session status and input queues together for the interface.
     struct MatchSnapshot {
-        // Local and replay supply three perspectives. Online supplies the account's view; completed LAN games also supply all three.
+        // Local and replay supply three perspectives. Network games supply the player's view; completed custom games supply all three.
         std::shared_ptr<const std::array<Observation, 3>> views = std::make_shared<const std::array<Observation, 3>>();
         MatchState state = MatchState::Empty;
         bool active() const { return state != MatchState::Empty && state != MatchState::Finished; }
@@ -32,11 +32,10 @@ namespace NEBULA {
         bool acceptsInput() const { return running() || state == MatchState::Paused; }
         std::string error;
         std::array<std::vector<Action>, 2> queued;
-        // Local uses default labels; replay restores recorded names; online and LAN fill participant usernames.
+        // Local uses default labels; replay restores recorded names; network sessions fill participant usernames.
         std::array<std::string, 2> names{"RED", "BLUE"};
         std::string status;
-        int player = -1; // This window's online or LAN seat; -1 until assigned.
-        int host = -1; // LAN participant accepting the peer connection and running the engine.
+        int player = -1; // This window's network seat; -1 until assigned.
     };
 
     // Both local games and playback expose these three perspectives through the same snapshot contract.

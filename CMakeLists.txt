@@ -25,60 +25,9 @@ add_library(engine INTERFACE)
 target_include_directories(engine INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_compile_features(engine INTERFACE cxx_std_20)
 
-option(NEBULA_BUILD_AGENT "Build the Nebula LibTorch inference program" ON)
-option(SIMPLE_BUILD_AGENT "Build the Simple GenFormer LibTorch inference program" ON)
-set(inferenceAgents)
-if(NEBULA_BUILD_AGENT)
-    list(APPEND inferenceAgents nebula)
-endif()
-if(SIMPLE_BUILD_AGENT)
-    list(APPEND inferenceAgents simple)
-endif()
-if(inferenceAgents)
-    find_package(Torch CONFIG QUIET)
-    if(NOT Torch_FOUND)
-        # PyTorch exposes the CMake package location for its bundled C++ libraries.
-        if(WIN32)
-            find_program(Python3_EXECUTABLE NAMES python python3)
-        else()
-            find_program(Python3_EXECUTABLE NAMES python3 python)
-        endif()
-        find_package(Python3 COMPONENTS Interpreter QUIET)
-        if(Python3_Interpreter_FOUND)
-            execute_process(
-                COMMAND "${Python3_EXECUTABLE}" -c "import torch; print(torch.utils.cmake_prefix_path)"
-                RESULT_VARIABLE torchStatus
-                OUTPUT_VARIABLE torchPrefix
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                ERROR_QUIET
-                TIMEOUT 20)
-            if(torchStatus EQUAL 0 AND NOT "${torchPrefix}" STREQUAL "")
-                list(APPEND CMAKE_PREFIX_PATH "${torchPrefix}")
-            endif()
-        endif()
-        find_package(Torch CONFIG REQUIRED)
-    endif()
-    separate_arguments(torchFlags NATIVE_COMMAND "${TORCH_CXX_FLAGS}")
-    if(WIN32)
-        file(GLOB torchDlls "${TORCH_INSTALL_PREFIX}/lib/*.dll")
-    endif()
-    foreach(agent IN LISTS inferenceAgents)
-        add_executable(${agent} "src/agents/${agent}/infer.cpp")
-        target_link_libraries(${agent} PRIVATE engine "${TORCH_LIBRARIES}")
-        target_compile_options(${agent} PRIVATE ${torchFlags})
-        set_target_properties(${agent} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${agent}"
-            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${agent}")
-        if(WIN32 AND torchDlls)
-            add_custom_command(TARGET ${agent} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${torchDlls} "$<TARGET_FILE_DIR:${agent}>"
-                VERBATIM)
-        endif()
-    endforeach()
-endif()
-
 option(NEBULA_BUILD_INTERFACE "Build the interface application" ON)
-if(NEBULA_BUILD_INTERFACE)
+option(NEBULA_BUILD_SERVER "Build the self-hosted WebSocket room server" ON)
+if(NEBULA_BUILD_INTERFACE OR NEBULA_BUILD_SERVER)
     find_package(Threads REQUIRED)
     find_package(nlohmann_json CONFIG REQUIRED)
     add_library(process STATIC src/interface/process.cpp)
@@ -86,19 +35,28 @@ if(NEBULA_BUILD_INTERFACE)
     add_library(local STATIC src/interface/local.cpp src/interface/replay.cpp)
     target_link_libraries(local PUBLIC process PRIVATE nlohmann_json::nlohmann_json)
     find_package(LibDataChannel CONFIG REQUIRED)
+endif()
+if(NEBULA_BUILD_SERVER)
+    add_library(rooms STATIC src/server/server.cpp)
+    target_link_libraries(rooms PUBLIC local PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
+    add_executable(server src/server/main.cpp)
+    target_link_libraries(server PRIVATE rooms)
+    set_target_properties(server PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/server")
+    add_custom_command(TARGET server POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/ATTRIBUTION.txt" "$<TARGET_FILE_DIR:server>/ATTRIBUTION.txt"
+        VERBATIM)
+endif()
+if(NEBULA_BUILD_INTERFACE)
     add_library(online STATIC src/interface/online.cpp)
     target_link_libraries(online PUBLIC process PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
-    add_library(lan STATIC src/interface/lan.cpp src/interface/discovery.cpp)
-    target_link_libraries(lan PUBLIC local PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
-    if(WIN32)
-        target_link_libraries(lan PRIVATE ws2_32 iphlpapi)
-    endif()
+    add_library(client STATIC src/interface/client.cpp)
+    target_link_libraries(client PUBLIC local PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
     find_package(glad CONFIG REQUIRED)
     find_package(glfw3 CONFIG REQUIRED)
 
     add_executable(interface WIN32 src/interface/interface.cpp src/interface/renderer.cpp src/interface/human.cpp
         src/interface/console.cpp src/interface/dialog.cpp)
-    target_link_libraries(interface PRIVATE local online lan glad::glad glfw)
+    target_link_libraries(interface PRIVATE local online client glad::glad glfw)
     if(WIN32)
         target_link_libraries(interface PRIVATE user32 comdlg32 ole32 shell32 uuid)
         enable_language(RC)
@@ -116,7 +74,7 @@ if(NEBULA_BUILD_INTERFACE)
         set_source_files_properties("${iconResource}" PROPERTIES OBJECT_DEPENDS "${iconFile}")
         target_sources(interface PRIVATE "${iconResource}" "${iconFile}")
     endif()
-    set_target_properties(interface process local online lan PROPERTIES
+    set_target_properties(interface process local online client PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface"
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface")
     add_custom_command(TARGET interface POST_BUILD

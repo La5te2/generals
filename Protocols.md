@@ -47,7 +47,7 @@ tick my_land my_army opp_land opp_army
 
 The angle-bracketed lines above stand for matrix rows. In an actual message, they are replaced by integers. The agent reads all terrain rows first, then all ownership rows, and finally all army rows. Initialization fixes the dimensions, so reading these $1 + 3H$ lines completes one observation.
 
-`tick` is the half-turn counter associated with the observation. LOCAL and LAN begin at `0`. Main- and bot-server games retain the server's counter, which starts at `1`. The first observation delivered to an agent may have a later tick, so the agent uses the received value for game timing.
+`tick` is the half-turn counter associated with the observation. LOCAL and CUSTOM begin at `0`. Main- and bot-server games retain the server's counter, which starts at `1`. The first observation delivered to an agent may have a later tick, so the agent uses the received value for game timing.
 
 `my_land` and `my_army` give the agent's total land and army. `opp_land` and `opp_army` give the opponent's public totals. These statistics cover each player's entire territory, while the matrices describe the agent's current field of view. Land counts satisfy $0 \le L \le HW$, army totals satisfy $0 \le A \le 2^{63}-1$, and `tick` is an unsigned 64-bit integer.
 
@@ -125,7 +125,7 @@ If calculation outlasts a half-turn, the agent still completes that request by s
 
 In LOCAL, each half-turn has a settlement deadline. An action participates only if its observation tick matches the half-turn being settled and its complete reply arrived by that deadline. An absent or late reply becomes Pass for that half-turn. After a missed deadline, the agent session continues with the same request/reply sequence. The interval follows the configured LOCAL half-turn duration.
 
-In LAN, the game advances every 500 ms. Agent replies are eligible while their observation tick remains current. A move that reaches the receiving peer after the tick changes is discarded. Main- and bot-server games advance on server board updates and also discard replies to older observation ticks. Pass completes the response to that observation and contributes a passing action for that player.
+In CUSTOM, the server advances the game every 500 ms. Agent replies are eligible while their observation tick remains current. A move that reaches the server after the tick changes is discarded. Main- and bot-server games advance on server board updates and also discard replies to older observation ticks. Pass completes the response to that observation and contributes a passing action for that player.
 
 The game clock continues during calculation. The agent should complete resource loading promptly and send each decision as soon as it is ready.
 
@@ -133,7 +133,7 @@ The game clock continues during calculation. The agent should complete resource 
 
 Execution depends on timely acceptance and move legality at execution time. An action may expire before acceptance or become illegal before execution. The agent determines action outcomes from subsequent observations of the position.
 
-An action line must contain exactly five integers and may occupy at most 255 bytes before LF. With CRLF, CR counts toward that limit. A malformed or oversized reply, a broken stream, or premature agent exit ends the agent session. A correctly formatted but illegal move leaves that player's action ineffective while the agent session continues. In LAN, agent failure also surrenders that player's side.
+An action line must contain exactly five integers and may occupy at most 255 bytes before LF. With CRLF, CR counts toward that limit. A malformed or oversized reply, a broken stream, or premature agent exit ends the agent session. A correctly formatted but illegal move leaves that player's action ineffective while the agent session continues. In CUSTOM, agent failure also surrenders that player's side.
 
 Observations describe ongoing positions. When the session ends, the interface closes the input stream, so EOF serves as the agent's session-end notification. The agent handles EOF and exits. A program that remains blocked can be terminated.
 

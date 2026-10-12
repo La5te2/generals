@@ -18,7 +18,7 @@ namespace NEBULA {
     struct LocalSnapshot : MatchSnapshot {
         std::filesystem::path saved;
         bool unsaved = false;
-        std::shared_ptr<const Recording> completed; // optional finished recording for LAN transfer, never sent during play.
+        std::shared_ptr<const Recording> completed; // optional finished recording for server transfer, never sent during play.
     };
 
     class LocalMatch : public PlayerInput {
@@ -27,7 +27,7 @@ namespace NEBULA {
         // an empty command leaves that player's actions to the caller, for example the window's human input handler.
         bool start(const std::array<std::string, 2>& commands, std::uint32_t seed, int milliseconds = 500,
                    const std::filesystem::path& directory = {}, bool retainRecording = false);
-        void stop(int surrender = -1); // a supplied seat forfeits; LAN uses this for departure or Stop.
+        void stop(int surrender = -1); // a supplied seat forfeits; the room server uses this for departure or Stop.
         bool savePending(const std::filesystem::path& destination, std::string& error);
         void pause();
         void resume();

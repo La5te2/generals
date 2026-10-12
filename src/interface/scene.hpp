@@ -64,8 +64,8 @@ namespace NEBULA {
         static constexpr double messageHold = 2, messageFade = 1; // seconds.
 
         Scene scene = Scene::Home;
-        int server = 0; // BOT, MAIN, LAN.
-        bool lan() const { return server == 2; }
+        int server = 0; // BOT, MAIN, CUSTOM.
+        bool custom() const { return server == 2; }
         std::filesystem::path directory; // session-wide RD destination; empty disables local recording.
         struct Account { TextInput username, identity, room, proxy; };
         std::array<Account, 3> accounts;
@@ -207,7 +207,7 @@ namespace NEBULA {
     inline std::array<Field, 5> inputOrder(const Setup& setup) {
         if (setup.scene == Scene::Local) return {Field::Red, Field::Blue};
         if (setup.scene == Scene::Online) {
-            if (setup.lan()) return {Field::Player, Field::Username, Field::Room, Field::Address, Field::Proxy};
+            if (setup.custom()) return {Field::Player, Field::Username, Field::Room, Field::Address, Field::Proxy};
             return {Field::Player, Field::Username, Field::Identity, Field::Room, Field::Proxy};
         }
         if (setup.scene == Scene::Replay) return {Field::Replay};
@@ -220,8 +220,8 @@ namespace NEBULA {
         switch (field) {
             case Field::Username: return "USERNAME";
             case Field::Identity: return "USER ID";
-            case Field::Room: return setup.lan() ? "ROOM ID" : "PRIVATE ROOM";
-            case Field::Address: return "IP";
+            case Field::Room: return setup.custom() ? "ROOM ID" : "PRIVATE ROOM";
+            case Field::Address: return "ADDRESS";
             case Field::Proxy: return "PROXY";
             case Field::Red: return "RED PLAYER";
             case Field::Blue: return "BLUE PLAYER";
