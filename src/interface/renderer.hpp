@@ -1,5 +1,5 @@
 // OpenGL presentation: draw observations and UI state using the shared scene layout.
-// Own GPU resources and drawing primitives; input handling, session updates and repaint scheduling stay with the caller.
+// own GPU resources and drawing primitives. input handling, session updates and repaint scheduling stay with the caller.
 #pragma once
 
 #include "engine/observe.hpp"
@@ -20,13 +20,13 @@ public:
 
     // create GPU resources after GLAD loads. destroy them before the window closes.
     bool init();
-    // Draw one board frame from the supplied snapshot and UI state without advancing any session.
-    // Dimensions are logical window coordinates; the caller sets the framebuffer viewport and swaps buffers.
+    // draw one board frame from the supplied snapshot and UI state without advancing any session.
+    // dimensions are logical window coordinates. the caller sets the framebuffer viewport and swaps buffers.
     void draw(const Observation& view, int perspective, int width, int height,
               const NEBULA::BoardControls& controls, const NEBULA::Setup& setup,
               const NEBULA::Console& console, const NEBULA::Human& human, std::span<const Action> queued,
               const std::array<std::string, 2>& names, std::string_view sessionStatus);
-    // Draw Home or the selected configuration form using the same layout rectangles as input hit testing.
+    // draw Home or the selected configuration form using the same layout rectangles as input hit testing.
     void drawSetup(const NEBULA::Setup& setup, int width, int height, const NEBULA::Console& console);
 
 private:

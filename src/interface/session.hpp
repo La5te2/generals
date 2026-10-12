@@ -13,34 +13,34 @@
 
 namespace NEBULA {
     enum class MatchState {
-        Empty,      // No session has been started.
-        Connecting, // Establishing a peer or server connection.
-        Waiting,    // Connected or listening, but no match has started.
-        Playing,    // The match or replay is advancing.
-        Paused,     // An unfinished local match or replay is paused.
-        Finishing,  // Play has ended; final updates or recording transfer are still pending.
-        Finished    // Session work has ended. Its last snapshot remains available.
+        Empty,      // no session has been started.
+        Connecting, // establishing a peer or server connection.
+        Waiting,    // connected or listening, but no match has started.
+        Playing,    // the match or replay is advancing.
+        Paused,     // an unfinished local match or replay is paused.
+        Finishing,  // play has ended. final updates or recording transfer are still pending.
+        Finished    // session work has ended. its last snapshot remains available.
     };
 
     // one published value keeps observations, session status and input queues together for the interface.
     struct MatchSnapshot {
-        // Local and replay supply three perspectives. Network games supply the player's view; completed custom games supply all three.
+        // local and replay supply three perspectives. network games supply the player's view. completed custom games supply all three.
         std::shared_ptr<const std::array<Observation, 3>> views = std::make_shared<const std::array<Observation, 3>>();
         MatchState state = MatchState::Empty;
-        // Includes setup, waiting, pause and final transfer; active does not imply the board is advancing.
+        // includes setup, waiting, pause and final transfer. active does not imply the board is advancing.
         bool active() const { return state != MatchState::Empty && state != MatchState::Finished; }
         bool running() const { return state == MatchState::Playing; }
-        // Describes the phase only; each session also enforces seat ownership and human/agent input restrictions.
+        // describes the phase only. each session also enforces seat ownership and human/agent input restrictions.
         bool acceptsInput() const { return running() || state == MatchState::Paused; }
         std::string error;
         std::array<std::vector<Action>, 2> queued;
-        // Local uses default labels; replay restores recorded names; network sessions fill participant usernames.
+        // local uses default labels. replay restores recorded names. network sessions fill participant usernames.
         std::array<std::string, 2> names{"RED", "BLUE"};
         std::string status;
-        int player = -1; // This window's network seat; -1 until assigned.
+        int player = -1; // this window's network seat, or -1 until assigned.
     };
 
-    // Both local games and playback expose these three perspectives through the same snapshot contract.
+    // both local games and playback expose these three perspectives through the same snapshot contract.
     inline std::array<Observation, 3> matchViews(const States& state) {
         std::array<Observation, 3> next{observe(state, 0), observe(state, 1)};
         next[2] = next[0];
@@ -66,9 +66,9 @@ namespace NEBULA {
     class PlayerInput {
     public:
         virtual ~PlayerInput() = default;
-        // True means accepted into this session's queue, not that the engine/server has executed the move.
+        // true means accepted into this session's queue, not that the engine/server has executed the move.
         virtual bool enqueue(int player, const Action& action) = 0;
-        // Remove the newest move or all queued moves; return the earliest removed action, or no value if none was removed.
+        // remove the newest move or all queued moves. return the earliest removed action, or no value if none was removed.
         virtual std::optional<Action> cancel(int player, bool all) = 0;
     };
 }

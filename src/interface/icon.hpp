@@ -1,4 +1,4 @@
-// Rasterize the existing general outline for window icons and executable resources, without image assets.
+// rasterize the existing general outline for window icons and executable resources, without image assets.
 #pragma once
 
 #include <algorithm>
@@ -10,7 +10,7 @@
 namespace NEBULA::Icon {
     #include "icons.inc"
 
-    // Return top-down RGBA pixels: a white crown on rounded black backing with transparent corners.
+    // return top-down RGBA pixels: a white crown on rounded black backing with transparent corners.
     inline std::vector<unsigned char> pixels(int size) {
         if (size < 1 || size > 256) throw std::invalid_argument("Icon size must be between 1 and 256");
         constexpr int samples = 4;
@@ -23,7 +23,7 @@ namespace NEBULA::Icon {
         struct Point { float x, y; };
         auto point = [&](int x, int y) { return Point{left + x * scale, top + y * scale}; };
         auto edge = [](Point a, Point b, Point p) { return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x); };
-        // Union triangles before downsampling so shared edges do not leave antialiasing seams.
+        // union triangles before downsampling so shared edges do not leave antialiasing seams.
         for (const auto& face : crownIcon) {
             Point a = point(face.ax, face.ay), b = point(face.bx, face.by), c = point(face.cx, face.cy);
             float area = edge(a, b, c);

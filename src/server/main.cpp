@@ -1,4 +1,4 @@
-// Server application entry point; owns process startup and shutdown, while RoomServer owns the room service.
+// server application entry point, responsible for process startup and shutdown. RoomServer owns the room service.
 #include "server.hpp"
 #include <charconv>
 #include <chrono>
@@ -10,18 +10,18 @@
 
 namespace {
     volatile std::sig_atomic_t stopping = 0;
-    // Signal handlers only set the exit flag; normal stack unwinding performs server cleanup.
+    // signal handlers only set the exit flag. normal stack unwinding performs server cleanup.
     void stop(int) { stopping = 1; }
 }
-// Validate command-line options, start the listener and wait for SIGINT/SIGTERM; report failures with exit code 1.
+// validate command-line options, start the listener and wait for SIGINT/SIGTERM. report failures with exit code 1.
 // RoomServer destruction stops the listener and joins its workers before this process exits.
-// The default 127.0.0.1:42817 accepts local connections only.
-// For a machine with a reachable public IP, run: server --bind 0.0.0.0 --port 42817
-// This listens on all local IPv4 interfaces; clients use ws://PUBLIC_IP:42817 in CUSTOM's ADDRESS.
-// Allow inbound TCP 42817 in both the cloud security group and the OS firewall, preferably only
-// from the players' IPs. Direct public access needs no tunnel; 0.0.0.0 is not a client address.
-// Equal nonempty Room IDs select a private room; empty IDs enter public matchmaking.
-// A Room ID identifies a room, not a password or authentication credential.
+// the default 127.0.0.1:42817 accepts local connections only.
+// for a machine with a reachable public IP, run: server --bind 0.0.0.0 --port 42817
+// this listens on all local IPv4 interfaces. clients use ws://PUBLIC_IP:42817 in CUSTOM's ADDRESS.
+// allow inbound TCP 42817 in both the cloud security group and the OS firewall, preferably only
+// from the players' IPs. direct public access needs no tunnel. 0.0.0.0 is not a client address.
+// equal nonempty Room IDs select a private room. empty IDs enter public matchmaking.
+// a Room ID identifies a room, not a password or authentication credential.
 int main(int argc, char** argv) try {
     std::string address = "127.0.0.1";
     int port = 42817;

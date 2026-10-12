@@ -1,4 +1,4 @@
-// Pausable half-turn clock for local play and replay; owns timing only, not game or playback state.
+// pausable half-turn clock for local play and replay, independent of game and playback state.
 #pragma once
 
 #include <chrono>
@@ -19,7 +19,7 @@ namespace NEBULA {
             remaining = interval;
         }
 
-        // Start the preserved remaining interval; repeated resume calls leave an active deadline unchanged.
+        // start the preserved remaining interval. repeated resume calls leave an active deadline unchanged.
         void resume(Time now = Source::now()) {
             if (active) return;
             deadline = now + remaining;

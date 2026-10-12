@@ -1,4 +1,4 @@
-// Authoritative room service. The lobby owns admission and pairing; each paired room owns its worker and engine.
+// authoritative room service. the lobby owns admission and pairing. each paired room owns its worker and engine.
 #include "server.hpp"
 #include "interface/local.hpp"
 #include "wire.hpp"
@@ -11,27 +11,27 @@ namespace NEBULA {
         using namespace Wire;
         using namespace std::chrono_literals;
         struct Player {
-            // The connection identifies a participant; its room-array index determines the seat.
-            // Names are display labels and may be identical, including within one room.
+            // the connection identifies a participant. its room-array index determines the seat.
+            // names are display labels and may be identical, including within one room.
             std::shared_ptr<Connection> connection;
             std::string name, room;
             bool joined = false;
         };
         struct Room {
-            std::string id, key; // key is a private Room ID; empty denotes public matchmaking.
+            std::string id, key; // key is a private Room ID. empty denotes public matchmaking.
             std::array<Player, 2> players;
             std::atomic<bool> quit{false}, done{false};
             std::thread worker;
-            // Transfer two matched connections from the lobby into one independently running room.
+            // transfer two matched connections from the lobby into one independently running room.
             Room(std::string identity, Player red, Player blue)
                 : id(std::move(identity)), key(red.room), players{std::move(red), std::move(blue)} {
                 worker = std::thread([this] { run(); });
             }
-            // May wait for game cleanup; the lobby normally destroys rooms only after done is set.
+            // may wait for game cleanup. the lobby normally destroys rooms only after done is set.
             ~Room() { quit = true; if (worker.joinable()) worker.join(); }
-            // Wait for both ready messages, route seat-specific input and stream each player's observation.
-            // Departure forfeits that seat; completion sends a recording before closing each surviving connection.
-            // All exits set done so the lobby can reclaim this room and its private Room ID.
+            // wait for both ready messages, route seat-specific input and stream each player's observation.
+            // departure forfeits that seat. completion sends a recording before closing each surviving connection.
+            // all exits set done so the lobby can reclaim this room and its private Room ID.
             void run() noexcept {
                 LocalMatch match;
                 try {
@@ -153,7 +153,7 @@ namespace NEBULA {
         std::vector<std::unique_ptr<Room>> rooms;
         std::uint64_t sequence = 0;
 
-        // WebSocket callbacks only enqueue accepted connections; the lobby worker owns admission decisions.
+        // WebSocket callbacks only enqueue accepted connections. the lobby worker owns admission decisions.
         Impl(const std::string& address, std::uint16_t port) {
             rtc::WebSocketServer::Configuration config;
             config.bindAddress = address; config.port = port; config.maxMessageSize = packetLimit; config.connectionTimeout = 10s;
@@ -166,14 +166,14 @@ namespace NEBULA {
             });
             worker = std::thread([this] { run(); });
         }
-        // Close admission before stopping the listener, then let the lobby drain its players and room workers.
+        // close admission before stopping the listener, then let the lobby drain its players and room workers.
         ~Impl() {
             { std::lock_guard lock(lobby->mutex); lobby->closing = true; }
             listener->stop(); quit = true;
             if (worker.joinable()) worker.join();
         }
-        // Validate joins and pair waiting players with equal Room IDs in arrival order; empty IDs form public pairs.
-        // A live private room reserves its ID. Paired sockets leave this loop and belong exclusively to their room.
+        // validate joins and pair waiting players with equal Room IDs in arrival order. empty IDs form public pairs.
+        // a live private room reserves its ID. paired sockets leave this loop and belong exclusively to their room.
         void run() noexcept {
             try {
                 while (!quit) {
@@ -216,7 +216,7 @@ namespace NEBULA {
                         if (second == waiting.end()) { ++first; continue; }
                         auto room = std::make_unique<Room>(std::to_string(++sequence), std::move(waiting[first]), std::move(*second));
                         waiting.erase(second); waiting.erase(waiting.begin() + first);
-                        // Close remaining contenders for this private ID in the same lobby iteration.
+                        // close remaining contenders for this private ID in the same lobby iteration.
                         if (!room->key.empty()) {
                             for (auto& other : waiting) if (other.joined && other.room == room->key) other.connection->reject("Room is full");
                             std::erase_if(waiting, [](const Player& player) { return player.connection->socket->readyState() >= rtc::WebSocket::State::Closing; });

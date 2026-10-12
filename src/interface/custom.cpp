@@ -1,4 +1,4 @@
-// One outgoing WebSocket session to a custom server; input queues remain responsive while replies are in flight.
+// one outgoing WebSocket session to a custom server. input queues remain responsive while replies are in flight.
 #include "custom.hpp"
 #include "process.hpp"
 #include "proxy.hpp"
@@ -11,7 +11,7 @@ namespace NEBULA {
     namespace {
         using namespace Wire;
         using namespace std::chrono_literals;
-        // Empty selects the local server; otherwise require a WebSocket URL without credentials or whitespace.
+        // empty selects the local server. otherwise require a WebSocket URL without credentials or whitespace.
         std::string endpoint(const std::string& address) {
             if (address.empty()) return "ws://127.0.0.1:42817";
             auto begin = address.starts_with("ws://") ? 5u : address.starts_with("wss://") ? 6u : 0u;
@@ -34,7 +34,7 @@ namespace NEBULA {
 
         ~Session() { leaving = true; if (worker.joinable()) worker.join(); }
         MatchSnapshot snapshot() const { std::lock_guard lock(mutex); return published; }
-        // Reconcile server acknowledgements, then overlay unacknowledged input so route markers do not jump backwards.
+        // reconcile server acknowledgements, then overlay unacknowledged input so route markers do not jump backwards.
         void publish(MatchSnapshot value, std::uint64_t ack = 0) {
             std::lock_guard lock(mutex);
             std::erase_if(pending, [&](const Json& item) { return item["id"].get<std::uint64_t>() <= ack; });
@@ -48,7 +48,7 @@ namespace NEBULA {
             } else pending.clear();
             published = std::move(value);
         }
-        // Under one lock, assign an input id, update route feedback and queue the corresponding network command.
+        // under one lock, assign an input id, update route feedback and queue the corresponding network command.
         bool command(Json value) {
             std::lock_guard lock(mutex);
             if (leaving || !published.running() || commands.size() >= Capacity || pending.size() >= Capacity) return false;
@@ -61,7 +61,7 @@ namespace NEBULA {
             commands.push_back(std::move(value));
             return true;
         }
-        // Save the verified final replay when RD is enabled; retain its bytes and report the error if writing fails.
+        // save the verified final replay when RD is enabled. retain its bytes and report the error if writing fails.
         void persist(const std::string& bytes, MatchSnapshot& state) {
             if (config.directory.empty()) return;
             std::string error;
@@ -70,8 +70,8 @@ namespace NEBULA {
                 unsaved = bytes; state.error = error;
             }
         }
-        // Own this connection and optional agent on the worker thread; the server remains authoritative for all moves.
-        // Validate the final replay against the last observation before exposing RED/BLUE/ALL, then publish completion.
+        // own this connection and optional agent on the worker thread. the server remains authoritative for all moves.
+        // validate the final replay against the last observation before exposing RED/BLUE/ALL, then publish completion.
         void run() {
             MatchSnapshot state;
             state.state = MatchState::Connecting; state.status = "Connecting to custom server";

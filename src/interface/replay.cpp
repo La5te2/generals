@@ -1,4 +1,4 @@
-// .gior storage and reconstruction implementation; owns format validation and persistence, not playback timing.
+// .gior storage and reconstruction implementation, responsible for format validation and persistence rather than playback timing.
 #include "replay.hpp"
 #include "lz.hpp"
 #include <nlohmann/json.hpp>
@@ -37,13 +37,13 @@ namespace NEBULA {
             return result;
         }
 
-        // Treat omitted/null optional array fields as empty; required fields are validated separately.
+        // treat omitted/null optional array fields as empty. required fields are validated separately.
         const Json& field(const Json& data, Field index) {
             static const Json empty = Json::array();
             return index < data.size() && !data[index].is_null() ? data[index] : empty;
         }
 
-        // Generate a short filename key, not a security hash; saveReplayBytes compares contents when the name already exists.
+        // generate a short filename key, not a security hash. saveReplayBytes compares contents when the name already exists.
         std::string digest(std::string_view bytes) {
             std::uint32_t value = 2166136261u;
             for (unsigned char byte : bytes) { value ^= byte; value *= 16777619u; }
@@ -53,7 +53,7 @@ namespace NEBULA {
             return output.str();
         }
 
-        // Read one bounded binary file, rejecting missing/oversized input and a read length that differs from the reported size.
+        // read one bounded binary file, rejecting missing/oversized input and a read length that differs from the reported size.
         bool readFile(const std::filesystem::path& path, std::string& bytes, std::string& error) {
             std::error_code status;
             auto size = std::filesystem::file_size(path, status);
@@ -67,7 +67,7 @@ namespace NEBULA {
             return true;
         }
 
-        // Validate the supported two-player rule revision and build the initial board before interpreting moves.
+        // validate the supported two-player rule revision and build the initial board before interpreting moves.
         States initialPosition(const Json& data) {
             require(data.is_array() && data.size() >= Chat + 1, "Expected a .gior replay array");
             // older files use different move priorities. future revisions also require a schema review.
@@ -124,7 +124,7 @@ namespace NEBULA {
             return state;
         }
 
-        // Map the initial board, player names, executed moves and optional surrender into the .gior positional schema.
+        // map the initial board, player names, executed moves and optional surrender into the .gior positional schema.
         Json encode(const Recording& record) {
             const auto& state = record.initial;
             require(state.tick == 0 && state.idle == 0 && state.result == Phases::Ongoing, "Recording must start at initial setup");
@@ -248,7 +248,7 @@ namespace NEBULA {
         return path;
     }
 
-    // Apply the stored turn at state.tick and its surrender result; callers ensure that tick exists in turns.
+    // apply the stored turn at state.tick and its surrender result. callers ensure that tick exists in turns.
     void Replay::advance(States& state) const {
         const auto& turn = turns[static_cast<std::size_t>(state.tick)];
         auto actions = turn.actions;

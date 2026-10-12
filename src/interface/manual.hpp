@@ -1,4 +1,4 @@
-// Console reference strings: help lists commands; man explains game rules, configuration and controls.
+// console reference strings: help lists commands and man explains game rules, configuration and controls.
 #pragma once
 
 #include <string_view>

@@ -1,5 +1,5 @@
-// Desktop application coordinator; owns the window lifecycle and connects UI state to game sessions.
-// Layout belongs to scene, drawing to renderer, player controls to human, and game/transport state to each session.
+// desktop application coordinator that owns the window lifecycle and connects UI state to game sessions.
+// layout belongs to scene, drawing to renderer, player controls to human, and game/transport state to each session.
 #include "local.hpp"
 #include "online.hpp"
 #include "custom.hpp"
@@ -45,23 +45,23 @@ namespace NEBULA {
 
         bool active() const { return displayed.active(); }
         bool running() const { return displayed.running(); }
-        // Keep polling while play, connection setup or deferred departure can change the display without user input.
+        // keep polling while play, connection setup or deferred departure can change the display without user input.
         bool live() const { return quitRequested || leavingRoom || (showingBoard && (running() || (setup.scene == Scene::Online && active()))); }
         // true while an unfinished match has a keyboard-and-mouse player, including a paused local match.
         bool hasHuman() const { return active() && human.player() >= 0; }
-        // Route human input to the current live mode; playback has no player-input session.
+        // route human input to the current live mode. playback has no player-input session.
         PlayerInput& inputSession() {
             if (setup.scene != Scene::Online) return local;
             return setup.custom() ? static_cast<PlayerInput&>(client) : online;
         }
-        // Derive one availability snapshot for both drawing and input, including full-board review after CUSTOM games.
+        // derive one availability snapshot for both drawing and input, including full-board review after CUSTOM games.
         BoardControls controls() const {
             bool review = setup.scene == Scene::Online && setup.custom() && !active() && (*displayed.views)[2].cols > 0;
             return {setup.scene, active(), running(), hasHuman(), hover, setup.scene == Scene::Replay && replay.cursor() > 0, review};
         }
         const Observation& view() const { return (*displayed.views)[perspective]; }
 
-        // Read the selected session and synchronize human controls with its latest observation.
+        // read the selected session and synchronize human controls with its latest observation.
         void update() {
             bool wasRunning = running();
             bool wasSpectator = controls().spectator();
@@ -77,7 +77,7 @@ namespace NEBULA {
             human.sync(displayed);
         }
 
-        // Give session errors priority over ordinary notices; otherwise include a saved local replay's filename.
+        // give session errors priority over ordinary notices. otherwise include a saved local replay's filename.
         void report(std::string message) {
             if (!displayed.error.empty()) message = displayed.error;
             else if (setup.scene == Scene::Local) {
@@ -99,7 +99,7 @@ namespace NEBULA {
             } else resetAt.reset();
         }
 
-        // Advance playback, observe session completion, and finish pending navigation before drawing.
+        // advance playback, observe session completion, and finish pending navigation before drawing.
         bool refresh() {
             bool changed = false;
             if (!setup.message.empty() && setup.messageOpacity() == 0) { setup.message.clear(); changed = true; }
@@ -133,8 +133,8 @@ namespace NEBULA {
             return changed;
         }
 
-        // Validate and start the configured mode; enter its board only after startup is accepted.
-        // Network startup is asynchronous, so a successful start may still be connecting or waiting for an opponent.
+        // validate and start the configured mode. enter its board only after startup is accepted.
+        // network startup is asynchronous, so a successful start may still be connecting or waiting for an opponent.
         void start() {
             if (leavingRoom || quitRequested) { setup.notify("Finishing the previous room"); return; }
             if (active()) { setup.notify("A match is already active"); return; }
@@ -165,7 +165,7 @@ namespace NEBULA {
                 std::array<std::string, 2> commands{setup.field(Field::Red).input, setup.field(Field::Blue).input};
                 if (setup.humanPlayer(Field::Red)) commands[0].clear();
                 if (setup.humanPlayer(Field::Blue)) commands[1].clear();
-                // One keyboard controls one player; LocalMatch itself permits externally supplied actions for both sides.
+                // one keyboard controls one player. LocalMatch itself permits externally supplied actions for both sides.
                 if (commands[0].empty() && commands[1].empty()) { setup.notify("Choose a program for at least one player"); return; }
                 player = commands[0].empty() ? 0 : commands[1].empty() ? 1 : -1;
                 if (!local.start(commands, std::random_device{}(), setup.milliseconds, setup.directory)) {
@@ -178,7 +178,7 @@ namespace NEBULA {
                 return;
             }
 
-            // Enter the board only after the selected mode has accepted its configuration.
+            // enter the board only after the selected mode has accepted its configuration.
             setup.message.clear();
             setup.focus = setup.fileHover = Field::None;
             showingBoard = true;
@@ -211,10 +211,10 @@ namespace NEBULA {
             hover = Tool::None;
         }
 
-        // Reuse the current configuration only after the previous session has finished.
+        // reuse the current configuration only after the previous session has finished.
         void reset() { if (showingBoard && controls().enabled(Tool::Reset)) start(); }
 
-        // AUTO schedules a new session after a one-second result display; errors and pending exit suppress restart.
+        // AUTO schedules a new session after a one-second result display. errors and pending exit suppress restart.
         void scheduleReset() {
             resetAt.reset();
             if (automatic && showingBoard && !active() && !closing && !quitRequested && displayed.error.empty()) {
@@ -239,7 +239,7 @@ namespace NEBULA {
             console.edit(Edit::Clear);
         }
 
-        // Request exit without blocking on a CUSTOM recording transfer; refresh() completes the request when it ends.
+        // request exit without blocking on a CUSTOM recording transfer. refresh() completes the request when it ends.
         void quit() {
             stop();
             client.leave();
@@ -248,7 +248,7 @@ namespace NEBULA {
             if (!client.opened()) finishQuit();
         }
 
-        // Retry pending recordings before closing; a write failure keeps the window available for another RD command.
+        // retry pending recordings before closing. a write failure keeps the window available for another RD command.
         void finishQuit() {
             quitRequested = false;
             observingMatch = false;
@@ -367,7 +367,7 @@ namespace NEBULA {
             refresh();
         }
 
-        // Move a paused replay one half-turn in either direction, or settle one paused local half-turn forward.
+        // move a paused replay one half-turn in either direction, or settle one paused local half-turn forward.
         void step(Tool direction) {
             if (!showingBoard || !controls().enabled(direction)) return;
             if (setup.scene == Scene::Replay) {
@@ -379,7 +379,7 @@ namespace NEBULA {
             refresh();
         }
 
-        // Dispatch only enabled tools so mouse clicks and keyboard shortcuts obey the same availability rules.
+        // dispatch only enabled tools so mouse clicks and keyboard shortcuts obey the same availability rules.
         void useTool(Tool tool) {
             if (!showingBoard || !controls().enabled(tool)) return;
             switch (tool) {
@@ -391,8 +391,8 @@ namespace NEBULA {
             }
         }
 
-        // Fill a configuration field from the native picker; quote executable paths but keep replay paths literal.
-        // Cancellation preserves the field, and selection alone neither starts an agent nor loads a replay.
+        // fill a configuration field from the native picker. quote executable paths but keep replay paths literal.
+        // cancellation preserves the field, and selection alone neither starts an agent nor loads a replay.
         void browse(GLFWwindow* window, Field field) {
             std::string error;
             PathKind kind = setup.scene == Scene::Replay ? PathKind::Replay : PathKind::Program;
@@ -495,7 +495,7 @@ namespace NEBULA {
     }
 #endif
 
-    // Schedule the next repaint. On Windows, callbacks invalidate the window and WM_PAINT performs the drawing.
+    // schedule the next repaint. on Windows, callbacks invalidate the window and WM_PAINT performs the drawing.
     void redraw(GLFWwindow* window) {
 #ifdef _WIN32
         auto* app = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
@@ -506,7 +506,7 @@ namespace NEBULA {
         if (live || !app->setup.message.empty()) {
             double delay = live ? 1.0 / 60 : app->setup.messageWait();
             UINT milliseconds = static_cast<UINT>(delay * 1000) + 1;
-            // An unchanged interval keeps its original deadline when input requests another repaint.
+            // an unchanged interval keeps its original deadline when input requests another repaint.
             if (milliseconds != app->repaintTimer) {
                 if (SetTimer(handle, id, milliseconds, repaintWindow)) app->repaintTimer = milliseconds;
                 else { KillTimer(handle, id); app->repaintTimer = 0; }
@@ -587,8 +587,8 @@ namespace NEBULA {
         }
     }
 
-    // With the window's OpenGL context current and GLAD loaded, own UI state, callbacks and the event loop.
-    // Detach callbacks and release GPU resources before returning to the entry point that destroys the window.
+    // with the window's OpenGL context current and GLAD loaded, own UI state, callbacks and the event loop.
+    // detach callbacks and release GPU resources before returning to the entry point that destroys the window.
     int run(GLFWwindow* window) {
         WindowState app;
         if (!app.renderer.init()) return 1;
@@ -775,8 +775,8 @@ namespace NEBULA {
     }
 }
 
-// Initialize GLFW/OpenGL, create the window and run the UI; destroy the window and terminate GLFW on return.
-// Initialization failures return a nonzero exit status without entering the event loop.
+// initialize GLFW/OpenGL, create the window and run the UI. destroy the window and terminate GLFW on return.
+// initialization failures return a nonzero exit status without entering the event loop.
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #else
@@ -797,7 +797,7 @@ int main() {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
-    // Start at 80% of the primary display; run() fits and centers the window in its work area.
+    // start at 80% of the primary display. run() fits and centers the window in its work area.
     int width = 1280, height = 720;
     if (auto* monitor = glfwGetPrimaryMonitor()) if (const auto* mode = glfwGetVideoMode(monitor)) {
         width = std::clamp(mode->width * 4 / 5, NEBULA::minWindowWidth, NEBULA::maxWindowWidth);

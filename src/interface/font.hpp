@@ -1,4 +1,4 @@
-// Fixed-width pixel-font data and geometry shared by text layout and rendering.
+// fixed-width pixel-font data and geometry shared by text layout and rendering.
 #pragma once
 
 #include <array>
@@ -13,7 +13,7 @@ namespace PixelFont {
     // height measures the body through its baseline. the last two rows extend below that baseline.
     using Glyph = std::array<std::uint8_t, height + 2>;
 
-    // Return the glyph's bitmap rows, using the question-mark glyph for unsupported characters.
+    // return the glyph's bitmap rows, using the question-mark glyph for unsupported characters.
     constexpr Glyph glyph(char letter) {
         switch (letter) {
             case '0': return {0b011110, 0b110011, 0b110011, 0b110011, 0b110011,
@@ -192,7 +192,7 @@ namespace PixelFont {
         return result;
     }();
 
-    // Borrow precomputed horizontal runs for printable ASCII; unsupported bytes use the question-mark shape.
+    // borrow precomputed horizontal runs for printable ASCII. unsupported bytes use the question-mark shape.
     constexpr std::span<const Stroke> strokes(char letter) {
         auto code = static_cast<unsigned char>(letter);
         const Shape& shape = shapes[(code >= ' ' && code <= '~' ? code : '?') - ' '];

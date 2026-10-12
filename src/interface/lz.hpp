@@ -12,8 +12,8 @@
 namespace NEBULA::LZ {
     constexpr std::size_t textLimit = 16 * 1024 * 1024;
 
-    // Compress ASCII JSON into LZ-String bytes; Unicode must already be escaped by the JSON serializer.
-    // Codes store their low bit first. The resulting bits fill big-endian 16-bit words.
+    // compress ASCII JSON into LZ-String bytes. Unicode must already be escaped by the JSON serializer.
+    // codes store their low bit first. the resulting bits fill big-endian 16-bit words.
     inline std::string compress(std::string_view text) {
         if (text.size() > textLimit) throw std::runtime_error("Replay text exceeds 16 MiB");
         struct Word { unsigned code; bool literal; };
@@ -64,7 +64,7 @@ namespace NEBULA::LZ {
         return bytes;
     }
 
-    // Decode the byte representation into UTF-16 text, rejecting invalid codes/padding and expansion past textLimit.
+    // decode the byte representation into UTF-16 text, rejecting invalid codes/padding and expansion past textLimit.
     inline std::u16string decompress(std::string_view bytes) {
         if (bytes.empty() || bytes.size() % 2 != 0) throw std::runtime_error("Invalid replay compression");
         std::size_t cursor = 0;

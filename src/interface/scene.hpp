@@ -1,5 +1,5 @@
-// Shared UI state, layout and control-availability definitions used by both input handling and rendering.
-// This module describes the interface; it does not run sessions or issue drawing commands.
+// shared UI state, layout and control-availability definitions used by both input handling and rendering.
+// this module describes the interface. it does not run sessions or issue drawing commands.
 #pragma once
 
 #include "console.hpp"
@@ -44,10 +44,10 @@ namespace NEBULA {
         bool previous = false; // the replay reader supplies whether an earlier position is available.
         bool review = false; // an ended network match supplies all three final perspectives.
 
-        // Permit perspective selection only for local/replay spectators or a completed network game's full-board review.
+        // permit perspective selection only for local/replay spectators or a completed network game's full-board review.
         bool spectator() const { return ((scene == Scene::Local || scene == Scene::Replay) && !human) || review; }
 
-        // Shared gate for mouse, keyboard and drawing: network play cannot pause/step, and active sessions cannot reset.
+        // shared gate for mouse, keyboard and drawing: network play cannot pause/step, and active sessions cannot reset.
         bool enabled(Tool tool) const {
             if (tool == Tool::Stop) return active && scene != Scene::Replay;
             if (tool == Tool::Reset) return !active;
@@ -68,13 +68,13 @@ namespace NEBULA {
         Scene scene = Scene::Home;
         int server = 0; // BOT, MAIN, CUSTOM.
         bool custom() const { return server == 2; }
-        std::filesystem::path directory; // session-wide RD destination; empty disables local recording.
+        std::filesystem::path directory; // session-wide RD destination. empty disables local recording.
         struct Account { TextInput username, identity, room, proxy; };
         std::array<Account, 3> accounts;
         TextInput replay, red, blue, player, address;
-        // Switch the selected account without copying credentials, Room ID or proxy settings between server modes.
+        // switch the selected account without copying credentials, Room ID or proxy settings between server modes.
         void selectServer(int selected) { if (selected >= 0 && selected < 3) server = selected; }
-        // Resolve semantic field names; account fields use the selected server, while program/replay/address fields are shared.
+        // resolve semantic field names. account fields use the selected server, while program/replay/address fields are shared.
         template<class Self> static auto& access(Self& self, Field field) {
             switch (field) {
                 case Field::Username: return self.accounts[self.server].username;
@@ -154,7 +154,7 @@ namespace NEBULA {
         return {width - 16.0f - span, 12 + 36 * scale, span, 84 * scale};
     }
 
-    // Reserve two username rows below the score table; board placement uses the same extent to avoid overlap.
+    // reserve two username rows below the score table. board placement uses the same extent to avoid overlap.
     inline Rect scoreNamesArea(int width, int height) {
         Rect scores = scoreArea(width, height);
         float scale = barScale(height);
@@ -192,7 +192,7 @@ namespace NEBULA {
         return {title.x, title.y + (64 + index * 68) * scale, title.width, 52 * scale};
     }
 
-    // Place a row in the centered form; index includes the server-choice row on Online pages.
+    // place a row in the centered form. index includes the server-choice row on Online pages.
     inline Rect formControl(Scene scene, int index, int width, int height) {
         int groups = scene == Scene::Online ? 6 : scene == Scene::Local ? 2 : 1;
         // reserve 24 px for each label and 36 px for its control. six online rows use a tighter, uniform gap.
@@ -209,7 +209,7 @@ namespace NEBULA {
         return {row.x + (span + gap) * choice, row.y, span, row.height};
     }
 
-    // Return visible text fields in row/tab order; unused array entries are None, and the server-choice row is excluded.
+    // return visible text fields in row/tab order. unused array entries are None, and the server-choice row is excluded.
     inline std::array<Field, 5> inputOrder(const Setup& setup) {
         if (setup.scene == Scene::Local) return {Field::Red, Field::Blue};
         if (setup.scene == Scene::Online) {
@@ -236,7 +236,7 @@ namespace NEBULA {
             default: return "";
         }
     }
-    // Resolve the row of a visible field from inputOrder(), accounting for Online's leading server-choice row.
+    // resolve the row of a visible field from inputOrder(), accounting for Online's leading server-choice row.
     inline Rect fieldRow(const Setup& setup, Field field, int width, int height) {
         auto order = inputOrder(setup);
         int group = static_cast<int>(std::find(order.begin(), order.end(), field) - order.begin()) + (setup.scene == Scene::Online ? 1 : 0);
@@ -250,7 +250,7 @@ namespace NEBULA {
         return row;
     }
 
-    // Return the picker hit/draw rectangle for a field whose hasFileButton() is true.
+    // return the picker hit/draw rectangle for a field whose hasFileButton() is true.
     inline Rect fileButton(const Setup& setup, Field field, int width, int height) {
         Rect row = fieldRow(setup, field, width, height);
         return {row.x + row.width - row.height, row.y, row.height, row.height};
@@ -260,7 +260,7 @@ namespace NEBULA {
         return {width - 16.0f - 180 * scale, 12 - 4 * scale, 180 * scale, 36 * scale};
     }
     inline Rect backButton(float scale) { return {16, 12, 28 * scale, 28 * scale}; }
-    // Configuration feedback sits below the top bar; board feedback sits below the player names and tooltips.
+    // configuration feedback sits below the top bar. board feedback sits below the player names and tooltips.
     inline Rect messageArea(int width, int height, bool board) {
         float scale = barScale(height);
         if (!board) return {16, 40 + 28 * scale, width - 32.0f, 36 * scale};

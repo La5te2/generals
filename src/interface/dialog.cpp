@@ -1,4 +1,4 @@
-// Desktop file-picker implementation behind the platform-independent choosePath contract.
+// desktop file-picker implementation behind the platform-independent choosePath contract.
 #include "dialog.hpp"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -18,8 +18,8 @@ extern char** environ;
 #endif
 
 namespace NEBULA {
-    // Use the Windows native dialog, macOS osascript or an available Linux zenity/kdialog helper.
-    // Helpers run without a shell; selected paths are returned through stdout rather than evaluated as commands.
+    // use the Windows native dialog, macOS osascript or an available Linux zenity/kdialog helper.
+    // helpers run without a shell. selected paths are returned through stdout rather than evaluated as commands.
     std::optional<std::string> choosePath(GLFWwindow* window, PathKind kind, std::string& error) {
         error.clear();
         bool program = kind == PathKind::Program;

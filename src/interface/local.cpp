@@ -60,8 +60,8 @@ namespace NEBULA {
         if (worker.joinable()) worker.join();
     }
 
-    // With the session lock held, finalize the result/recording and publish the final board before stopping agents.
-    // A failed write leaves recording available for savePending(); wake the worker so it can exit even if paused.
+    // with the session lock held, finalize the result/recording and publish the final board before stopping agents.
+    // a failed write leaves recording available for savePending(). wake the worker so it can exit even if paused.
     void LocalMatch::finish(int surrender) {
         clock.pause();
         if (phase == Phase::Active) {
@@ -94,7 +94,7 @@ namespace NEBULA {
         for (auto& strategy : strategies) if (strategy) strategy->stop();
     }
 
-    // Caller holds the session lock. Release recording only after a successful write or when disk saving is disabled.
+    // caller holds the session lock. release recording only after a successful write or when disk saving is disabled.
     bool LocalMatch::saveRecording() {
         saveError.clear();
         if (!recording) return true;
@@ -199,7 +199,7 @@ namespace NEBULA {
         published = std::move(next);
     }
 
-    // Offer each agent only its own current observation; its process worker handles outstanding replies asynchronously.
+    // offer each agent only its own current observation. its process worker handles outstanding replies asynchronously.
     void LocalMatch::request() {
         for (int player = 0; player < 2; ++player) {
             if (strategies[player]) strategies[player]->request((*views)[player]);
@@ -228,8 +228,8 @@ namespace NEBULA {
         return settle(Clock::Source::now());
     }
 
-    // With the session lock held, execute one half-turn from input available by cutoff, then record and publish it.
-    // Return false if there is no active match or an agent failure ends it before a normal step.
+    // with the session lock held, execute one half-turn from input available by cutoff, then record and publish it.
+    // return false if there is no active match or an agent failure ends it before a normal step.
     bool LocalMatch::settle(Clock::Time cutoff) {
         if (phase != Phase::Active) return false;
         auto tick = (*views)[0].tick;

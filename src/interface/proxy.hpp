@@ -1,4 +1,4 @@
-// Shared validation for anonymous HTTP CONNECT proxies used by WebSocket clients.
+// shared validation for anonymous HTTP CONNECT proxies used by WebSocket clients.
 #pragma once
 
 #include <rtc/configuration.hpp>
@@ -9,8 +9,8 @@
 #include <string_view>
 
 namespace NEBULA {
-    // Empty means direct; otherwise require an anonymous http://host:port CONNECT endpoint and throw on invalid input.
-    // Callers must propagate failure rather than substituting a direct connection for a configured proxy.
+    // empty means direct. otherwise require an anonymous http://host:port CONNECT endpoint and throw on invalid input.
+    // callers must propagate failure rather than substituting a direct connection for a configured proxy.
     inline std::optional<rtc::ProxyServer> httpProxy(std::string_view address) {
         if (address.empty()) return std::nullopt;
         try {

@@ -31,9 +31,9 @@ namespace NEBULA {
         Action action(std::uint64_t tick, Time cutoff) const;
         // online sessions send a reply as soon as it arrives, including an explicit Pass.
         std::optional<Action> reply(std::uint64_t tick, Time cutoff) const;
-        // Check quoting and locate the executable through platform path lookup; do not start it or validate its arguments.
+        // check quoting and locate the executable through platform path lookup. do not start it or validate its arguments.
         static bool available(std::string_view command);
-        // Read the first process/pipe/protocol failure under the worker lock; empty means none has been recorded.
+        // read the first process/pipe/protocol failure under the worker lock. empty means none has been recorded.
         std::string error() const;
 
     private:
