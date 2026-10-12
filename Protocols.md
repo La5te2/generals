@@ -192,8 +192,8 @@ int main() {
         // Pass the decoded observation to the agent and receive its chosen Action.
         Action action = agent.decide(*view);
         // Write "kind row col direction split\n" to stdout for the interface to read.
-        // Pass becomes "1 0 0 0 0\n". A half move right from (0, 0)
-        // would be Action{ActionType::Move, 0, 0, Direction::Right, true},
+        // Pass would be "1 0 0 0 0\n". 
+        // A half move right from (0, 0) would be Action{ActionType::Move, 0, 0, Direction::Right, true},
         // producing "0 0 0 3 1\n".
         if (!Protocol::writeAction(std::cout, action)) return 1;
         // Deliver the complete reply before waiting for the next observation.
