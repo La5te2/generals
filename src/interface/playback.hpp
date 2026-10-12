@@ -62,8 +62,7 @@ namespace NEBULA {
         void publish() {
             published.views = std::make_shared<const std::array<Observation, 3>>(matchViews(replay.state()));
             published.names = replay.names();
-            published.state = cursor() == length() ? MatchState::Finished :
-                              clock.running() ? MatchState::Playing : MatchState::Paused;
+            published.state = cursor() == length() ? MatchState::Finished : clock.running() ? MatchState::Playing : MatchState::Paused;
         }
     };
 }
