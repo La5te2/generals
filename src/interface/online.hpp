@@ -22,9 +22,13 @@ namespace NEBULA {
 
         // validate locally, then connect on a worker. each start uses a fresh connection and agent process.
         bool start(const OnlineConfig& config);
+        // Cancel matchmaking or leave the game, stop the agent and join the worker; the last snapshot remains readable.
         void stop();
+        // Copy the latest account-visible board and status under the mailbox lock, without querying the server.
         MatchSnapshot snapshot() const;
+        // Queue a human move for the assigned seat; ownership and army legality are checked by the server when executed.
         bool enqueue(int player, const Action& action) override;
+        // Undo the newest pending move or clear the route; return the first removed move for cursor placement.
         std::optional<Action> cancel(int player, bool all) override;
 
     private:

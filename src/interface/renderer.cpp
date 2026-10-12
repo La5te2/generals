@@ -132,6 +132,7 @@ void Renderer::text(std::string_view value, float x, float y, float scale, Color
     }
 }
 
+// Fit a terrain mesh inside bounds without changing its aspect ratio; plain/fog cells have no icon geometry.
 void Renderer::icon(ViewTerrain terrain, Rect bounds, Color color) {
     std::span<const IconTriangle> mesh;
     std::array<unsigned char, 4> limits{};
@@ -156,6 +157,7 @@ void Renderer::icon(ViewTerrain terrain, Rect bounds, Color color) {
     }
 }
 
+// Draw the visible wrapped output and a command slice that keeps the cursor visible; Console owns scrolling state.
 void Renderer::drawConsole(const NEBULA::Console& console, int width, int height, float textScale) {
     float scale = 1.5f * textScale;
     float spacing = PixelFont::advance * scale;
@@ -194,8 +196,8 @@ void Renderer::drawConsole(const NEBULA::Console& console, int width, int height
     rectangle({cursor, top + 9 * textScale, 1.5f * textScale, 18 * textScale}, accent);
 }
 
+// Center text, reducing its requested scale only when needed to fit the available width.
 void Renderer::label(std::string_view value, Rect bounds, Color color, float scale) {
-    // center the text and reduce its requested scale only when the label exceeds the available width.
     float length = PixelFont::measure(value);
     if (length > 0) scale = std::min(scale, (bounds.width - 12) / length);
     text(value, bounds.x + (bounds.width - length * scale) / 2,
@@ -208,6 +210,7 @@ void Renderer::button(std::string_view value, Rect bounds, bool selected, bool e
     label(value, bounds, enabled ? Color{.95f, .96f, .97f} : Color{.43f, .46f, .48f}, 1.5f * scale);
 }
 
+// Render a field slice that keeps the cursor visible; masking affects only the displayed copy, never the stored value.
 void Renderer::input(const NEBULA::TextInput& field, Rect bounds, bool focused, bool masked, float scale) {
     rectangle(bounds, {.06f, .08f, .09f});
     if (focused) rectangle({bounds.x, bounds.y + bounds.height - 2 * scale, bounds.width, 2 * scale}, {.40f, .82f, .68f});
@@ -230,6 +233,7 @@ void Renderer::back(float scale) {
     line({bounds.x + 6 * scale, bounds.y + 14 * scale}, {bounds.x + 13 * scale, bounds.y + 21 * scale}, 2 * scale, white);
 }
 
+// Render tool symbols from shared availability/hover state; do not duplicate action eligibility rules here.
 void Renderer::drawTools(const NEBULA::BoardControls& controls, int width, float scale) {
     for (Tool tool : NEBULA::tools) {
         Rect bounds = toolButton(tool, width, scale);
@@ -348,8 +352,8 @@ void Renderer::drawSetup(const NEBULA::Setup& setup, int width, int height, cons
     flush(width, height);
 }
 
+// Wrap feedback in its scene-defined area and apply time-based opacity; the application expires the message.
 void Renderer::drawMessage(const NEBULA::Setup& setup, int width, int height, bool board) {
-    // operation feedback wraps at word boundaries and fades with the notification's elapsed time.
     float textScale = NEBULA::barScale(height);
     std::string_view message = setup.message;
     float opacity = setup.messageOpacity();
@@ -370,6 +374,7 @@ void Renderer::drawMessage(const NEBULA::Setup& setup, int width, int height, bo
     }
 }
 
+// Render public army/land totals and the supplied display names; equal names do not merge player seats.
 void Renderer::drawScores(const Observation& view, const std::array<std::string, 2>& names, int width, int height) {
     Rect area = NEBULA::scoreArea(width, height);
     float scale = NEBULA::barScale(height);
@@ -508,6 +513,7 @@ void Renderer::draw(const Observation& view, int perspective, int width, int hei
     flush(width, height);
 }
 
+// Overlay queued-route arrows and the human cursor without predicting whether queued moves will succeed.
 void Renderer::drawSelection(const NEBULA::Human& human, std::span<const Action> queued, Rect board, int cols) {
     float size = board.width / cols;
     Color white{.97f, .98f, .99f}, gold{.98f, .80f, .32f}, outline{.06f, .08f, .09f};
@@ -544,14 +550,13 @@ void Renderer::drawSelection(const NEBULA::Human& human, std::span<const Action>
     rectangle({left + span - thickness, top, thickness, span}, color);
 }
 
+// Upload the frame's vertices and draw in insertion order so later shapes overlay earlier ones.
+// This submits to the current OpenGL context; the application presents the frame with its buffer swap.
 void Renderer::flush(int width, int height) {
-    // upload the CPU vertex list to the VBO and draw its triangles in their insertion order.
-    // later shapes cover earlier ones, placing text over icons and the console over the page.
     glUseProgram(program);
     glUniform2f(canvas, static_cast<float>(width), static_cast<float>(height));
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)), vertices.data(), GL_STREAM_DRAW);
-    // this submits drawing commands. drawWindow() in interface.cpp presents the frame with glfwSwapBuffers().
     glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
 }

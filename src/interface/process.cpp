@@ -1,5 +1,4 @@
-// external agent communication: start an agent process, exchange observations and actions through pipes, and close it after the game.
-// a worker thread handles blocking reads and writes, keeping game updates and drawing responsive while waiting for a reply.
+// Platform process and pipe implementation for the external-agent interface; isolates blocking I/O from session callers.
 #include "process.hpp"
 #include <array>
 #include <condition_variable>
@@ -105,12 +104,14 @@ namespace NEBULA {
 
         ~Process() { stop(); }
 
+        // Preserve the first diagnostic, ignoring expected pipe errors caused by an intentional shutdown.
         void fail(std::string message) {
             std::lock_guard lock(mutex);
             if (!closing && failure.empty()) failure = std::move(message);
         }
 
-        // the child inherits the application's working directory, which determines relative path resolution.
+        // Launch directly with private stdin/stdout pipes and inherited stderr; supervise descendants for cleanup.
+        // The child inherits the application's working directory, which determines relative path resolution.
         bool launch(const std::vector<std::string>& args) {
 #ifdef _WIN32
             SECURITY_ATTRIBUTES security{sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
@@ -214,6 +215,7 @@ namespace NEBULA {
             return true;
         }
 
+        // Worker-only blocking write; handle partial writes and return false if the complete message cannot be sent.
         bool write(std::string_view text) {
             while (!text.empty()) {
 #ifdef _WIN32
@@ -229,6 +231,7 @@ namespace NEBULA {
             return true;
         }
 
+        // Worker-only blocking read of one newline-terminated reply; EOF, I/O failure or the size limit returns false.
         bool read(std::string& line) {
             line.clear();
             // limit the reply size even if an agent keeps writing without a newline.
@@ -248,6 +251,8 @@ namespace NEBULA {
             return false;
         }
 
+        // Send initialization once, then serialize observation/reply exchanges; only the newest waiting observation is retained.
+        // Tag each reply with its request tick and arrival time so the session can reject stale or late input.
         void exchange(Protocol::Init init) {
 #ifndef _WIN32
             // a closed child input reports EPIPE on this worker instead of terminating the application.
@@ -292,6 +297,7 @@ namespace NEBULA {
             changed.notify_all();
         }
 
+        // Force termination of the supervised process group/job when cooperative shutdown cannot finish.
         void terminate() {
 #ifdef _WIN32
             if (job) TerminateJobObject(job, 1);
@@ -301,6 +307,7 @@ namespace NEBULA {
 #endif
         }
 
+        // Request EOF-driven shutdown, interrupt blocked I/O after a grace period, then join and release process resources.
         void stop() {
             {
                 std::unique_lock lock(mutex);

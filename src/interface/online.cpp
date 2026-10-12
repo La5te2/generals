@@ -1,5 +1,5 @@
-// online session: keep server communication off the window thread, publish account-only views, and track queued actions until server confirmation.
-// the server settles moves and decides the outcome. stopping a session cancels its queue entry or leaves its game.
+// MAIN/BOT server adapter; owns the account session and translates server protocol state into the shared match contract.
+// Server rules remain authoritative; transport callbacks and the session worker are isolated from the window thread.
 #include "online.hpp"
 #include "proxy.hpp"
 #include "process.hpp"
@@ -39,6 +39,7 @@ namespace NEBULA::OnlineProtocol {
         return message;
     }
 
+    // Turn a server rejection event into a bounded, account-redacted explanation suitable for display.
     inline std::string rejection(std::string_view event, const Json& data, const std::string& userId) {
         std::string reason;
         if (event == "error_user_id") reason = "Account is active in another session";
@@ -77,6 +78,7 @@ namespace NEBULA::OnlineProtocol {
         return object.at(name);
     }
 
+    // Accept exact names, allowing only whitespace normalization immediately after the server's [Bot] prefix.
     inline bool nickname(std::string_view expected, std::string_view actual) {
         if (expected == actual) return true;
         if (!expected.starts_with("[Bot]") || !actual.starts_with("[Bot]")) return false;
@@ -87,6 +89,7 @@ namespace NEBULA::OnlineProtocol {
         return expected == actual;
     }
 
+    // Reject rule extensions that the two-player observation/input adapter cannot represent.
     inline void rules(const Json& data) {
         constexpr const char* exceeds = "Game rules exceed mainstream 1v1 rules";
         require(data.is_object(), "Expected a server game object");
@@ -197,6 +200,7 @@ namespace NEBULA::OnlineProtocol {
         }
     };
 
+    // Resolve the adjacent destination, excluding bounds and visible mountains; fog and future source ownership remain unchecked.
     inline std::optional<int> target(const Observation& view, const Action& action) {
         if (action.type != ActionType::Move || action.row < 0 || action.row >= view.rows || action.col < 0 || action.col >= view.cols) return {};
         int row = action.row, col = action.col;
@@ -220,6 +224,7 @@ namespace NEBULA::OnlineProtocol {
         std::deque<Json> outgoing;
         std::int64_t issued = 0, transmitted = 0, confirmed = 0;
 
+        // Allocate a monotonic attack index and retain the route marker until the server confirms or the player cancels it.
         bool append(const Observation& view, const Action& action) {
             auto to = target(view, action);
             if (!to || pending.size() >= Capacity || outgoing.size() >= 2 * Capacity || issued == maxInteger) return false;
@@ -230,6 +235,7 @@ namespace NEBULA::OnlineProtocol {
             return true;
         }
 
+        // Retire only attacks acknowledged by attackIndex; a newer board alone does not prove that a queued move ran.
         void confirm(const Json& data) {
             // some updates omit this field. a later map alone leaves the pending queue unchanged.
             if (!data.contains("attackIndex") || data["attackIndex"].is_null()) return;
@@ -238,6 +244,7 @@ namespace NEBULA::OnlineProtocol {
             while (!pending.empty() && pending.front().index <= confirmed) pending.pop_front();
         }
 
+        // Remove unsent attacks locally; emit undo/clear for transmitted input without reusing old attack indices.
         std::optional<Action> cancel(bool all) {
             if (pending.empty()) return {};
             Action removed = all ? pending.front().action : pending.back().action;
@@ -261,6 +268,7 @@ namespace NEBULA::OnlineProtocol {
         void clear() { pending.clear(); outgoing.clear(); }
     };
 
+    // Build the server-specific public/private queue request independently of whether input comes from a human or agent.
     inline Json join(const OnlineConfig& config) {
         if (!config.room.empty()) {
             Json event = Json::array({"join_private", config.room, config.userId});
@@ -302,6 +310,7 @@ namespace NEBULA {
         std::shared_ptr<Mailbox> mail = std::make_shared<Mailbox>();
         std::thread worker;
 
+        // Wake the worker to leave its queue/game, then wait for transport and agent cleanup.
         void stop() {
             {
                 std::lock_guard lock(mail->mutex);
@@ -312,6 +321,8 @@ namespace NEBULA {
             if (worker.joinable()) worker.join();
         }
 
+        // Own the Engine.IO/Socket.IO handshake, heartbeat deadlines and game events on the session worker.
+        // Apply diffs in order, send current input and retain only the player's observed board when the session ends.
         void run(OnlineConfig config) {
             rtc::WebSocketConfiguration transport;
             transport.connectionTimeout = 10s;
@@ -399,6 +410,7 @@ namespace NEBULA {
                 name.erase(std::remove_if(name.begin(), name.end(), [](unsigned char ch) { return ch < 32 || ch == 127; }), name.end());
                 return name;
             };
+            // Interpret one game-service event after transport framing; final results still allow trailing map diffs.
             auto event = [&](const Json& packet) {
                 require(packet.is_array() && !packet.empty() && packet[0].is_string(), "Invalid server event");
                 auto name = packet[0].get<std::string>();

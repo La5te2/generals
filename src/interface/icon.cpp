@@ -1,10 +1,11 @@
-// Build a multi-resolution Windows ICO from the same pixels used by the application window.
+// Build-time executable-icon generator; shares the window icon artwork through icon.hpp.
 #include "icon.hpp"
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 
 namespace {
+    // ICO/DIB fields use little-endian integers independently of the machine running this build helper.
     void integer(std::ostream& out, std::uint32_t value, int bytes = 4) {
         for (int i = 0; i < bytes; ++i) out.put(static_cast<char>((value >> (8 * i)) & 255));
     }
@@ -12,6 +13,7 @@ namespace {
     int imageSize(int size) { return 40 + size * size * 4 + maskSize(size); }
 }
 
+// Write all supported icon sizes to the single output path supplied by CMake; report usage or write failures with exit code 1.
 int main(int argc, char** argv) try {
     if (argc != 2) { std::cerr << "Usage: icon <output.ico>\n"; return 1; }
     std::ofstream out(argv[1], std::ios::binary);

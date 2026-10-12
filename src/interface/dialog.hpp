@@ -1,5 +1,4 @@
 // file selection interface: let configuration pages request a player-program or replay path without depending on desktop APIs.
-// choosePath returns the selected path, no value on cancellation, or no value with an error message on failure.
 // the caller fills the input field; starting programs and loading replays remain separate operations.
 #pragma once
 
@@ -10,6 +9,7 @@ struct GLFWwindow;
 
 namespace NEBULA {
     enum class PathKind { Program, Replay };
-    // cancellation returns an empty optional. a failure also supplies an error message.
+    // Open a modal picker and return a UTF-8 path. Cancellation returns no value and clears error; failure sets error.
+    // This call blocks while the dialog is open; it does not validate program execution or replay contents.
     std::optional<std::string> choosePath(GLFWwindow* window, PathKind kind, std::string& error);
 }

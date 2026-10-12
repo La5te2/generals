@@ -1,9 +1,8 @@
-// interface entry point: bring the game components together into an interactive desktop application.
-// create the window and OpenGL context, handle page navigation, and route keyboard, mouse and console input.
-// coordinate session controls and display updates, then release resources when the application closes.
+// Desktop application coordinator; owns the window lifecycle and connects UI state to game sessions.
+// Layout belongs to scene, drawing to renderer, player controls to human, and game/transport state to each session.
 #include "local.hpp"
 #include "online.hpp"
-#include "client.hpp"
+#include "custom.hpp"
 #include "playback.hpp"
 #include "dialog.hpp"
 #include "renderer.hpp"
@@ -46,13 +45,16 @@ namespace NEBULA {
 
         bool active() const { return displayed.active(); }
         bool running() const { return displayed.running(); }
+        // Keep polling while play, connection setup or deferred departure can change the display without user input.
         bool live() const { return quitRequested || leavingRoom || (showingBoard && (running() || (setup.scene == Scene::Online && active()))); }
         // true while an unfinished match has a keyboard-and-mouse player, including a paused local match.
         bool hasHuman() const { return active() && human.player() >= 0; }
+        // Route human input to the current live mode; playback has no player-input session.
         PlayerInput& inputSession() {
             if (setup.scene != Scene::Online) return local;
             return setup.custom() ? static_cast<PlayerInput&>(client) : online;
         }
+        // Derive one availability snapshot for both drawing and input, including full-board review after CUSTOM games.
         BoardControls controls() const {
             bool review = setup.scene == Scene::Online && setup.custom() && !active() && (*displayed.views)[2].cols > 0;
             return {setup.scene, active(), running(), hasHuman(), hover, setup.scene == Scene::Replay && replay.cursor() > 0, review};
@@ -75,6 +77,7 @@ namespace NEBULA {
             human.sync(displayed);
         }
 
+        // Give session errors priority over ordinary notices; otherwise include a saved local replay's filename.
         void report(std::string message) {
             if (!displayed.error.empty()) message = displayed.error;
             else if (setup.scene == Scene::Local) {
@@ -130,7 +133,8 @@ namespace NEBULA {
             return changed;
         }
 
-        // validate the selected mode before replacing the match and starting its timer.
+        // Validate and start the configured mode; enter its board only after startup is accepted.
+        // Network startup is asynchronous, so a successful start may still be connecting or waiting for an opponent.
         void start() {
             if (leavingRoom || quitRequested) { setup.notify("Finishing the previous room"); return; }
             if (active()) { setup.notify("A match is already active"); return; }
@@ -207,8 +211,10 @@ namespace NEBULA {
             hover = Tool::None;
         }
 
+        // Reuse the current configuration only after the previous session has finished.
         void reset() { if (showingBoard && controls().enabled(Tool::Reset)) start(); }
 
+        // AUTO schedules a new session after a one-second result display; errors and pending exit suppress restart.
         void scheduleReset() {
             resetAt.reset();
             if (automatic && showingBoard && !active() && !closing && !quitRequested && displayed.error.empty()) {
@@ -233,6 +239,7 @@ namespace NEBULA {
             console.edit(Edit::Clear);
         }
 
+        // Request exit without blocking on a CUSTOM recording transfer; refresh() completes the request when it ends.
         void quit() {
             stop();
             client.leave();
@@ -241,6 +248,7 @@ namespace NEBULA {
             if (!client.opened()) finishQuit();
         }
 
+        // Retry pending recordings before closing; a write failure keeps the window available for another RD command.
         void finishQuit() {
             quitRequested = false;
             observingMatch = false;
@@ -359,6 +367,7 @@ namespace NEBULA {
             refresh();
         }
 
+        // Move a paused replay one half-turn in either direction, or settle one paused local half-turn forward.
         void step(Tool direction) {
             if (!showingBoard || !controls().enabled(direction)) return;
             if (setup.scene == Scene::Replay) {
@@ -370,6 +379,7 @@ namespace NEBULA {
             refresh();
         }
 
+        // Dispatch only enabled tools so mouse clicks and keyboard shortcuts obey the same availability rules.
         void useTool(Tool tool) {
             if (!showingBoard || !controls().enabled(tool)) return;
             switch (tool) {
@@ -381,6 +391,8 @@ namespace NEBULA {
             }
         }
 
+        // Fill a configuration field from the native picker; quote executable paths but keep replay paths literal.
+        // Cancellation preserves the field, and selection alone neither starts an agent nor loads a replay.
         void browse(GLFWwindow* window, Field field) {
             std::string error;
             PathKind kind = setup.scene == Scene::Replay ? PathKind::Replay : PathKind::Program;
@@ -575,8 +587,9 @@ namespace NEBULA {
         }
     }
 
+    // With the window's OpenGL context current and GLAD loaded, own UI state, callbacks and the event loop.
+    // Detach callbacks and release GPU resources before returning to the entry point that destroys the window.
     int run(GLFWwindow* window) {
-        // run() releases the renderer's GPU resources before the entry function destroys the window.
         WindowState app;
         if (!app.renderer.init()) return 1;
         int width, height;
@@ -762,6 +775,8 @@ namespace NEBULA {
     }
 }
 
+// Initialize GLFW/OpenGL, create the window and run the UI; destroy the window and terminate GLFW on return.
+// Initialization failures return a nonzero exit status without entering the event loop.
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #else

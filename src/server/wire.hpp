@@ -25,15 +25,18 @@ namespace NEBULA::Wire {
     inline constexpr int version = 1, halfTurnMilliseconds = 500;
 
     inline void require(bool value, const char* error) { if (!value) throw std::runtime_error(error); }
+    // Usernames and nonempty Room IDs share these text limits; this does not check uniqueness or authenticate a player.
     inline bool nameValid(const std::string& value) {
         return !value.empty() && value.size() <= 64 &&
             std::all_of(value.begin(), value.end(), [](unsigned char c) { return c >= 32 && c <= 126; });
     }
+    // Carry the shared five-integer action format inside a JSON string, without a second action encoding.
     inline std::string encode(const Action& action) {
         std::ostringstream stream;
         require(Protocol::writeAction(stream, action), "Invalid action");
         return stream.str();
     }
+    // Require exactly one bounded action string; reject trailing tokens as well as malformed actions.
     inline Action decode(const Json& text) {
         require(text.is_string() && text.get_ref<const std::string&>().size() <= 100, "Invalid action");
         std::istringstream stream(text.get<std::string>());
@@ -42,6 +45,7 @@ namespace NEBULA::Wire {
         require(action.has_value() && stream.eof(), "Invalid action");
         return *action;
     }
+    // Reject non-object packets and excessive nesting before the owning thread interprets message fields.
     inline Json parse(const std::string& text) {
         auto data = Json::parse(text, [](int depth, Json::parse_event_t, Json&) {
             require(depth <= 12, "Packet nesting is too deep"); return true;
@@ -49,12 +53,14 @@ namespace NEBULA::Wire {
         require(data.is_object(), "Expected a packet object");
         return data;
     }
+    // Preserve arbitrary .gior bytes in text WebSocket frames using lowercase hexadecimal.
     inline std::string hex(std::string_view bytes) {
         std::string result;
         result.reserve(bytes.size() * 2);
         for (unsigned char byte : bytes) { result += "0123456789abcdef"[byte >> 4]; result += "0123456789abcdef"[byte & 15]; }
         return result;
     }
+    // Append only the next sequential replay chunk within the transfer limit; callers discard the transfer on error.
     inline void append(std::string& bytes, const Json& message) {
         auto offset = message.at("offset").get<std::size_t>();
         const auto& text = message.at("data").get_ref<const std::string&>();
@@ -80,6 +86,7 @@ namespace NEBULA::Wire {
         std::shared_ptr<Inbox> inbox = std::make_shared<Inbox>();
         bool closed = false; // Snapshot taken with take(), after all preceding message callbacks.
         Time::time_point last = Time::now(), heartbeat = last, arrived = last;
+        // Attach bounded receive/error callbacks. Shared inbox ownership keeps callbacks independent of this object's lifetime.
         explicit Connection(Socket source) : socket(std::move(source)) {
             std::weak_ptr<rtc::WebSocket> weak = socket;
             socket->onMessage([mail = inbox, weak](rtc::message_variant message) {
@@ -101,6 +108,7 @@ namespace NEBULA::Wire {
             socket->onClosed([mail = inbox] { std::lock_guard lock(mail->mutex); mail->closed = true; });
         }
         ~Connection() { socket->close(); }
+        // Drain queued text in order and update closed; defer a transport error until earlier packets have been delivered.
         std::deque<std::string> take() {
             std::lock_guard lock(inbox->mutex);
             // Deliver a queued protocol error/closed packet before observing transport shutdown.
@@ -110,22 +118,26 @@ namespace NEBULA::Wire {
             packets.swap(inbox->packets); inbox->bytes = 0;
             return packets;
         }
+        // Queue a JSON text packet, rejecting closed or backed-up connections instead of growing the send buffer indefinitely.
         void send(const Json& data) {
             require(socket->isOpen(), "Connection closed");
             require(socket->bufferedAmount() < 2 * 1024 * 1024, "Peer is not receiving updates");
             socket->send(data.dump());
         }
+        // Record incoming activity and consume application-level ping/pong packets; false leaves game handling to the caller.
         bool control(const Json& message) {
             auto type = message.at("type").get<std::string>();
             last = Time::now();
             if (type == "ping") { send({{"type", "pong"}}); return true; }
             return type == "pong";
         }
+        // Called by the owner while connected: send periodic heartbeats and fail when no packet arrives for 30 seconds.
         void pulse() {
             auto now = Time::now();
             require(now - last < std::chrono::seconds(30), "Connection timed out");
             if (now - heartbeat >= std::chrono::seconds(5)) { send({{"type", "ping"}}); heartbeat = now; }
         }
+        // Try to send a bounded protocol error before closing; force-close if even that send fails.
         void reject(const std::string& error) noexcept {
             try { send({{"type", "error"}, {"message", error.substr(0, 256)}}); socket->close(); }
             catch (...) { socket->forceClose(); }

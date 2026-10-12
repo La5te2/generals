@@ -1,4 +1,4 @@
-// Headless entry point for the self-hosted room service: parse listening options and handle shutdown.
+// Server application entry point; owns process startup and shutdown, while RoomServer owns the room service.
 #include "server.hpp"
 #include <charconv>
 #include <chrono>
@@ -10,8 +10,11 @@
 
 namespace {
     volatile std::sig_atomic_t stopping = 0;
+    // Signal handlers only set the exit flag; normal stack unwinding performs server cleanup.
     void stop(int) { stopping = 1; }
 }
+// Validate command-line options, start the listener and wait for SIGINT/SIGTERM; report failures with exit code 1.
+// RoomServer destruction stops the listener and joins its workers before this process exits.
 // The default 127.0.0.1:42817 accepts local connections only.
 // For a machine with a reachable public IP, run: server --bind 0.0.0.0 --port 42817
 // This listens on all local IPv4 interfaces; clients use ws://PUBLIC_IP:42817 in CUSTOM's ADDRESS.

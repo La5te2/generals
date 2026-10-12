@@ -9,10 +9,14 @@
 namespace NEBULA {
     class RoomServer {
     public:
+        // Start listening and matchmaking immediately. Port 0 asks the OS to choose a free port.
+        // Listener startup errors propagate as exceptions to the caller.
         explicit RoomServer(const std::string& address = "127.0.0.1", std::uint16_t port = 42817);
+        // Stop admission, notify connected players and wait for lobby and room workers to exit.
         ~RoomServer();
         RoomServer(const RoomServer&) = delete;
         RoomServer& operator=(const RoomServer&) = delete;
+        // Return the actual listening port, including one assigned by the OS.
         std::uint16_t port() const;
     private:
         struct Impl;

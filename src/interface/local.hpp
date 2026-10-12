@@ -1,4 +1,4 @@
-// local session: collect player actions and advance the engine at half-turn deadlines.
+// Engine-backed match lifecycle and timing, shared by local play and authoritative server rooms.
 #pragma once
 
 #include "clock.hpp"
@@ -24,12 +24,20 @@ namespace NEBULA {
     class LocalMatch : public PlayerInput {
     public:
         ~LocalMatch();
-        // an empty command leaves that player's actions to the caller, for example the window's human input handler.
+        // Initialize a seeded game and its agents, then start the half-turn worker; refuse replacement of an active match.
+        // An empty command leaves that seat's input to the caller. A destination enables disk recording;
+        // retainRecording also keeps the completed game in the snapshot without requiring a destination.
         bool start(const std::array<std::string, 2>& commands, std::uint32_t seed, int milliseconds = 500,
                    const std::filesystem::path& directory = {}, bool retainRecording = false);
-        void stop(int surrender = -1); // a supplied seat forfeits; the room server uses this for departure or Stop.
+        // Finish and join the worker. A supplied seat forfeits; otherwise the sole caller-controlled seat forfeits,
+        // or army/land totals decide the winner if both seats have the same input type. An existing result is preserved.
+        void stop(int surrender = -1);
+        // Retry a finished game's failed write at a new destination without starting another match.
+        // Success releases the pending recording; failure retains it and supplies error.
         bool savePending(const std::filesystem::path& destination, std::string& error);
+        // Suspend half-turn settlement while preserving queued input and the unused clock interval.
         void pause();
+        // Continue an unfinished paused match; this does not restart a finished game.
         void resume();
         // begin a full interval with the new duration, retaining the current running or paused state.
         bool setInterval(int milliseconds);

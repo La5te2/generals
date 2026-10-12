@@ -27,8 +27,10 @@ namespace NEBULA {
         // Local and replay supply three perspectives. Network games supply the player's view; completed custom games supply all three.
         std::shared_ptr<const std::array<Observation, 3>> views = std::make_shared<const std::array<Observation, 3>>();
         MatchState state = MatchState::Empty;
+        // Includes setup, waiting, pause and final transfer; active does not imply the board is advancing.
         bool active() const { return state != MatchState::Empty && state != MatchState::Finished; }
         bool running() const { return state == MatchState::Playing; }
+        // Describes the phase only; each session also enforces seat ownership and human/agent input restrictions.
         bool acceptsInput() const { return running() || state == MatchState::Paused; }
         std::string error;
         std::array<std::vector<Action>, 2> queued;
@@ -64,7 +66,9 @@ namespace NEBULA {
     class PlayerInput {
     public:
         virtual ~PlayerInput() = default;
+        // True means accepted into this session's queue, not that the engine/server has executed the move.
         virtual bool enqueue(int player, const Action& action) = 0;
+        // Remove the newest move or all queued moves; return the earliest removed action, or no value if none was removed.
         virtual std::optional<Action> cancel(int player, bool all) = 0;
     };
 }

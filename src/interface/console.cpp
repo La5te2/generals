@@ -1,3 +1,4 @@
+// Console parsing, text editing and output wrapping, independent of command execution and drawing.
 #include "console.hpp"
 #include "manual.hpp"
 #include <algorithm>

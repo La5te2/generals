@@ -1,6 +1,4 @@
-// desktop file selection: hide platform differences behind choosePath so page and input logic can use one interface.
-// use the Windows file dialog, macOS osascript, or Linux zenity/kdialog, then return the path or report cancellation/failure.
-// this file does not draw configuration fields, start the selected player program or load replay contents.
+// Desktop file-picker implementation behind the platform-independent choosePath contract.
 #include "dialog.hpp"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -20,6 +18,8 @@ extern char** environ;
 #endif
 
 namespace NEBULA {
+    // Use the Windows native dialog, macOS osascript or an available Linux zenity/kdialog helper.
+    // Helpers run without a shell; selected paths are returned through stdout rather than evaluated as commands.
     std::optional<std::string> choosePath(GLFWwindow* window, PathKind kind, std::string& error) {
         error.clear();
         bool program = kind == PathKind::Program;

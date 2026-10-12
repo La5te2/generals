@@ -1,8 +1,5 @@
-// Replay playback control: present a recorded game over time without putting playback state in the window.
-// Playback combines a Replay reader with a Clock to manage timed advancement, pause/resume and seeking.
-// After changing position, it publishes observations and playback status through the shared MatchSnapshot contract.
-// Replay owns file decoding and position reconstruction; Clock supplies elapsed-time deadlines.
-// The application calls these operations and handles navigation and automatic restart. The renderer only reads the result.
+// Replay playback controller; owns presentation time and the displayed replay snapshot, independently of the window.
+// Replay owns decoding and position reconstruction; the application owns navigation/restart and the renderer only draws.
 #pragma once
 
 #include "clock.hpp"
@@ -12,6 +9,7 @@
 namespace NEBULA {
     class Playback {
     public:
+        // Load at tick zero and begin timed playback; on load failure preserve the previous reader, clock and snapshot.
         bool load(const std::filesystem::path& path, int milliseconds, std::string& error) {
             if (!replay.load(path, error)) return false;
             clock.interval = std::chrono::milliseconds(milliseconds);
@@ -24,10 +22,12 @@ namespace NEBULA {
         std::size_t cursor() const { return replay.cursor(); }
         std::size_t length() const { return replay.length(); }
         const MatchSnapshot& snapshot() const { return published; }
+        // Advance at most one half-turn when its clock interval expires; return whether the displayed position changed.
         bool advance() {
             if (!clock.consume()) return false;
             return seek(cursor() + 1);
         }
+        // Reconstruct an absolute half-turn, publish all perspectives and restart the interval if playing; the end pauses it.
         bool seek(std::size_t tick) {
             if (!replay.loaded() || !replay.seek(tick)) return false;
             if (cursor() == length()) clock.pause();
@@ -37,12 +37,14 @@ namespace NEBULA {
             publish();
             return true;
         }
+        // Pause/resume an unfinished replay without changing its position or discarding the remaining interval.
         void toggle() {
             if (!published.active()) return;
             if (clock.running()) clock.pause();
             else clock.resume();
             published.state = clock.running() ? MatchState::Playing : MatchState::Paused;
         }
+        // End this playback session at its current position; used for navigation/exit rather than a replay toolbar Stop.
         void stop() {
             clock.pause();
             if (loaded()) published.state = MatchState::Finished;
@@ -59,6 +61,7 @@ namespace NEBULA {
         Replay replay;
         Clock clock;
         MatchSnapshot published;
+        // Rebuild the immutable display views and derive playback state from the cursor and clock.
         void publish() {
             published.views = std::make_shared<const std::array<Observation, 3>>(matchViews(replay.state()));
             published.names = replay.names();
