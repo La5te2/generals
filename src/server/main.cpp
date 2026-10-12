@@ -1,4 +1,4 @@
-// Headless entry point for the self-hosted room service. Tunnel its listening TCP port to a public endpoint.
+// Headless entry point for the self-hosted room service: parse listening options and handle shutdown.
 #include "server.hpp"
 #include <charconv>
 #include <chrono>
@@ -12,6 +12,13 @@ namespace {
     volatile std::sig_atomic_t stopping = 0;
     void stop(int) { stopping = 1; }
 }
+// The default 127.0.0.1:42817 accepts local connections only.
+// For a machine with a reachable public IP, run: server --bind 0.0.0.0 --port 42817
+// This listens on all local IPv4 interfaces; clients use ws://PUBLIC_IP:42817 in CUSTOM's ADDRESS.
+// Allow inbound TCP 42817 in both the cloud security group and the OS firewall, preferably only
+// from the players' IPs. Direct public access needs no tunnel; 0.0.0.0 is not a client address.
+// Equal nonempty Room IDs select a private room; empty IDs enter public matchmaking.
+// A Room ID identifies a room, not a password or authentication credential.
 int main(int argc, char** argv) try {
     std::string address = "127.0.0.1";
     int port = 42817;
