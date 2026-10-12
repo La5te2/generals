@@ -49,14 +49,14 @@ endif()
 if(NEBULA_BUILD_INTERFACE)
     add_library(online STATIC src/interface/online.cpp)
     target_link_libraries(online PUBLIC process PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
-    add_library(client STATIC src/interface/custom.cpp)
-    target_link_libraries(client PUBLIC local PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
+    add_library(custom STATIC src/interface/custom.cpp)
+    target_link_libraries(custom PUBLIC local PRIVATE LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
     find_package(glad CONFIG REQUIRED)
     find_package(glfw3 CONFIG REQUIRED)
 
     add_executable(interface WIN32 src/interface/interface.cpp src/interface/renderer.cpp src/interface/human.cpp
         src/interface/console.cpp src/interface/dialog.cpp)
-    target_link_libraries(interface PRIVATE local online client glad::glad glfw)
+    target_link_libraries(interface PRIVATE local online custom glad::glad glfw)
     if(WIN32)
         target_link_libraries(interface PRIVATE user32 comdlg32 ole32 shell32 uuid)
         enable_language(RC)
@@ -74,7 +74,7 @@ if(NEBULA_BUILD_INTERFACE)
         set_source_files_properties("${iconResource}" PROPERTIES OBJECT_DEPENDS "${iconFile}")
         target_sources(interface PRIVATE "${iconResource}" "${iconFile}")
     endif()
-    set_target_properties(interface process local online client PROPERTIES
+    set_target_properties(interface process local online custom PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface"
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/interface")
     add_custom_command(TARGET interface POST_BUILD
