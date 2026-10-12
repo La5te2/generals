@@ -17,7 +17,7 @@ namespace NEBULA {
 
     class Discovery {
     public:
-        // Empty selects all up, multicast-capable IPv4 interfaces. Otherwise bind discovery to this local IP.
+        // Empty searches all usable IPv4 interfaces. Otherwise select this local IP; use multicast and subnet broadcast.
         Discovery(const std::string& local, std::string id, std::string room, std::uint16_t port);
         ~Discovery();
         Discovery(const Discovery&) = delete;

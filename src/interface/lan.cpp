@@ -191,7 +191,7 @@ namespace NEBULA {
                 });
                 Discovery discovery(config.address, id, config.room, server->port());
                 std::string target, host;
-                bool helloSent = false, agentStarted = false, replied = false;
+                bool helloSent = false, agentStarted = false, replied = false, connectionFailed = false;
                 std::uint64_t requested = 0, sentAck = 0;
                 std::size_t offset = 0;
                 auto began = Time::now(), attempt = began, last = began, heartbeat = began;
@@ -348,6 +348,7 @@ namespace NEBULA {
                         if (peer && (peer->isClosed() || now - attempt > 5s)) {
                             peer->forceClose(); peer.reset(); host.clear(); hosting = helloSent = false; retry = now + 500ms;
                             if (proxy) throw std::runtime_error("LAN connection through PROXY failed; no direct fallback was attempted");
+                            connectionFailed = true;
                         }
                         if (peer && !hosting && peer->isOpen() && !helloSent) {
                             send(peer, {{"type", "hello"}, {"id", id}, {"target", target}, {"room", config.room}, {"name", config.username}});
@@ -378,6 +379,11 @@ namespace NEBULA {
                             }
                         }
                         state.state = peer ? MatchState::Connecting : MatchState::Waiting;
+                        if (peer) state.status = "Connecting to LAN peer";
+                        else if (connectionFailed) state.status = "Peer found; connection failed. Check firewall / Wi-Fi isolation";
+                        else if (!discovery.peers().empty()) state.status = "LAN peer found; waiting for pairing";
+                        else if (now - began > 10s)
+                            state.status = "No matching peer found. Check Room ID / firewall / Wi-Fi isolation";
                         publish(state);
                         std::this_thread::sleep_for(10ms);
                         continue;

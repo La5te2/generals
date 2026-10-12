@@ -69,7 +69,7 @@ ROOM ID selects a private room. Both players enter the same case-sensitive ID, u
 
 IP selects a network adapter on your own computer. Enter that adapter's IPv4 address, for example 192.168.1.10, without a port. To use a particular physical or virtual LAN, enter your address on that network. Leave IP empty to search through all usable local adapters.
 
-Both players need a shared network that permits IPv4 multicast discovery and WebSocket connections between them. Each window searches for a matching opponent and establishes a peer connection automatically. Multiple windows can form independent pairs, including on the same computer.
+Both players need a shared network that permits IPv4 multicast or subnet broadcast discovery and WebSocket connections between them. Each window searches for a matching opponent and establishes a peer connection automatically. Multiple windows can form independent pairs, including on the same computer. Discovery uses UDP port 42817; game connections use a dynamically assigned TCP port. Allow the application through the firewall on both computers. Campus or guest Wi-Fi may block discovery or isolate clients even when their IP addresses share a subnet.
 
 The window marked [HOST] runs the match and plays red. The other player plays blue. These roles are assigned automatically. Each player sees their own view during the match. LAN uses a fixed 500 ms half-turn interval.
 
