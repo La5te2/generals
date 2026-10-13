@@ -797,7 +797,7 @@ int main() {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
-    // start at 80% of the primary display. run() fits and centers the window in its work area.
+    // start at 80% of the primary display. 
     int width = 1280, height = 720;
     if (auto* monitor = glfwGetPrimaryMonitor()) if (const auto* mode = glfwGetVideoMode(monitor)) {
         width = std::clamp(mode->width * 4 / 5, NEBULA::minWindowWidth, NEBULA::maxWindowWidth);
@@ -822,6 +822,7 @@ int main() {
     }
     // request swaps synchronized with the display refresh. actual redraws are scheduled in run().
     glfwSwapInterval(1);
+    // run(GLFWwindow* window) fits and centers the window in its work area.
     int result = NEBULA::run(window);
     glfwDestroyWindow(window);
     glfwTerminate();
