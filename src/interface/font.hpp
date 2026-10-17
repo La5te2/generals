@@ -7,7 +7,7 @@
 #include <string_view>
 
 namespace PixelFont {
-    // original pixel lettering with a 6 x 9 body and two extra rows for lowercase descenders.
+    // printable ASCII lettering with a 6 x 9 body and two extra rows for lowercase descenders.
     // each binary row reads left to right. 1 fills a pixel, 0 leaves it empty.
     inline constexpr int width = 6, height = 9, advance = 8;
     // height measures the body through its baseline. the last two rows extend below that baseline.
@@ -161,7 +161,33 @@ namespace PixelFont {
             case '[': return {0b011110, 0b011000, 0b011000, 0b011000, 0b011000, 0b011000, 0b011000, 0b011000, 0b011110};
             case ']': return {0b011110, 0b000110, 0b000110, 0b000110, 0b000110, 0b000110, 0b000110, 0b000110, 0b011110};
             case '%': return {0b110001, 0b110011, 0b000110, 0b001100, 0b001100, 0b011000, 0b110000, 0b110011, 0b100011};
-            default: return {0b011110, 0b110011, 0b000011, 0b000110, 0b001100, 0b001100, 0, 0b001100, 0b001100};
+            case '#': return {0b010010, 0b010010, 0b111111, 0b010010, 0b010010,
+                              0b010010, 0b111111, 0b010010, 0b010010};
+            case '$': return {0b001100, 0b011111, 0b110100, 0b110100, 0b011110,
+                              0b001011, 0b001011, 0b111110, 0b001100};
+            case '&': return {0b011000, 0b110100, 0b110100, 0b011000, 0b011011,
+                              0b110110, 0b110110, 0b110011, 0b011101};
+            case '(': return {0b000110, 0b001100, 0b011000, 0b011000, 0b011000,
+                              0b011000, 0b011000, 0b001100, 0b000110};
+            case ')': return {0b011000, 0b001100, 0b000110, 0b000110, 0b000110,
+                              0b000110, 0b000110, 0b001100, 0b011000};
+            case ';': return {0, 0b001100, 0b001100, 0, 0, 0b001100, 0b001100, 0b001000, 0b010000};
+            case '<': return {0b000011, 0b000110, 0b001100, 0b011000, 0b110000,
+                              0b011000, 0b001100, 0b000110, 0b000011};
+            case '=': return {0, 0, 0, 0b111111, 0, 0b111111, 0, 0, 0};
+            case '@': return {0b011110, 0b110011, 0b100001, 0b101101, 0b101101,
+                              0b101111, 0b100000, 0b110001, 0b011110};
+            case '^': return {0b001100, 0b011110, 0b110011};
+            case '`': return {0b011000, 0b011000, 0b001100, 0b000110};
+            case '{': return {0b000111, 0b001100, 0b001100, 0b001100, 0b011000,
+                              0b001100, 0b001100, 0b001100, 0b000111};
+            case '|': return {0b001100, 0b001100, 0b001100, 0b001100, 0b001100,
+                              0b001100, 0b001100, 0b001100, 0b001100};
+            case '}': return {0b111000, 0b001100, 0b001100, 0b001100, 0b000110,
+                              0b001100, 0b001100, 0b001100, 0b111000};
+            case '~': return {0, 0, 0, 0b011001, 0b111111, 0b100110};
+            case '?': return {0b011110, 0b110011, 0b000011, 0b000110, 0b001100, 0b001100, 0, 0b001100, 0b001100};
+            default: return glyph('?');
         }
     }
 
