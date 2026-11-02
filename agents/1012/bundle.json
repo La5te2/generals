@@ -1,0 +1,202 @@
+[
+  {
+    "file": "bundle.py",
+    "bytes": 2160,
+    "sha256": "c9d7008c1cc73b2ad7b56e63410a1fadea6cfa02f0e5e26e7f146962773785fa"
+  },
+  {
+    "file": "CLOUD.md",
+    "bytes": 5305,
+    "sha256": "0f2856d5283fe4022dca6dbea3b2ff92455f758cb9f992e81ea96df6673b9996"
+  },
+  {
+    "file": "data/inventory.json",
+    "bytes": 1279,
+    "sha256": "907a24c7a2eb975a68cd362deeb9a12c170fc9fe733a0d2a75b2df3c81a7327f"
+  },
+  {
+    "file": "data/pilot/manifest.jsonl",
+    "bytes": 3601,
+    "sha256": "b101195cd55804c42aa717d5ff31c50ae32efab80991b83f95b04fbb83fdc56d"
+  },
+  {
+    "file": "data/pilot/test/47e6396a9d2d7abbce2893c0.npz",
+    "bytes": 651533,
+    "sha256": "2ce95d63cdb4b906cf64aae5bbfe8e8370616a5fb9dc8ef8bd4d7b315a8f3696"
+  },
+  {
+    "file": "data/pilot/train/106b19278b02d8429371d4a5.npz",
+    "bytes": 73184,
+    "sha256": "0ca4526ba34cdf4e047b4f8b3cc8729a09c3a07a429fc1bd50614ad031845d1a"
+  },
+  {
+    "file": "data/pilot/train/142641254e811d3aef28d1b5.npz",
+    "bytes": 277552,
+    "sha256": "3eae86f1f14420b5e4cb6ce526a8fef5d64d94d429381fcbbad02b964703d393"
+  },
+  {
+    "file": "data/pilot/train/4d0660c0b27d4590f6f5541e.npz",
+    "bytes": 741407,
+    "sha256": "4a27087fc4950836953d63154e7bce9b46efe1458276f2a5319385a34caf7e4c"
+  },
+  {
+    "file": "data/pilot/train/501fba3c9e1eb405b0a65744.npz",
+    "bytes": 140216,
+    "sha256": "60465cef61b90ebf70031a6c84246cd73774cc83b3251909e947fb332e20c715"
+  },
+  {
+    "file": "data/pilot/train/54d2c277f0d7b8dc6839d876.npz",
+    "bytes": 124045,
+    "sha256": "5002d01c5cb79e6e2c6d88723d6eb4aa69df93b910118822f139f02eaee3146d"
+  },
+  {
+    "file": "data/pilot/train/74c6be36b9fa999737aabe9d.npz",
+    "bytes": 537887,
+    "sha256": "2177b9703f8db2ce8eab838e087b4fb1a4cedff4330ae6c85b1042b5d3edda70"
+  },
+  {
+    "file": "data/pilot/train/793500bf517478f8cc31f43f.npz",
+    "bytes": 51401,
+    "sha256": "3b914dd0828930c8f88995d4ec4b6452112ffa5f222469c29be2c15f6b6df3f8"
+  },
+  {
+    "file": "data/pilot/train/7dcb71116ce38cad5bf3fc2f.npz",
+    "bytes": 152608,
+    "sha256": "ec8e888b0c47913b2dd127411a2c525b3566e8d104336a19efeae19f9b818038"
+  },
+  {
+    "file": "data/pilot/train/83b7924cee8cfc530a78eece.npz",
+    "bytes": 71048,
+    "sha256": "baad1dafb580f922dc6fda3636b279b4ed37b1ada9990c8e5aa5516d8a9db99a"
+  },
+  {
+    "file": "data/pilot/train/9a1aa1fb20a3a8c56ca9e9ad.npz",
+    "bytes": 209839,
+    "sha256": "1caec5765cc35a671b67f3d65be9f86c7851f4003aff8a69b9bb8ab72cede194"
+  },
+  {
+    "file": "data/pilot/train/a97bfcf06c925bfead9edf84.npz",
+    "bytes": 219888,
+    "sha256": "01f93921267f23cc8808493b05991ac57e6ee403fbce113932bc234201bf5921"
+  },
+  {
+    "file": "data/pilot/train/bf7e9d300a6351ef1eb4e173.npz",
+    "bytes": 162749,
+    "sha256": "c0b1c94625754c80f9e9f51e2c5c7e9fde5dd2c0928bd73e09ba154d1be7e35a"
+  },
+  {
+    "file": "data/pilot/train/d5180ee5fdfac6419d8484bd.npz",
+    "bytes": 272875,
+    "sha256": "517378226dd6f422110966c217464113ffb0ffce3bb6d04039ec18f67e019882"
+  },
+  {
+    "file": "data/pilot/train/d533ad8fdec28ec53dd49ed6.npz",
+    "bytes": 373037,
+    "sha256": "f771f0553e1fd27f6d22e516f8b18545f99a3d710824d32fada52ba92b45d14e"
+  },
+  {
+    "file": "data/pilot/train/e6de8a73f06246afdabe45cf.npz",
+    "bytes": 465596,
+    "sha256": "b51220a0ae498791602bbcfcfc2509a6dd566e622b5cb72d838b59a0d83e1108"
+  },
+  {
+    "file": "data/pilot/validation/b110eb93b893c5058705c895.npz",
+    "bytes": 365858,
+    "sha256": "12bd82137c8c0ed3b37347f37b2c29a26f331bd035f23e162cb4a19c79705db9"
+  },
+  {
+    "file": "data/raw/high_rank.parquet",
+    "bytes": 61449177,
+    "sha256": "fcc448e3ae020d1019585465113d98b1f49b9ff3d58fd663ec4fbfa12f3540ca"
+  },
+  {
+    "file": "data/raw/replays_prod.tar.gz",
+    "bytes": 1167869329,
+    "sha256": "2416172014c58981b4e755aa28a7ace0837298069de0ee114f6509bacddb8dd4"
+  },
+  {
+    "file": "data.py",
+    "bytes": 14311,
+    "sha256": "98be56e1941061edc07bf35676ffeffb8824284ceb76f13dc3926df8131387ab"
+  },
+  {
+    "file": "features.py",
+    "bytes": 7148,
+    "sha256": "e1c0e1f2005df780a5ef58d786f87becbee66b623617af942183c2212a9c81d4"
+  },
+  {
+    "file": "model.py",
+    "bytes": 8448,
+    "sha256": "005478f062166922a0f44b7903dc57bc75097fa347b73b99d66a92e40b9ebd90"
+  },
+  {
+    "file": "ppo.py",
+    "bytes": 13242,
+    "sha256": "169506a87003926e9cfac2ecc4fa7516c66b459a0671e75cde69aa4e013bf15b"
+  },
+  {
+    "file": "prepare.sh",
+    "bytes": 734,
+    "sha256": "58f08485fdfcce066452a2a0ccfc3aad15c81788e626c27ee227608d4dcb2817"
+  },
+  {
+    "file": "README.md",
+    "bytes": 9896,
+    "sha256": "61adb7c36be46405e5530044396b817ce64fb879bfd770198dc849dd2fcd9c1f"
+  },
+  {
+    "file": "replay.js",
+    "bytes": 4648,
+    "sha256": "297396dc1fbb51ce8aac9f70d2420cf29d7e579c400077a1c3f4cb263040be03"
+  },
+  {
+    "file": "requirements.txt",
+    "bytes": 268,
+    "sha256": "9a2cc9761d9d1b598364cbb91d604071e334fca6fcb14f0de11d7e91ae9b1b7e"
+  },
+  {
+    "file": "setup.sh",
+    "bytes": 1119,
+    "sha256": "310b543ea7adb02e8ae006d00bb79f36097f012b3a17829153de8e772427234e"
+  },
+  {
+    "file": "smoke.py",
+    "bytes": 3540,
+    "sha256": "0d27fe892b9529604fdeadd2ee2ff185752c87f0d130c7e5cf92ad21c3e36c0f"
+  },
+  {
+    "file": "test_agent.py",
+    "bytes": 11288,
+    "sha256": "7d9e19731f11291c8460d87ada439c3d59283330c30f5040ff80f7c1899dbfaf"
+  },
+  {
+    "file": "train.py",
+    "bytes": 15630,
+    "sha256": "6f2efb88a6566b5f9058cb2f2c7744b18b716c73921aee8e1247252083cce6c7"
+  },
+  {
+    "file": "train.sh",
+    "bytes": 639,
+    "sha256": "ab024be8d4acb2f5aad074a440b3684ebab3dc7b1167e5cbee32a3486c3d90a3"
+  },
+  {
+    "file": "vendor/replay/Constants.js",
+    "bytes": 172,
+    "sha256": "5e12a02487311709822b38c8ce5742232c95725b10a5f1c08309e1ee23010e33"
+  },
+  {
+    "file": "vendor/replay/Game.js",
+    "bytes": 7118,
+    "sha256": "5ef0d2fb180f12f8399cf68ec2c8efa0e17426ac3c693a9e76d5fbf2401cfec6"
+  },
+  {
+    "file": "vendor/replay/LICENSE",
+    "bytes": 1068,
+    "sha256": "19f1a7aeffed7aef46e540a8ffc418c5ca64848beeada805d4c8d676bb5d3bba"
+  },
+  {
+    "file": "vendor/replay/Map.js",
+    "bytes": 3993,
+    "sha256": "25779a762cf639b6ef51249711959f93cdd167d4f0d40e77bac776e013aa1374"
+  }
+]
