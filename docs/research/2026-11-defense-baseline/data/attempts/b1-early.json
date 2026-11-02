@@ -1,0 +1,242 @@
+{
+  "source": "experiments/evidence/b1-first-attempt.json",
+  "source_sha256": "b44efa4321bbc0e6aac4ed02d32cedebc4d1264b7514a6e2b3f4ac49fa0f94b8",
+  "export_kind": "selected_fields_no_retraining",
+  "data": {
+    "date": "2026-10-19",
+    "start_tick": 283,
+    "branches": [
+      {
+        "name": "original",
+        "end_tick": 385,
+        "outcome_for33": "loss",
+        "extra_survival_ticks_vs_original": 0,
+        "plan_blocked": false,
+        "override_count": 0,
+        "checkpoints": {
+          "300": {
+            "home_army_before": 5,
+            "land_after": [
+              81,
+              71
+            ],
+            "army_after": [
+              261,
+              207
+            ]
+          },
+          "350": {
+            "home_army_before": 21,
+            "land_after": [
+              79,
+              94
+            ],
+            "army_after": [
+              307,
+              269
+            ]
+          },
+          "384": {
+            "home_army_before": 7,
+            "land_after": [
+              180,
+              0
+            ],
+            "army_after": [
+              359,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "name": "home_forward_intercept",
+        "end_tick": 480,
+        "outcome_for33": "loss",
+        "extra_survival_ticks_vs_original": 95,
+        "plan_blocked": true,
+        "override_count": 63,
+        "checkpoints": {
+          "300": {
+            "home_army_before": 5,
+            "land_after": [
+              86,
+              65
+            ],
+            "army_after": [
+              281,
+              216
+            ]
+          },
+          "350": {
+            "home_army_before": 45,
+            "land_after": [
+              90,
+              63
+            ],
+            "army_after": [
+              329,
+              237
+            ]
+          },
+          "384": {
+            "home_army_before": 23,
+            "land_after": [
+              100,
+              65
+            ],
+            "army_after": [
+              257,
+              165
+            ]
+          },
+          "400": {
+            "home_army_before": 32,
+            "land_after": [
+              109,
+              56
+            ],
+            "army_after": [
+              340,
+              197
+            ]
+          },
+          "450": {
+            "home_army_before": 10,
+            "land_after": [
+              106,
+              76
+            ],
+            "army_after": [
+              438,
+              266
+            ]
+          }
+        }
+      },
+      {
+        "name": "nearby_rally",
+        "end_tick": 463,
+        "outcome_for33": "loss",
+        "extra_survival_ticks_vs_original": 78,
+        "plan_blocked": false,
+        "override_count": 65,
+        "checkpoints": {
+          "300": {
+            "home_army_before": 13,
+            "land_after": [
+              86,
+              65
+            ],
+            "army_after": [
+              281,
+              216
+            ]
+          },
+          "350": {
+            "home_army_before": 41,
+            "land_after": [
+              103,
+              63
+            ],
+            "army_after": [
+              329,
+              224
+            ]
+          },
+          "384": {
+            "home_army_before": 74,
+            "land_after": [
+              119,
+              55
+            ],
+            "army_after": [
+              329,
+              224
+            ]
+          },
+          "400": {
+            "home_army_before": 83,
+            "land_after": [
+              119,
+              55
+            ],
+            "army_after": [
+              451,
+              280
+            ]
+          },
+          "450": {
+            "home_army_before": 27,
+            "land_after": [
+              94,
+              87
+            ],
+            "army_after": [
+              477,
+              301
+            ]
+          }
+        }
+      },
+      {
+        "name": "main_recall",
+        "end_tick": 416,
+        "outcome_for33": "loss",
+        "extra_survival_ticks_vs_original": 31,
+        "plan_blocked": false,
+        "override_count": 94,
+        "checkpoints": {
+          "300": {
+            "home_army_before": 5,
+            "land_after": [
+              89,
+              60
+            ],
+            "army_after": [
+              293,
+              221
+            ]
+          },
+          "350": {
+            "home_army_before": 98,
+            "land_after": [
+              109,
+              41
+            ],
+            "army_after": [
+              373,
+              233
+            ]
+          },
+          "384": {
+            "home_army_before": 118,
+            "land_after": [
+              118,
+              41
+            ],
+            "army_after": [
+              390,
+              250
+            ]
+          },
+          "400": {
+            "home_army_before": 127,
+            "land_after": [
+              122,
+              41
+            ],
+            "army_after": [
+              520,
+              299
+            ]
+          }
+        }
+      }
+    ],
+    "original_parity": true,
+    "all_actions_legal": true,
+    "formal_policy_changed": false,
+    "training_started": false
+  }
+}

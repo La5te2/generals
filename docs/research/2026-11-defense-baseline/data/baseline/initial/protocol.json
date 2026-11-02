@@ -1,0 +1,42 @@
+{
+  "purpose": "establish_fixed_baseline_panel",
+  "created": "2026-11-01",
+  "author": "Claude (research partner); execution may be Codex or local background job",
+  "plan": "EXPERIMENT_PLAN_20261101.md section 2.4",
+  "lineage_claim": {
+    "fact": "iteration-00000033 was trained from ppo20",
+    "confirmed_by": "user verbal confirmation 2026-11-01",
+    "note": "metadata.json for 33/39 records no source_sha256; this rests on the user's confirmation and on ppo.py:421's default",
+    "implication": "P2 (33 vs ppo20) is a valid measure of training progress from initialization"
+  },
+  "evaluation": {
+    "seed": 930001,
+    "games_per_pair": 200,
+    "map_pairs_per_evaluation": 100,
+    "lanes": 8,
+    "horizon": 1024,
+    "side": 24,
+    "distance": 17,
+    "selection": "argmax",
+    "opponent_selection": "argmax",
+    "interval": "map-paired Hoeffding, fixed-look",
+    "measured_seconds_per_game": 10.9,
+    "note": "measured on 10-core CPU, lanes 8, horizon 1024, 2026-11-01"
+  },
+  "pairs": [
+    {"id": "P2", "learner": "iteration-00000033", "opponent_kind": "checkpoint", "opponent": "ppo20", "question": "training progress from initialization (primary baseline number)"},
+    {"id": "P5", "learner": "iteration-00000033", "opponent_kind": "rule", "opponent": "hunter", "question": "beats a garrison-and-decapitate rule bot"},
+    {"id": "P4", "learner": "iteration-00000033", "opponent_kind": "rule", "opponent": "expander", "question": "beats a greedy territory expander"},
+    {"id": "P3", "learner": "iteration-00000033", "opponent_kind": "rule", "opponent": "random", "question": "beats random legal moves (minimum sanity floor)"},
+    {"id": "P1", "learner": "iteration-00000033", "opponent_kind": "checkpoint", "opponent": "iteration-00000039", "question": "difference between adjacent lineage snapshots"}
+  ],
+  "order_rationale": "P2 first because it is the project's central missing number; P5/P4 next because rule opponents are the only fixed external anchors; P1 last because it only compares two members of the same lineage",
+  "rules": [
+    "no rerun for a better result",
+    "no seed substitution",
+    "truncated games score zero and are reported",
+    "results are reported per pair, never pooled across opponents"
+  ],
+  "known_caveat": "the models were never shown to capture cities (mean production 1.0 at every milestone in validate-ppo20-v33); the expander/hunter contrast probes whether that is decisive",
+  "outputs": "runs/baseline-20261101-01/<pair>.json plus summary.json"
+}

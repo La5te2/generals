@@ -1,0 +1,81 @@
+{
+  "purpose": "user_authorized_P2_extension_and_P6",
+  "created_at": "2026-11-02T08:31:29.111455+08:00",
+  "preregistered_commitment": "第二批 400 局、合并 300 张图、沿用 Hoeffding 口径、结果无条件报告",
+  "user_instruction": "P2 新增 400 局，seed 930002（全新地图），其余参数不变；同时执行 P6：39 vs ppo20，200 局，seed 930001。",
+  "original_protocol": {
+    "path": "runs/baseline-20261101-01/protocol.json",
+    "sha256": "5a47a3896d0277afae4478b800f9ebf8352264a7ef2ed5b244a5d959c9421420",
+    "preserve_unchanged": true
+  },
+  "evaluation": {
+    "lanes": 8,
+    "horizon": 1024,
+    "side": 24,
+    "distance": 17,
+    "selection": "argmax",
+    "opponent_selection": "argmax",
+    "interval": "map-paired Hoeffding, fixed-look",
+    "alpha": 0.05,
+    "radius_formula": "sqrt(log(40)/(2*number_of_map_pairs))",
+    "truncated_score": 0
+  },
+  "order": [
+    "P2-batch2",
+    "P6"
+  ],
+  "P2": {
+    "learner": "iteration-00000033",
+    "opponent": "ppo20",
+    "first_batch": {
+      "path": "runs/baseline-20261101-01/P2-33-vs-ppo20.json",
+      "sha256": "5430c554953aa100595f09eb632cab6a4addec1b8dbc62e671d7dbbdb6bc0997",
+      "games": 200,
+      "map_pairs": 100,
+      "seed": 930001
+    },
+    "second_batch": {
+      "games": 400,
+      "map_pairs": 200,
+      "seed": 930002,
+      "output": "P2-batch2-33-vs-ppo20.json"
+    },
+    "merge": {
+      "games": 600,
+      "map_pairs": 300,
+      "output": "P2-merged-33-vs-ppo20.json",
+      "radius": 0.07841002756996855,
+      "method": "Concatenate records, namespace map/game IDs by batch, count each paired map once; pool wins over 600 games, never average batch percentages unweighted.",
+      "map_overlap_policy": "Require 200 unique new map hashes, disjoint from the original 100; stop and report any overlap, do not substitute seed."
+    }
+  },
+  "P6": {
+    "learner": "iteration-00000039",
+    "opponent": "ppo20",
+    "games": 200,
+    "map_pairs": 100,
+    "seed": 930001,
+    "output": "P6-39-vs-ppo20.json",
+    "map_policy": "Require same map hashes, map IDs and seats as original P2."
+  },
+  "reporting": {
+    "unconditional": true,
+    "report": [
+      "P2 batch1",
+      "P2 batch2",
+      "P2 combined 600 games / 300 maps",
+      "P6 separately",
+      "wins/losses/draws/truncated",
+      "win_rate and win_rate_ci95",
+      "economy at all recorded milestones"
+    ],
+    "caveat": "Extension was requested after observing the first 200 games (122 wins). Retain requested nominal fixed-look Hoeffding calculation; it is not a time-uniform or optional-stopping-adjusted confidence interval. Report both batches, do not present the pooled interval as a newly preregistered independent confirmation."
+  },
+  "stopping_rules": [
+    "Run exactly 400 new P2 games and 200 P6 games regardless of observed win rate.",
+    "No interim significance stopping, extra batches, seed changes, best-run selection, or automatic retries.",
+    "On technical error/nonfinite outputs/source hash drift/map overlap: stop, preserve evidence and report; no automatic formal rerun."
+  ],
+  "outputs": "Separate new output files; original protocol, results, summary and conclusion stay unchanged.",
+  "next_stage": "Do not start GPU training."
+}

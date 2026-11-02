@@ -1,0 +1,325 @@
+{
+  "passed": true,
+  "audited_at": "2026-11-02T01:01:21.099987+08:00",
+  "source_hashes_verified": 28,
+  "formal_games": 1000,
+  "maps_per_pair": 100,
+  "same_maps_across_pairs": true,
+  "ci_radius": 0.13581015157406195,
+  "elapsed_seconds": 20794.372812,
+  "checks": [
+    "original source/model/protocol hashes",
+    "accepted raw result hashes",
+    "raw paired records and shared maps",
+    "outcome totals and preregistered intervals",
+    "summary consistency",
+    "economy recomputed from per-game records"
+  ],
+  "pairs": [
+    {
+      "pair": "P2",
+      "seconds": 6767.367567541078,
+      "economy": {
+        "50": {
+          "ongoing_games": 200,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "100": {
+          "ongoing_games": 200,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "150": {
+          "ongoing_games": 182,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "200": {
+          "ongoing_games": 144,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "400": {
+          "ongoing_games": 33,
+          "mean_production": [
+            1.0303030303030303,
+            1.0
+          ],
+          "games_production_gt1": [
+            1,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "pair": "P5",
+      "seconds": 2414.266706292052,
+      "economy": {
+        "50": {
+          "ongoing_games": 200,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "100": {
+          "ongoing_games": 199,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "150": {
+          "ongoing_games": 189,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "200": {
+          "ongoing_games": 174,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "400": {
+          "ongoing_games": 29,
+          "mean_production": [
+            1.0344827586206897,
+            1.0
+          ],
+          "games_production_gt1": [
+            1,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "pair": "P4",
+      "seconds": 2229.3163142921403,
+      "economy": {
+        "50": {
+          "ongoing_games": 200,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "100": {
+          "ongoing_games": 198,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "150": {
+          "ongoing_games": 162,
+          "mean_production": [
+            1.0061728395061729,
+            1.0432098765432098
+          ],
+          "games_production_gt1": [
+            1,
+            7
+          ]
+        },
+        "200": {
+          "ongoing_games": 115,
+          "mean_production": [
+            1.0,
+            1.1391304347826088
+          ],
+          "games_production_gt1": [
+            0,
+            16
+          ]
+        },
+        "400": {
+          "ongoing_games": 10,
+          "mean_production": [
+            1.0,
+            1.5
+          ],
+          "games_production_gt1": [
+            0,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "pair": "P3",
+      "seconds": 2637.325252874987,
+      "economy": {
+        "50": {
+          "ongoing_games": 200,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "100": {
+          "ongoing_games": 200,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "150": {
+          "ongoing_games": 168,
+          "mean_production": [
+            1.0,
+            1.0595238095238095
+          ],
+          "games_production_gt1": [
+            0,
+            10
+          ]
+        },
+        "200": {
+          "ongoing_games": 117,
+          "mean_production": [
+            1.0,
+            1.1111111111111112
+          ],
+          "games_production_gt1": [
+            0,
+            13
+          ]
+        },
+        "400": {
+          "ongoing_games": 12,
+          "mean_production": [
+            1.0833333333333333,
+            1.3333333333333333
+          ],
+          "games_production_gt1": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "pair": "P1",
+      "seconds": 6723.405359375058,
+      "economy": {
+        "50": {
+          "ongoing_games": 200,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "100": {
+          "ongoing_games": 199,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "150": {
+          "ongoing_games": 175,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "200": {
+          "ongoing_games": 146,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        },
+        "400": {
+          "ongoing_games": 40,
+          "mean_production": [
+            1.0,
+            1.0
+          ],
+          "games_production_gt1": [
+            0,
+            0
+          ]
+        }
+      }
+    }
+  ]
+}

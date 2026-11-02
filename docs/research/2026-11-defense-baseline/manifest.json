@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-02",
+  "base_commit": "1c1c27ce241e49b281b15b9681da4739f627f440",
+  "files": [
+    {
+      "path": "data/baseline/initial/P1-33-vs-39.json",
+      "sha256": "d1c5b33820440a3df970ddba24842915da320bfac6a662434621b42a6ce6028c",
+      "source": "runs/baseline-20261101-01/P1-33-vs-39.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/initial/P2-33-vs-ppo20.json",
+      "sha256": "5430c554953aa100595f09eb632cab6a4addec1b8dbc62e671d7dbbdb6bc0997",
+      "source": "runs/baseline-20261101-01/P2-33-vs-ppo20.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/initial/P3-33-vs-random.json",
+      "sha256": "1b775a258458a80cce914c6c8050fb5705520117d63ca018b50c18cf0f10c1ac",
+      "source": "runs/baseline-20261101-01/P3-33-vs-random.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/initial/P4-33-vs-expander.json",
+      "sha256": "2e5c75571b525eb91a56d21192f8bc2cd22498be496421b658f2eefbf3f694e9",
+      "source": "runs/baseline-20261101-01/P4-33-vs-expander.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/initial/P5-33-vs-hunter.json",
+      "sha256": "571d5d1f210459ef0ef560173a5d8725a7cf944d4dfb8f2c05693b57d8de6e3e",
+      "source": "runs/baseline-20261101-01/P5-33-vs-hunter.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/initial/protocol.json",
+      "sha256": "5a47a3896d0277afae4478b800f9ebf8352264a7ef2ed5b244a5d959c9421420",
+      "source": "runs/baseline-20261101-01/protocol.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/initial/adapters.json",
+      "sha256": "149af4ab98a4c9307e6b569073ed7aa4c03410014d94e728bc009254da357a9c",
+      "source": "runs/baseline-20261101-01/adapters.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/initial/independent_audit.json",
+      "sha256": "01a4788f3d96af6f55f91b11111cb4766bbb951e3ffa3f14224e769d85e04953",
+      "source": "runs/baseline-20261101-01/independent_audit.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/extension/P2-batch2-33-vs-ppo20.json",
+      "sha256": "eac45b72fad2e0216e30b13fccb2e68365fbd0ad75f58c96a26875c2ea6b8416",
+      "source": "runs/baseline-extension-20261102-01/P2-batch2-33-vs-ppo20.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/extension/P6-39-vs-ppo20.json",
+      "sha256": "ce33b9666ecdd3be00640f318c6c3a8c6694937b38178830a7c5988d11ea012d",
+      "source": "runs/baseline-extension-20261102-01/P6-39-vs-ppo20.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/extension/protocol.json",
+      "sha256": "e2f03df0f225cca03630268fbf100d4aa2d84f575b6490e37221d69781be555b",
+      "source": "runs/baseline-extension-20261102-01/protocol.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/baseline/extension/independent_audit.json",
+      "sha256": "42198a600a70bf691da102a083d5f606713ead55575824f789e4a4c744d03de1",
+      "source": "runs/baseline-extension-20261102-01/independent_audit.json",
+      "kind": "original"
+    },
+    {
+      "path": "data/attempts/b1-late.json",
+      "sha256": "edfc271193036a33d9b1ff297900ef9a10e4a1f65e5b6f51d71143a21ffca694",
+      "source": "experiments/evidence/local-branch-summary.json",
+      "kind": "excerpt"
+    },
+    {
+      "path": "data/attempts/b1-early.json",
+      "sha256": "3570f5a998bfbe0c653891058f4956cdf435e5d3c77167478b91277d747f5a62",
+      "source": "experiments/evidence/b1-first-attempt.json",
+      "kind": "excerpt"
+    },
+    {
+      "path": "data/attempts/b1-adaptive.json",
+      "sha256": "568d56f89a1de38a69a287c82c5c001380892aa8d05fc4abbb031b988bc5d369",
+      "source": "experiments/evidence/b1-adaptive-summary.json",
+      "kind": "excerpt"
+    },
+    {
+      "path": "data/attempts/b2-curriculum.json",
+      "sha256": "1f45c7261f59b6efb90d29af2a2bb0ec4acf1df7e7588f487710336a168af9e2",
+      "source": "experiments/evidence/b2-main-gpu-complete.json",
+      "kind": "excerpt"
+    },
+    {
+      "path": "data/attempts/b2-retention.json",
+      "sha256": "38d7adf8689c5c052154dd870102b42a03c445afb46cae7b3c2636b750363748",
+      "source": "experiments/evidence/retention-gpu-complete.json",
+      "kind": "excerpt"
+    },
+    {
+      "path": "data/attempts/b2-multimap.json",
+      "sha256": "de06001235bd76a1b13ba8904bf2595b936e4de19609f4d4b3bc729a3bf96a25",
+      "source": "experiments/evidence/threat-retention-gpu-complete.json",
+      "kind": "excerpt"
+    },
+    {
+      "path": "data/attempts/b4-probes.json",
+      "sha256": "296e9331a8cb8c38d62cca80e2eb877372a8c32c6cfb75b5e48d9f3106be8da5",
+      "source": "runs/b4-probe-20261030-01/metrics.json",
+      "kind": "excerpt"
+    },
+    {
+      "path": "data/attempts/b12-screening.json",
+      "sha256": "6a7bbebb2cc783390064874576d283e5abf8f3576b62153db7c1a30c68ceeea8",
+      "source": "runs/b12-decoding-20261030-01/screening-result.json",
+      "kind": "excerpt"
+    }
+  ],
+  "models": {
+    "iteration-00000033": {
+      "filename": "iteration-00000033.zip",
+      "sha256": "e8025d2f4395b5c936867547cbfcf5ef5013c43ccf1cb5b520a46d0446106d34",
+      "availability": "Existing team snapshots; request from project maintainers. No public download supplied."
+    },
+    "iteration-00000039": {
+      "filename": "iteration-00000039.zip",
+      "sha256": "01e14dcad7ac88afbb4039273b7e8537d6946e99f512ae5ee1075db06ef7a6f2",
+      "availability": "Existing team snapshots; request from project maintainers. No public download supplied."
+    },
+    "ppo20": {
+      "filename": "ppo20.zip",
+      "sha256": "518adc61bf7c1a2962ad7c8d338e53eb02ea1ee4b05eabd08bf4f13898438668",
+      "availability": "Existing team snapshots; request from project maintainers. No public download supplied."
+    }
+  },
+  "agent_source_sha256": {
+    "agents/1014/critic.py": "3130122365f54092ed0e418cca80fd7c31723776425efe36ca6281c8eabb1f54",
+    "agents/1014/economy.py": "6b2046131d579525426f9338441bda3fb6bd471847c771b0be9bd8e12fe49630",
+    "agents/1014/environment.py": "41ee5b71be34a326945c46394df17258c0f4a706693142de69480ae369e79aab",
+    "agents/1014/evaluate.py": "0725cf8b894ef3caf45fb04b6afce4702bac4cffa1f9c9574b80b766eaf85905",
+    "agents/1014/features.py": "db396f3de5ca7438d678115f76da88538171689d2bd94b7a020ad9ba91d06c9d",
+    "agents/1014/model.py": "16ffeb3bf3d31f55ccaf30ae65ba776e2965973bee0c8594e2fee721592d22bf",
+    "agents/1014/ppo.py": "378fbbdc0f8d779ba06b3d0e2496c9d9160982f4f0d4497a9b9ad3621e76e4c5",
+    "agents/1014/rewards.py": "0964eaf7f9a71edeeb2136f422bc2eca44c3dd2b2e1184cf8c65a9d1f7e4d257",
+    "agents/1014/rollout.py": "013580a06c5ffc3a17146f63054cb9dc14f5d51f1d7e70620dcdc1cca5d8b18d",
+    "agents/1014/train.py": "5a3698154c87582b4800f87b01279a6dc4c678f37b6d8953300bf3878998d9da"
+  },
+  "historical_source_note": "The historical evaluator extracted _tick from _advance; environment added training-only curriculum support. This PR uses unchanged upstream evaluation code. Two-game record parity for each of P2 and P5 is checked separately; this is not a full 1600-game rerun.",
+  "historical_versions": {
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "jax": "0.11.2",
+    "equinox": "0.13.8",
+    "optax": "0.2.8",
+    "generals_bots_commit": "2e9b00a4dd3a0489a7091c144548243f3d6d7b15"
+  }
+}
