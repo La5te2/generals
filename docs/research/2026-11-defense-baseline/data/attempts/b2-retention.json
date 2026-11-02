@@ -1,0 +1,108 @@
+{
+  "source": "experiments/evidence/retention-gpu-complete.json",
+  "source_sha256": "69860c0d5b634d356a2607f36543abe74bb030806ce1e204af2db3e552cc95de",
+  "export_kind": "selected_fields_no_retraining",
+  "data": {
+    "status": "COMPLETE_RETENTION_EXPERIMENT",
+    "beta": 0.1,
+    "seeds": [
+      101425,
+      101426
+    ],
+    "total_new_samples": 98304,
+    "total_rounds": 64,
+    "training": {
+      "101425": {
+        "rounds": 32,
+        "new_samples": 49152,
+        "actor_examples": 23936,
+        "actor_optimizer_steps": 748,
+        "critic_optimizer_steps": 3072,
+        "final_original_kl_on_current_probe": 0.18872897326946259,
+        "frozen_reference_verified_all_rounds": true,
+        "late_training_wins": 15,
+        "late_training_losses": 69
+      },
+      "101426": {
+        "rounds": 32,
+        "new_samples": 49152,
+        "actor_examples": 28256,
+        "actor_optimizer_steps": 883,
+        "critic_optimizer_steps": 3072,
+        "final_original_kl_on_current_probe": 0.05635858327150345,
+        "frozen_reference_verified_all_rounds": true,
+        "late_training_wins": 22,
+        "late_training_losses": 75
+      }
+    },
+    "evaluations": [
+      {
+        "split": "development",
+        "seed": "101425",
+        "model": "retention",
+        "iteration": 8,
+        "wins": 4,
+        "losses": 12,
+        "optional_pass_fraction": 0.0495
+      },
+      {
+        "split": "development",
+        "seed": "101426",
+        "model": "retention",
+        "iteration": 8,
+        "wins": 9,
+        "losses": 7,
+        "optional_pass_fraction": 0.05549364831736127
+      },
+      {
+        "split": "development",
+        "seed": "101425",
+        "model": "retention",
+        "iteration": 32,
+        "wins": 7,
+        "losses": 9,
+        "optional_pass_fraction": 0.030991735537190084
+      },
+      {
+        "split": "development",
+        "seed": "101426",
+        "model": "retention",
+        "iteration": 32,
+        "wins": 8,
+        "losses": 8,
+        "optional_pass_fraction": 0.06259158467657526
+      },
+      {
+        "split": "confirmation",
+        "seed": "original",
+        "model": "original",
+        "iteration": 0,
+        "wins": 7,
+        "losses": 9,
+        "optional_pass_fraction": 0.0
+      },
+      {
+        "split": "confirmation",
+        "seed": "101425",
+        "model": "retention",
+        "iteration": 32,
+        "wins": 5,
+        "losses": 11,
+        "optional_pass_fraction": 0.00019634792852935403
+      },
+      {
+        "split": "confirmation",
+        "seed": "101426",
+        "model": "retention",
+        "iteration": 32,
+        "wins": 6,
+        "losses": 10,
+        "optional_pass_fraction": 0.0
+      }
+    ],
+    "development_original_wins": 6,
+    "development_games": 64,
+    "fresh_confirmation_games": 48,
+    "all_stages_exit0": true
+  }
+}

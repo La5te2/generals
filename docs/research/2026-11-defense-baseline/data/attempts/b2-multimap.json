@@ -1,0 +1,6295 @@
+{
+  "source": "experiments/evidence/threat-retention-gpu-complete.json",
+  "source_sha256": "895553bc1906b5098707e72bb2e0e0a4bf98c753aa2c464283b46693dde8ead7",
+  "export_kind": "selected_fields_no_retraining",
+  "data": {
+    "outcome": "CONTACT_WINDOW_GAIN_WITHOUT_FRESH_FULL_GAME_GAIN",
+    "adopt_new_model": false,
+    "actual_actor_threat_source_union": {
+      "cases": 26,
+      "maps": 19
+    },
+    "rounds_total": 64,
+    "total_new_samples": 98304,
+    "training": {
+      "101425": {
+        "rounds": 32,
+        "new_samples": 49152,
+        "actor_examples": 31552,
+        "actor_updates": 986,
+        "critic_updates": 3072,
+        "actor_threat_examples": 3555,
+        "actor_cases_used": 20,
+        "actor_maps_used": 17,
+        "actor_examples_by_kind": {
+          "contact": 2106,
+          "home": 1449
+        },
+        "actor_case_histogram": {
+          "batch2-map20-contact": 10,
+          "batch2-map23-home": 198,
+          "batch2-map08-contact": 18,
+          "batch2-map13-contact": 10,
+          "batch2-map12-contact": 228,
+          "batch1-map00-home": 470,
+          "batch2-map13-home": 168,
+          "batch2-map21-home": 406,
+          "batch2-map23-contact": 134,
+          "batch1-map04-contact": 334,
+          "batch1-map02-contact": 255,
+          "batch2-map11-contact": 159,
+          "batch2-map07-contact": 355,
+          "batch2-map06-contact": 124,
+          "batch1-map03-contact": 101,
+          "batch2-map15-home": 71,
+          "batch2-map16-contact": 1,
+          "batch2-map03-home": 136,
+          "batch2-map22-contact": 156,
+          "batch2-map15-contact": 221
+        },
+        "curriculum_samples": 5316,
+        "ordinary_samples": 43836,
+        "initial_five_match": true,
+        "teacher_frozen_all32": true,
+        "complete_restore_pass": true,
+        "reference_kl_final": 0.11971409618854523
+      },
+      "101426": {
+        "rounds": 32,
+        "new_samples": 49152,
+        "actor_examples": 23488,
+        "actor_updates": 734,
+        "critic_updates": 3072,
+        "actor_threat_examples": 3627,
+        "actor_cases_used": 24,
+        "actor_maps_used": 17,
+        "actor_examples_by_kind": {
+          "contact": 2349,
+          "home": 1278
+        },
+        "actor_case_histogram": {
+          "batch1-map02-contact": 367,
+          "batch2-map12-contact": 52,
+          "batch2-map06-contact": 399,
+          "batch1-map00-contact": 19,
+          "batch1-map00-home": 351,
+          "batch1-map11-home": 119,
+          "batch2-map23-home": 135,
+          "batch2-map03-home": 142,
+          "batch2-map08-contact": 49,
+          "batch2-map10-contact": 63,
+          "batch2-map13-contact": 4,
+          "batch2-map07-home": 41,
+          "batch2-map22-home": 110,
+          "batch2-map07-contact": 63,
+          "batch2-map21-contact": 289,
+          "batch2-map11-contact": 591,
+          "batch2-map13-home": 241,
+          "batch2-map21-home": 122,
+          "batch2-map20-contact": 10,
+          "batch2-map23-contact": 119,
+          "batch2-map22-contact": 213,
+          "batch2-map15-home": 17,
+          "batch2-map15-contact": 93,
+          "batch1-map04-contact": 18
+        },
+        "curriculum_samples": 7203,
+        "ordinary_samples": 41949,
+        "initial_five_match": true,
+        "teacher_frozen_all32": true,
+        "complete_restore_pass": true,
+        "reference_kl_final": 0.08440544456243515
+      }
+    },
+    "rows": [
+      {
+        "role": "original",
+        "seed": 101425,
+        "development_wins": 6,
+        "confirmation": {
+          "opponent": "fixed ordinary opponent",
+          "seed": 101431,
+          "side": 24,
+          "distance": 17,
+          "horizon": 1024,
+          "selection": "argmax",
+          "opponent_selection": "argmax",
+          "games": 16,
+          "map_pairs": 8,
+          "wins": 8,
+          "losses": 8,
+          "draws": 0,
+          "truncated": 0,
+          "win_rate": 0.5,
+          "net_win_rate": 0.0,
+          "win_rate_ci95": [
+            0.019838604340039645,
+            0.9801613956599604
+          ],
+          "net_win_rate_ci95": [
+            -0.9603227913199207,
+            0.9603227913199207
+          ],
+          "interval": "map-paired Hoeffding, fixed-look; unresolved games score zero",
+          "mean_ticks": 291.8125,
+          "pass_fraction": 0.015849218248018847,
+          "optional_pass_fraction": 0.0,
+          "movable_samples": 4595,
+          "opponent_action_nll": 4.970101597324942,
+          "opponent_action_accuracy": 0.21160848147354894,
+          "hidden_owner_nll": 0.17337774724872496,
+          "hidden_army_conditional_nll": 0.16703221138704766,
+          "general_nll": 8.517052417394819,
+          "economy": {
+            "50": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  21.9375,
+                  47.9375,
+                  1.0
+                ],
+                [
+                  21.6875,
+                  47.6875,
+                  1.0
+                ]
+              ]
+            },
+            "100": {
+              "ongoing_games": 15,
+              "learner_opponent_land_army_production": [
+                [
+                  41.4,
+                  109.73333333333333,
+                  1.0
+                ],
+                [
+                  48.266666666666666,
+                  116.4,
+                  1.0
+                ]
+              ]
+            },
+            "150": {
+              "ongoing_games": 14,
+              "learner_opponent_land_army_production": [
+                [
+                  51.92857142857143,
+                  151.42857142857142,
+                  1.0
+                ],
+                [
+                  57.07142857142857,
+                  162.85714285714286,
+                  1.0
+                ]
+              ]
+            },
+            "200": {
+              "ongoing_games": 11,
+              "learner_opponent_land_army_production": [
+                [
+                  58.63636363636363,
+                  163.0,
+                  1.0
+                ],
+                [
+                  60.63636363636363,
+                  178.0,
+                  1.0
+                ]
+              ]
+            },
+            "400": {
+              "ongoing_games": 3,
+              "learner_opponent_land_army_production": [
+                [
+                  79.33333333333333,
+                  254.33333333333334,
+                  1.0
+                ],
+                [
+                  54.666666666666664,
+                  195.33333333333334,
+                  1.0
+                ]
+              ]
+            }
+          },
+          "seconds": 43.47349546290934,
+          "records": [
+            {
+              "game": 0,
+              "map": 0,
+              "seat": 0,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "loss",
+              "prediction_sums": [
+                1818.0491943359375,
+                130.0,
+                67.37081909179688,
+                81.99703216552734,
+                5494.8310546875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    49.0,
+                    120.0,
+                    1.0
+                  ],
+                  [
+                    40.0,
+                    111.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    50.0,
+                    142.0,
+                    1.0
+                  ],
+                  [
+                    53.0,
+                    136.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    59.0,
+                    163.0,
+                    1.0
+                  ],
+                  [
+                    57.0,
+                    155.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    97.0,
+                    317.0,
+                    1.0
+                  ],
+                  [
+                    64.0,
+                    250.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 427,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 424
+            },
+            {
+              "game": 1,
+              "map": 0,
+              "seat": 1,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "loss",
+              "prediction_sums": [
+                1434.640869140625,
+                31.0,
+                58.5838737487793,
+                41.41130447387695,
+                1428.2744140625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    20.0,
+                    46.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    28.0,
+                    99.0,
+                    1.0
+                  ],
+                  [
+                    55.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    45.0,
+                    148.0,
+                    1.0
+                  ],
+                  [
+                    77.0,
+                    208.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    67.0,
+                    188.0,
+                    1.0
+                  ],
+                  [
+                    66.0,
+                    247.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 249,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 245
+            },
+            {
+              "game": 2,
+              "map": 1,
+              "seat": 0,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "win",
+              "prediction_sums": [
+                1294.6082763671875,
+                44.0,
+                37.2999153137207,
+                34.546470642089844,
+                933.6373901367188
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    50.0,
+                    116.0,
+                    1.0
+                  ],
+                  [
+                    50.0,
+                    117.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    44.0,
+                    135.0,
+                    1.0
+                  ],
+                  [
+                    60.0,
+                    152.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    50.0,
+                    134.0,
+                    1.0
+                  ],
+                  [
+                    61.0,
+                    162.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 243,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 239
+            },
+            {
+              "game": 3,
+              "map": 1,
+              "seat": 1,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "loss",
+              "prediction_sums": [
+                989.6530151367188,
+                46.0,
+                28.987754821777344,
+                20.55759048461914,
+                1206.3348388671875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    39.0,
+                    104.0,
+                    1.0
+                  ],
+                  [
+                    41.0,
+                    105.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    46.0,
+                    126.0,
+                    1.0
+                  ],
+                  [
+                    48.0,
+                    129.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 200,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 196
+            },
+            {
+              "game": 4,
+              "map": 2,
+              "seat": 0,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "loss",
+              "prediction_sums": [
+                1144.002197265625,
+                50.0,
+                30.7701416015625,
+                42.208702087402344,
+                1116.016357421875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    44.0,
+                    106.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    108.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    41.0,
+                    139.0,
+                    1.0
+                  ],
+                  [
+                    62.0,
+                    162.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    65.0,
+                    159.0,
+                    1.0
+                  ],
+                  [
+                    69.0,
+                    186.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 252,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 247
+            },
+            {
+              "game": 5,
+              "map": 2,
+              "seat": 1,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "win",
+              "prediction_sums": [
+                1553.7420654296875,
+                41.0,
+                66.21878814697266,
+                56.35716247558594,
+                1634.0958251953125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    33.0,
+                    106.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    128.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    54.0,
+                    153.0,
+                    1.0
+                  ],
+                  [
+                    69.0,
+                    190.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    64.0,
+                    165.0,
+                    1.0
+                  ],
+                  [
+                    70.0,
+                    208.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 274,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 270
+            },
+            {
+              "game": 6,
+              "map": 3,
+              "seat": 0,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "win",
+              "prediction_sums": [
+                651.1802368164062,
+                5.0,
+                12.742040634155273,
+                9.025384902954102,
+                692.06884765625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": null,
+                "150": null,
+                "200": null,
+                "400": null
+              },
+              "ticks": 100,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 94
+            },
+            {
+              "game": 7,
+              "map": 3,
+              "seat": 1,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "loss",
+              "prediction_sums": [
+                1601.165771484375,
+                76.0,
+                38.48635482788086,
+                46.26661682128906,
+                2451.167236328125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    31.0,
+                    84.0,
+                    1.0
+                  ],
+                  [
+                    45.0,
+                    99.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    46.0,
+                    103.0,
+                    1.0
+                  ],
+                  [
+                    46.0,
+                    118.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    56.0,
+                    134.0,
+                    1.0
+                  ],
+                  [
+                    44.0,
+                    137.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 346,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 340
+            },
+            {
+              "game": 8,
+              "map": 4,
+              "seat": 0,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "loss",
+              "prediction_sums": [
+                3534.405517578125,
+                218.0,
+                135.24598693847656,
+                163.2465362548828,
+                13851.88671875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    37.0,
+                    105.0,
+                    1.0
+                  ],
+                  [
+                    46.0,
+                    114.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    48.0,
+                    134.0,
+                    1.0
+                  ],
+                  [
+                    39.0,
+                    134.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    40.0,
+                    131.0,
+                    1.0
+                  ],
+                  [
+                    57.0,
+                    148.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    52.0,
+                    133.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    143.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 756,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 752
+            },
+            {
+              "game": 9,
+              "map": 4,
+              "seat": 1,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "win",
+              "prediction_sums": [
+                1718.7333984375,
+                59.0,
+                68.5169677734375,
+                65.55225372314453,
+                1232.450439453125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    51.0,
+                    122.0,
+                    1.0
+                  ],
+                  [
+                    50.0,
+                    121.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    59.0,
+                    150.0,
+                    1.0
+                  ],
+                  [
+                    62.0,
+                    152.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    57.0,
+                    176.0,
+                    1.0
+                  ],
+                  [
+                    73.0,
+                    194.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 318,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 314
+            },
+            {
+              "game": 10,
+              "map": 5,
+              "seat": 0,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "win",
+              "prediction_sums": [
+                985.1779174804688,
+                6.0,
+                28.672395706176758,
+                13.601537704467773,
+                834.250244140625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    40.0,
+                    114.0,
+                    1.0
+                  ],
+                  [
+                    52.0,
+                    126.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    48.0,
+                    187.0,
+                    1.0
+                  ],
+                  [
+                    72.0,
+                    223.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 156,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 150
+            },
+            {
+              "game": 11,
+              "map": 5,
+              "seat": 1,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "loss",
+              "prediction_sums": [
+                832.0313720703125,
+                12.0,
+                25.2467041015625,
+                12.75964641571045,
+                699.938720703125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    40.0,
+                    114.0,
+                    1.0
+                  ],
+                  [
+                    53.0,
+                    126.0,
+                    1.0
+                  ]
+                ],
+                "150": null,
+                "200": null,
+                "400": null
+              },
+              "ticks": 150,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 144
+            },
+            {
+              "game": 12,
+              "map": 6,
+              "seat": 0,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "loss",
+              "prediction_sums": [
+                908.21435546875,
+                22.0,
+                30.807987213134766,
+                18.737388610839844,
+                849.509033203125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    19.0,
+                    45.0,
+                    1.0
+                  ],
+                  [
+                    18.0,
+                    44.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    49.0,
+                    119.0,
+                    1.0
+                  ],
+                  [
+                    45.0,
+                    114.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    66.0,
+                    200.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    178.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 175,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 170
+            },
+            {
+              "game": 13,
+              "map": 6,
+              "seat": 1,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "win",
+              "prediction_sums": [
+                1870.438720703125,
+                134.0,
+                75.38276672363281,
+                92.78412628173828,
+                2957.107177734375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    17.0,
+                    43.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    49.0,
+                    121.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    115.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    57.0,
+                    183.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    167.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    60.0,
+                    159.0,
+                    1.0
+                  ],
+                  [
+                    51.0,
+                    134.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    89.0,
+                    313.0,
+                    1.0
+                  ],
+                  [
+                    51.0,
+                    193.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 460,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 455
+            },
+            {
+              "game": 14,
+              "map": 7,
+              "seat": 0,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "win",
+              "prediction_sums": [
+                1575.37548828125,
+                94.0,
+                55.515113830566406,
+                50.06221008300781,
+                2495.51708984375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    47.0,
+                    109.0,
+                    1.0
+                  ],
+                  [
+                    45.0,
+                    108.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    68.0,
+                    175.0,
+                    1.0
+                  ],
+                  [
+                    44.0,
+                    150.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    74.0,
+                    213.0,
+                    1.0
+                  ],
+                  [
+                    42.0,
+                    156.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 352,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 349
+            },
+            {
+              "game": 15,
+              "map": 7,
+              "seat": 1,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "win",
+              "prediction_sums": [
+                1293.9859619140625,
+                20.0,
+                49.65309143066406,
+                30.759431838989258,
+                1889.0323486328125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    34.0,
+                    107.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    55.0,
+                    145.0,
+                    1.0
+                  ],
+                  [
+                    71.0,
+                    181.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    53.0,
+                    171.0,
+                    1.0
+                  ],
+                  [
+                    77.0,
+                    231.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 211,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 206
+            }
+          ]
+        },
+        "diagnostic": {
+          "records": [
+            {
+              "case": "batch1-map15-contact",
+              "map_group": "51cc2ca3b7bf75622ca6827b79c450d89db6186a0bdf901351a5735278aacd04",
+              "kind": "contact",
+              "seat": 1,
+              "steps": 128,
+              "start_tick": 155,
+              "end_tick": 283,
+              "outcome": "unresolved",
+              "army_before": 177,
+              "army_after": 213,
+              "all_commands_legal": true
+            },
+            {
+              "case": "batch1-map14-contact",
+              "map_group": "a0bf6ecf1fddc890df3c1f0c4667ac74dfb4929d0b849fa06570aeaeda5c706d",
+              "kind": "contact",
+              "seat": 0,
+              "steps": 128,
+              "start_tick": 187,
+              "end_tick": 315,
+              "outcome": "unresolved",
+              "army_before": 181,
+              "army_after": 204,
+              "all_commands_legal": true
+            }
+          ],
+          "wins": 0,
+          "losses": 0,
+          "unresolved": 2,
+          "survival_is_not_win": true
+        }
+      },
+      {
+        "role": "ordinary-control",
+        "seed": 101425,
+        "development_wins": 7,
+        "confirmation": {
+          "opponent": "fixed ordinary opponent",
+          "seed": 101431,
+          "side": 24,
+          "distance": 17,
+          "horizon": 1024,
+          "selection": "argmax",
+          "opponent_selection": "argmax",
+          "games": 16,
+          "map_pairs": 8,
+          "wins": 8,
+          "losses": 8,
+          "draws": 0,
+          "truncated": 0,
+          "win_rate": 0.5,
+          "net_win_rate": 0.0,
+          "win_rate_ci95": [
+            0.019838604340039645,
+            0.9801613956599604
+          ],
+          "net_win_rate_ci95": [
+            -0.9603227913199207,
+            0.9603227913199207
+          ],
+          "interval": "map-paired Hoeffding, fixed-look; unresolved games score zero",
+          "mean_ticks": 294.375,
+          "pass_fraction": 0.015711252653927813,
+          "optional_pass_fraction": 0.0,
+          "movable_samples": 4636,
+          "opponent_action_nll": 5.893795666218816,
+          "opponent_action_accuracy": 0.1819532908704883,
+          "hidden_owner_nll": 0.223384321824254,
+          "hidden_army_conditional_nll": 0.1694013822357113,
+          "general_nll": 9.971435754213111,
+          "economy": {
+            "50": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  21.75,
+                  47.75,
+                  1.0
+                ],
+                [
+                  21.6875,
+                  47.6875,
+                  1.0
+                ]
+              ]
+            },
+            "100": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  37.5625,
+                  106.4375,
+                  1.0
+                ],
+                [
+                  48.1875,
+                  117.0,
+                  1.0
+                ]
+              ]
+            },
+            "150": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  47.25,
+                  142.5,
+                  1.0
+                ],
+                [
+                  59.125,
+                  164.9375,
+                  1.0
+                ]
+              ]
+            },
+            "200": {
+              "ongoing_games": 13,
+              "learner_opponent_land_army_production": [
+                [
+                  53.0,
+                  155.69230769230768,
+                  1.0
+                ],
+                [
+                  60.92307692307692,
+                  186.53846153846155,
+                  1.0
+                ]
+              ]
+            },
+            "400": {
+              "ongoing_games": 4,
+              "learner_opponent_land_army_production": [
+                [
+                  55.0,
+                  164.0,
+                  1.0
+                ],
+                [
+                  64.75,
+                  210.5,
+                  1.0
+                ]
+              ]
+            }
+          },
+          "seconds": 16.041569483932108,
+          "records": [
+            {
+              "game": 0,
+              "map": 0,
+              "seat": 0,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "loss",
+              "prediction_sums": [
+                1331.6431884765625,
+                42.0,
+                45.5939826965332,
+                32.9067497253418,
+                2287.20068359375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    45.0,
+                    100.0,
+                    1.0
+                  ],
+                  [
+                    40.0,
+                    95.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    48.0,
+                    126.0,
+                    1.0
+                  ],
+                  [
+                    48.0,
+                    121.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    50.0,
+                    152.0,
+                    1.0
+                  ],
+                  [
+                    59.0,
+                    156.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 241,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 238
+            },
+            {
+              "game": 1,
+              "map": 0,
+              "seat": 1,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "win",
+              "prediction_sums": [
+                1413.15185546875,
+                24.0,
+                48.63919448852539,
+                29.596324920654297,
+                2912.48193359375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    35.0,
+                    107.0,
+                    1.0
+                  ],
+                  [
+                    55.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    53.0,
+                    171.0,
+                    1.0
+                  ],
+                  [
+                    73.0,
+                    211.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    50.0,
+                    173.0,
+                    1.0
+                  ],
+                  [
+                    87.0,
+                    250.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 203,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 199
+            },
+            {
+              "game": 2,
+              "map": 1,
+              "seat": 0,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "loss",
+              "prediction_sums": [
+                1378.238525390625,
+                25.0,
+                51.75017166137695,
+                26.29838752746582,
+                2238.96435546875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    33.0,
+                    105.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    55.0,
+                    136.0,
+                    1.0
+                  ],
+                  [
+                    55.0,
+                    158.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 200,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 196
+            },
+            {
+              "game": 3,
+              "map": 1,
+              "seat": 1,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "win",
+              "prediction_sums": [
+                2259.664306640625,
+                112.0,
+                71.96337127685547,
+                62.140403747558594,
+                4620.947265625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    46.0,
+                    107.0,
+                    1.0
+                  ],
+                  [
+                    37.0,
+                    97.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    54.0,
+                    139.0,
+                    1.0
+                  ],
+                  [
+                    42.0,
+                    117.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    55.0,
+                    154.0,
+                    1.0
+                  ],
+                  [
+                    41.0,
+                    118.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    66.0,
+                    207.0,
+                    1.0
+                  ],
+                  [
+                    42.0,
+                    120.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 435,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 431
+            },
+            {
+              "game": 4,
+              "map": 2,
+              "seat": 0,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "win",
+              "prediction_sums": [
+                2388.064697265625,
+                136.0,
+                90.02012634277344,
+                111.87952423095703,
+                3405.25390625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    40.0,
+                    107.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    113.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    41.0,
+                    129.0,
+                    1.0
+                  ],
+                  [
+                    52.0,
+                    146.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    50.0,
+                    126.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    142.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    67.0,
+                    212.0,
+                    1.0
+                  ],
+                  [
+                    66.0,
+                    189.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 496,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 491
+            },
+            {
+              "game": 5,
+              "map": 2,
+              "seat": 1,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "loss",
+              "prediction_sums": [
+                1423.25537109375,
+                12.0,
+                59.07183837890625,
+                38.109344482421875,
+                1023.739990234375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    33.0,
+                    106.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    128.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    38.0,
+                    164.0,
+                    1.0
+                  ],
+                  [
+                    81.0,
+                    229.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    59.0,
+                    204.0,
+                    1.0
+                  ],
+                  [
+                    66.0,
+                    276.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 208,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 204
+            },
+            {
+              "game": 6,
+              "map": 3,
+              "seat": 0,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "win",
+              "prediction_sums": [
+                1721.4573974609375,
+                24.0,
+                82.00579071044922,
+                34.00645065307617,
+                2487.66748046875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    33.0,
+                    108.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    121.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    49.0,
+                    130.0,
+                    1.0
+                  ],
+                  [
+                    65.0,
+                    159.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    55.0,
+                    147.0,
+                    1.0
+                  ],
+                  [
+                    69.0,
+                    190.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 214,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 208
+            },
+            {
+              "game": 7,
+              "map": 3,
+              "seat": 1,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "win",
+              "prediction_sums": [
+                1697.35107421875,
+                58.0,
+                55.683467864990234,
+                37.47766876220703,
+                3521.381591796875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    40.0,
+                    90.0,
+                    1.0
+                  ],
+                  [
+                    39.0,
+                    90.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    49.0,
+                    117.0,
+                    1.0
+                  ],
+                  [
+                    45.0,
+                    113.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    62.0,
+                    151.0,
+                    1.0
+                  ],
+                  [
+                    42.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 274,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 268
+            },
+            {
+              "game": 8,
+              "map": 4,
+              "seat": 0,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "loss",
+              "prediction_sums": [
+                2424.924072265625,
+                97.0,
+                92.28535461425781,
+                73.18669891357422,
+                5024.52197265625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    27.0,
+                    101.0,
+                    1.0
+                  ],
+                  [
+                    51.0,
+                    124.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    35.0,
+                    93.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    128.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    41.0,
+                    110.0,
+                    1.0
+                  ],
+                  [
+                    50.0,
+                    154.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    41.0,
+                    119.0,
+                    1.0
+                  ],
+                  [
+                    57.0,
+                    194.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 448,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 444
+            },
+            {
+              "game": 9,
+              "map": 4,
+              "seat": 1,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "loss",
+              "prediction_sums": [
+                1980.93359375,
+                62.0,
+                74.95638275146484,
+                69.01985168457031,
+                3354.828125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    50.0,
+                    120.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    121.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    34.0,
+                    142.0,
+                    1.0
+                  ],
+                  [
+                    67.0,
+                    176.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    51.0,
+                    147.0,
+                    1.0
+                  ],
+                  [
+                    64.0,
+                    194.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 328,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 324
+            },
+            {
+              "game": 10,
+              "map": 5,
+              "seat": 0,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "win",
+              "prediction_sums": [
+                1277.8634033203125,
+                6.0,
+                39.92403793334961,
+                14.393482208251953,
+                2177.84033203125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    35.0,
+                    108.0,
+                    1.0
+                  ],
+                  [
+                    50.0,
+                    124.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    50.0,
+                    181.0,
+                    1.0
+                  ],
+                  [
+                    71.0,
+                    218.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 155,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 149
+            },
+            {
+              "game": 11,
+              "map": 5,
+              "seat": 1,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "loss",
+              "prediction_sums": [
+                1185.24267578125,
+                77.0,
+                30.121131896972656,
+                35.85993194580078,
+                1142.7435302734375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    31.0,
+                    105.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    120.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    48.0,
+                    113.0,
+                    1.0
+                  ],
+                  [
+                    51.0,
+                    131.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    45.0,
+                    125.0,
+                    1.0
+                  ],
+                  [
+                    58.0,
+                    156.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 285,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 279
+            },
+            {
+              "game": 12,
+              "map": 6,
+              "seat": 0,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "win",
+              "prediction_sums": [
+                1226.968994140625,
+                25.0,
+                50.50716018676758,
+                26.38831329345703,
+                2760.48779296875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    20.0,
+                    46.0,
+                    1.0
+                  ],
+                  [
+                    18.0,
+                    44.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    46.0,
+                    117.0,
+                    1.0
+                  ],
+                  [
+                    45.0,
+                    114.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    50.0,
+                    136.0,
+                    1.0
+                  ],
+                  [
+                    55.0,
+                    138.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 191,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 186
+            },
+            {
+              "game": 13,
+              "map": 6,
+              "seat": 1,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "win",
+              "prediction_sums": [
+                1333.5609130859375,
+                40.0,
+                56.20420455932617,
+                37.89051818847656,
+                1621.2293701171875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    18.0,
+                    44.0,
+                    1.0
+                  ],
+                  [
+                    17.0,
+                    43.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    43.0,
+                    112.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    115.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    63.0,
+                    185.0,
+                    1.0
+                  ],
+                  [
+                    48.0,
+                    173.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    64.0,
+                    179.0,
+                    1.0
+                  ],
+                  [
+                    59.0,
+                    162.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 254,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 249
+            },
+            {
+              "game": 14,
+              "map": 7,
+              "seat": 0,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "loss",
+              "prediction_sums": [
+                2526.39208984375,
+                103.0,
+                109.76032257080078,
+                119.52405548095703,
+                6241.91845703125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    31.0,
+                    104.0,
+                    1.0
+                  ],
+                  [
+                    55.0,
+                    129.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    49.0,
+                    156.0,
+                    1.0
+                  ],
+                  [
+                    71.0,
+                    203.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    46.0,
+                    151.0,
+                    1.0
+                  ],
+                  [
+                    75.0,
+                    227.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    46.0,
+                    118.0,
+                    1.0
+                  ],
+                  [
+                    94.0,
+                    339.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 489,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 486
+            },
+            {
+              "game": 15,
+              "map": 7,
+              "seat": 1,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "loss",
+              "prediction_sums": [
+                2191.0654296875,
+                14.0,
+                93.65361785888672,
+                49.20280456542969,
+                2144.255615234375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    33.0,
+                    106.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    40.0,
+                    162.0,
+                    1.0
+                  ],
+                  [
+                    75.0,
+                    218.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    61.0,
+                    205.0,
+                    1.0
+                  ],
+                  [
+                    73.0,
+                    273.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 289,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 284
+            }
+          ]
+        },
+        "diagnostic": {
+          "records": [
+            {
+              "case": "batch1-map15-contact",
+              "map_group": "51cc2ca3b7bf75622ca6827b79c450d89db6186a0bdf901351a5735278aacd04",
+              "kind": "contact",
+              "seat": 1,
+              "steps": 96,
+              "start_tick": 155,
+              "end_tick": 251,
+              "outcome": "loss",
+              "army_before": 177,
+              "army_after": 0,
+              "all_commands_legal": true
+            },
+            {
+              "case": "batch1-map14-contact",
+              "map_group": "a0bf6ecf1fddc890df3c1f0c4667ac74dfb4929d0b849fa06570aeaeda5c706d",
+              "kind": "contact",
+              "seat": 0,
+              "steps": 128,
+              "start_tick": 187,
+              "end_tick": 315,
+              "outcome": "unresolved",
+              "army_before": 181,
+              "army_after": 216,
+              "all_commands_legal": true
+            }
+          ],
+          "wins": 0,
+          "losses": 1,
+          "unresolved": 1,
+          "survival_is_not_win": true
+        }
+      },
+      {
+        "role": "ordinary-control",
+        "seed": 101426,
+        "development_wins": 8,
+        "confirmation": {
+          "opponent": "fixed ordinary opponent",
+          "seed": 101431,
+          "side": 24,
+          "distance": 17,
+          "horizon": 1024,
+          "selection": "argmax",
+          "opponent_selection": "argmax",
+          "games": 16,
+          "map_pairs": 8,
+          "wins": 7,
+          "losses": 9,
+          "draws": 0,
+          "truncated": 0,
+          "win_rate": 0.4375,
+          "net_win_rate": -0.125,
+          "win_rate_ci95": [
+            0.0,
+            0.9176613956599604
+          ],
+          "net_win_rate_ci95": [
+            -1.0,
+            0.8353227913199207
+          ],
+          "interval": "map-paired Hoeffding, fixed-look; unresolved games score zero",
+          "mean_ticks": 282.0,
+          "pass_fraction": 0.016622340425531915,
+          "optional_pass_fraction": 0.0,
+          "movable_samples": 4437,
+          "opponent_action_nll": 6.02466123323914,
+          "opponent_action_accuracy": 0.22074468085106383,
+          "hidden_owner_nll": 0.23971475100686365,
+          "hidden_army_conditional_nll": 0.1668135701341832,
+          "general_nll": 14.253534898690297,
+          "economy": {
+            "50": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  21.75,
+                  47.75,
+                  1.0
+                ],
+                [
+                  21.6875,
+                  47.6875,
+                  1.0
+                ]
+              ]
+            },
+            "100": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  43.8125,
+                  111.0,
+                  1.0
+                ],
+                [
+                  47.375,
+                  114.5,
+                  1.0
+                ]
+              ]
+            },
+            "150": {
+              "ongoing_games": 15,
+              "learner_opponent_land_army_production": [
+                [
+                  54.46666666666667,
+                  152.33333333333334,
+                  1.0
+                ],
+                [
+                  55.0,
+                  156.33333333333334,
+                  1.0
+                ]
+              ]
+            },
+            "200": {
+              "ongoing_games": 13,
+              "learner_opponent_land_army_production": [
+                [
+                  58.61538461538461,
+                  178.15384615384616,
+                  1.0
+                ],
+                [
+                  59.76923076923077,
+                  180.84615384615384,
+                  1.0
+                ]
+              ]
+            },
+            "400": {
+              "ongoing_games": 3,
+              "learner_opponent_land_army_production": [
+                [
+                  61.0,
+                  178.0,
+                  1.0
+                ],
+                [
+                  80.33333333333333,
+                  282.3333333333333,
+                  1.0
+                ]
+              ]
+            }
+          },
+          "seconds": 14.459567382000387,
+          "records": [
+            {
+              "game": 0,
+              "map": 0,
+              "seat": 0,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "loss",
+              "prediction_sums": [
+                1835.941650390625,
+                49.0,
+                97.91608428955078,
+                41.17355728149414,
+                5792.47802734375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    49.0,
+                    120.0,
+                    1.0
+                  ],
+                  [
+                    40.0,
+                    111.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    55.0,
+                    144.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    66.0,
+                    183.0,
+                    1.0
+                  ],
+                  [
+                    40.0,
+                    140.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 285,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 282
+            },
+            {
+              "game": 1,
+              "map": 0,
+              "seat": 1,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "loss",
+              "prediction_sums": [
+                1529.2103271484375,
+                50.0,
+                58.1263427734375,
+                29.169921875,
+                5431.26806640625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    42.0,
+                    103.0,
+                    1.0
+                  ],
+                  [
+                    46.0,
+                    107.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    53.0,
+                    120.0,
+                    1.0
+                  ],
+                  [
+                    51.0,
+                    122.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    55.0,
+                    145.0,
+                    1.0
+                  ],
+                  [
+                    56.0,
+                    148.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 239,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 235
+            },
+            {
+              "game": 2,
+              "map": 1,
+              "seat": 0,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "win",
+              "prediction_sums": [
+                1901.7640380859375,
+                41.0,
+                78.42535400390625,
+                48.16978073120117,
+                4618.49853515625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    50.0,
+                    122.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    67.0,
+                    214.0,
+                    1.0
+                  ],
+                  [
+                    58.0,
+                    210.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    63.0,
+                    205.0,
+                    1.0
+                  ],
+                  [
+                    66.0,
+                    204.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 261,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 256
+            },
+            {
+              "game": 3,
+              "map": 1,
+              "seat": 1,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "loss",
+              "prediction_sums": [
+                1377.416259765625,
+                31.0,
+                35.35567855834961,
+                27.45319938659668,
+                4315.92138671875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    55.0,
+                    128.0,
+                    1.0
+                  ],
+                  [
+                    48.0,
+                    119.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    67.0,
+                    163.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    136.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    84.0,
+                    220.0,
+                    1.0
+                  ],
+                  [
+                    48.0,
+                    157.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 218,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 214
+            },
+            {
+              "game": 4,
+              "map": 2,
+              "seat": 0,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "win",
+              "prediction_sums": [
+                1871.342529296875,
+                56.0,
+                67.4722900390625,
+                44.98069763183594,
+                4382.1796875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    56.0,
+                    130.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    120.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    54.0,
+                    164.0,
+                    1.0
+                  ],
+                  [
+                    66.0,
+                    166.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    65.0,
+                    182.0,
+                    1.0
+                  ],
+                  [
+                    55.0,
+                    174.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 272,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 267
+            },
+            {
+              "game": 5,
+              "map": 2,
+              "seat": 1,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "loss",
+              "prediction_sums": [
+                1059.751708984375,
+                42.0,
+                39.26392364501953,
+                26.802356719970703,
+                1874.5982666015625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    52.0,
+                    121.0,
+                    1.0
+                  ],
+                  [
+                    52.0,
+                    122.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    54.0,
+                    156.0,
+                    1.0
+                  ],
+                  [
+                    53.0,
+                    156.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 184,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 180
+            },
+            {
+              "game": 6,
+              "map": 3,
+              "seat": 0,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "win",
+              "prediction_sums": [
+                2203.163818359375,
+                62.0,
+                68.90813446044922,
+                56.1052360534668,
+                4054.6962890625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    50.0,
+                    125.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    121.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    69.0,
+                    182.0,
+                    1.0
+                  ],
+                  [
+                    56.0,
+                    165.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    72.0,
+                    199.0,
+                    1.0
+                  ],
+                  [
+                    70.0,
+                    180.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 286,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 280
+            },
+            {
+              "game": 7,
+              "map": 3,
+              "seat": 1,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "loss",
+              "prediction_sums": [
+                1070.256103515625,
+                68.0,
+                33.04341125488281,
+                28.6904354095459,
+                1933.6824951171875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    38.0,
+                    86.0,
+                    1.0
+                  ],
+                  [
+                    39.0,
+                    88.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    46.0,
+                    111.0,
+                    1.0
+                  ],
+                  [
+                    48.0,
+                    115.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    54.0,
+                    131.0,
+                    1.0
+                  ],
+                  [
+                    48.0,
+                    129.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 231,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 225
+            },
+            {
+              "game": 8,
+              "map": 4,
+              "seat": 0,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "loss",
+              "prediction_sums": [
+                2563.7939453125,
+                101.0,
+                116.83287811279297,
+                88.9581069946289,
+                9031.1279296875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    36.0,
+                    100.0,
+                    1.0
+                  ],
+                  [
+                    42.0,
+                    106.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    38.0,
+                    110.0,
+                    1.0
+                  ],
+                  [
+                    51.0,
+                    129.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    40.0,
+                    129.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    157.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    70.0,
+                    231.0,
+                    1.0
+                  ],
+                  [
+                    104.0,
+                    335.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 420,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 416
+            },
+            {
+              "game": 9,
+              "map": 4,
+              "seat": 1,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "loss",
+              "prediction_sums": [
+                2303.58935546875,
+                137.0,
+                82.10074615478516,
+                115.29528045654297,
+                2558.68310546875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    38.0,
+                    99.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    110.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    43.0,
+                    111.0,
+                    1.0
+                  ],
+                  [
+                    50.0,
+                    129.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    54.0,
+                    168.0,
+                    1.0
+                  ],
+                  [
+                    60.0,
+                    192.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    42.0,
+                    114.0,
+                    1.0
+                  ],
+                  [
+                    74.0,
+                    282.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 507,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 503
+            },
+            {
+              "game": 10,
+              "map": 5,
+              "seat": 0,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "win",
+              "prediction_sums": [
+                1066.557861328125,
+                32.0,
+                37.7366943359375,
+                16.78139877319336,
+                1394.0399169921875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    37.0,
+                    99.0,
+                    1.0
+                  ],
+                  [
+                    52.0,
+                    115.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    43.0,
+                    124.0,
+                    1.0
+                  ],
+                  [
+                    67.0,
+                    164.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 174,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 168
+            },
+            {
+              "game": 11,
+              "map": 5,
+              "seat": 1,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "loss",
+              "prediction_sums": [
+                1188.3836669921875,
+                19.0,
+                42.69819259643555,
+                11.342676162719727,
+                2280.654052734375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    43.0,
+                    116.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    120.0,
+                    1.0
+                  ]
+                ],
+                "150": null,
+                "200": null,
+                "400": null
+              },
+              "ticks": 133,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 127
+            },
+            {
+              "game": 12,
+              "map": 6,
+              "seat": 0,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "win",
+              "prediction_sums": [
+                1590.7783203125,
+                27.0,
+                63.83821487426758,
+                38.659603118896484,
+                916.2486572265625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    19.0,
+                    45.0,
+                    1.0
+                  ],
+                  [
+                    18.0,
+                    44.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    46.0,
+                    116.0,
+                    1.0
+                  ],
+                  [
+                    45.0,
+                    114.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    53.0,
+                    194.0,
+                    1.0
+                  ],
+                  [
+                    58.0,
+                    197.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    49.0,
+                    257.0,
+                    1.0
+                  ],
+                  [
+                    86.0,
+                    297.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 244,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 239
+            },
+            {
+              "game": 13,
+              "map": 6,
+              "seat": 1,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "win",
+              "prediction_sums": [
+                1394.241455078125,
+                104.0,
+                46.3244743347168,
+                50.849002838134766,
+                4768.30615234375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    18.0,
+                    44.0,
+                    1.0
+                  ],
+                  [
+                    17.0,
+                    43.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    38.0,
+                    107.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    115.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    62.0,
+                    183.0,
+                    1.0
+                  ],
+                  [
+                    52.0,
+                    181.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    60.0,
+                    175.0,
+                    1.0
+                  ],
+                  [
+                    61.0,
+                    174.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 341,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 336
+            },
+            {
+              "game": 14,
+              "map": 7,
+              "seat": 0,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "loss",
+              "prediction_sums": [
+                2247.767822265625,
+                148.0,
+                118.1821517944336,
+                89.34669494628906,
+                5846.01708984375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    41.0,
+                    101.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    110.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    58.0,
+                    145.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    150.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    57.0,
+                    153.0,
+                    1.0
+                  ],
+                  [
+                    60.0,
+                    161.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    71.0,
+                    189.0,
+                    1.0
+                  ],
+                  [
+                    63.0,
+                    230.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 482,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 479
+            },
+            {
+              "game": 15,
+              "map": 7,
+              "seat": 1,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "win",
+              "prediction_sums": [
+                1979.3126220703125,
+                29.0,
+                95.3683853149414,
+                38.88488006591797,
+                5113.5498046875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    30.0,
+                    103.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    55.0,
+                    164.0,
+                    1.0
+                  ],
+                  [
+                    65.0,
+                    198.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    43.0,
+                    169.0,
+                    1.0
+                  ],
+                  [
+                    78.0,
+                    238.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 235,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 230
+            }
+          ]
+        },
+        "diagnostic": {
+          "records": [
+            {
+              "case": "batch1-map15-contact",
+              "map_group": "51cc2ca3b7bf75622ca6827b79c450d89db6186a0bdf901351a5735278aacd04",
+              "kind": "contact",
+              "seat": 1,
+              "steps": 128,
+              "start_tick": 155,
+              "end_tick": 283,
+              "outcome": "unresolved",
+              "army_before": 177,
+              "army_after": 247,
+              "all_commands_legal": true
+            },
+            {
+              "case": "batch1-map14-contact",
+              "map_group": "a0bf6ecf1fddc890df3c1f0c4667ac74dfb4929d0b849fa06570aeaeda5c706d",
+              "kind": "contact",
+              "seat": 0,
+              "steps": 128,
+              "start_tick": 187,
+              "end_tick": 315,
+              "outcome": "unresolved",
+              "army_before": 181,
+              "army_after": 279,
+              "all_commands_legal": true
+            }
+          ],
+          "wins": 0,
+          "losses": 0,
+          "unresolved": 2,
+          "survival_is_not_win": true
+        }
+      },
+      {
+        "role": "threat",
+        "seed": 101425,
+        "development_wins": 7,
+        "confirmation": {
+          "opponent": "fixed ordinary opponent",
+          "seed": 101431,
+          "side": 24,
+          "distance": 17,
+          "horizon": 1024,
+          "selection": "argmax",
+          "opponent_selection": "argmax",
+          "games": 16,
+          "map_pairs": 8,
+          "wins": 7,
+          "losses": 9,
+          "draws": 0,
+          "truncated": 0,
+          "win_rate": 0.4375,
+          "net_win_rate": -0.125,
+          "win_rate_ci95": [
+            0.0,
+            0.9176613956599604
+          ],
+          "net_win_rate_ci95": [
+            -1.0,
+            0.8353227913199207
+          ],
+          "interval": "map-paired Hoeffding, fixed-look; unresolved games score zero",
+          "mean_ticks": 264.875,
+          "pass_fraction": 0.01864086833411987,
+          "optional_pass_fraction": 0.0,
+          "movable_samples": 4159,
+          "opponent_action_nll": 5.567140284885264,
+          "opponent_action_accuracy": 0.20764511562057575,
+          "hidden_owner_nll": 0.2281301839557556,
+          "hidden_army_conditional_nll": 0.16680525158193102,
+          "general_nll": 10.29022467389541,
+          "economy": {
+            "50": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  21.8125,
+                  47.8125,
+                  1.0
+                ],
+                [
+                  21.6875,
+                  47.6875,
+                  1.0
+                ]
+              ]
+            },
+            "100": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  50.6875,
+                  118.25,
+                  1.0
+                ],
+                [
+                  47.125,
+                  114.5625,
+                  1.0
+                ]
+              ]
+            },
+            "150": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  63.8125,
+                  171.875,
+                  1.0
+                ],
+                [
+                  60.3125,
+                  164.6875,
+                  1.0
+                ]
+              ]
+            },
+            "200": {
+              "ongoing_games": 12,
+              "learner_opponent_land_army_production": [
+                [
+                  70.58333333333333,
+                  197.08333333333334,
+                  1.0
+                ],
+                [
+                  63.333333333333336,
+                  185.25,
+                  1.0
+                ]
+              ]
+            },
+            "400": {
+              "ongoing_games": 1,
+              "learner_opponent_land_army_production": [
+                [
+                  81.0,
+                  277.0,
+                  1.0
+                ],
+                [
+                  80.0,
+                  331.0,
+                  1.0
+                ]
+              ]
+            }
+          },
+          "seconds": 12.950386796612293,
+          "records": [
+            {
+              "game": 0,
+              "map": 0,
+              "seat": 0,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "loss",
+              "prediction_sums": [
+                1604.2086181640625,
+                59.0,
+                63.119503021240234,
+                44.37944412231445,
+                3984.120361328125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    52.0,
+                    124.0,
+                    1.0
+                  ],
+                  [
+                    37.0,
+                    109.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    64.0,
+                    153.0,
+                    1.0
+                  ],
+                  [
+                    44.0,
+                    118.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    67.0,
+                    181.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    133.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 295,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 292
+            },
+            {
+              "game": 1,
+              "map": 0,
+              "seat": 1,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "win",
+              "prediction_sums": [
+                1501.291748046875,
+                33.0,
+                74.95927429199219,
+                51.193145751953125,
+                2578.37158203125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    50.0,
+                    122.0,
+                    1.0
+                  ],
+                  [
+                    55.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    69.0,
+                    213.0,
+                    1.0
+                  ],
+                  [
+                    80.0,
+                    229.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    85.0,
+                    264.0,
+                    1.0
+                  ],
+                  [
+                    68.0,
+                    263.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 255,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 251
+            },
+            {
+              "game": 2,
+              "map": 1,
+              "seat": 0,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "win",
+              "prediction_sums": [
+                1452.3951416015625,
+                25.0,
+                46.89683532714844,
+                26.168651580810547,
+                2076.950927734375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    42.0,
+                    100.0,
+                    1.0
+                  ],
+                  [
+                    53.0,
+                    112.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    49.0,
+                    129.0,
+                    1.0
+                  ],
+                  [
+                    77.0,
+                    169.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 189,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 184
+            },
+            {
+              "game": 3,
+              "map": 1,
+              "seat": 1,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "loss",
+              "prediction_sums": [
+                1284.1334228515625,
+                30.0,
+                46.3847770690918,
+                26.409927368164062,
+                2918.720947265625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    58.0,
+                    130.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    117.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    79.0,
+                    181.0,
+                    1.0
+                  ],
+                  [
+                    50.0,
+                    139.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 196,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 191
+            },
+            {
+              "game": 4,
+              "map": 2,
+              "seat": 0,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "loss",
+              "prediction_sums": [
+                1186.595947265625,
+                31.0,
+                47.97523880004883,
+                35.85453414916992,
+                2969.097412109375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    58.0,
+                    132.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    120.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    79.0,
+                    195.0,
+                    1.0
+                  ],
+                  [
+                    63.0,
+                    167.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 195,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 190
+            },
+            {
+              "game": 5,
+              "map": 2,
+              "seat": 1,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "loss",
+              "prediction_sums": [
+                1215.94140625,
+                52.0,
+                56.07660675048828,
+                43.86481475830078,
+                2527.95703125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    56.0,
+                    125.0,
+                    1.0
+                  ],
+                  [
+                    50.0,
+                    120.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    58.0,
+                    184.0,
+                    1.0
+                  ],
+                  [
+                    71.0,
+                    192.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    80.0,
+                    203.0,
+                    1.0
+                  ],
+                  [
+                    72.0,
+                    203.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 254,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 249
+            },
+            {
+              "game": 6,
+              "map": 3,
+              "seat": 0,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "win",
+              "prediction_sums": [
+                1637.8349609375,
+                6.0,
+                59.4929313659668,
+                20.380056381225586,
+                3758.645263671875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    55.0,
+                    130.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    121.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    82.0,
+                    231.0,
+                    1.0
+                  ],
+                  [
+                    61.0,
+                    201.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 156,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 150
+            },
+            {
+              "game": 7,
+              "map": 3,
+              "seat": 1,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "win",
+              "prediction_sums": [
+                1436.9794921875,
+                44.0,
+                50.76993179321289,
+                32.43666458129883,
+                2935.891357421875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    50.0,
+                    110.0,
+                    1.0
+                  ],
+                  [
+                    44.0,
+                    105.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    65.0,
+                    160.0,
+                    1.0
+                  ],
+                  [
+                    43.0,
+                    133.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    73.0,
+                    179.0,
+                    1.0
+                  ],
+                  [
+                    46.0,
+                    125.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 243,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 237
+            },
+            {
+              "game": 8,
+              "map": 4,
+              "seat": 0,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "win",
+              "prediction_sums": [
+                1962.54052734375,
+                40.0,
+                62.84181213378906,
+                49.7969856262207,
+                4567.00146484375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    48.0,
+                    110.0,
+                    1.0
+                  ],
+                  [
+                    40.0,
+                    101.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    63.0,
+                    168.0,
+                    1.0
+                  ],
+                  [
+                    36.0,
+                    132.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    64.0,
+                    182.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    129.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 319,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 314
+            },
+            {
+              "game": 9,
+              "map": 4,
+              "seat": 1,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "loss",
+              "prediction_sums": [
+                1199.347900390625,
+                61.0,
+                43.303016662597656,
+                42.407623291015625,
+                2434.678466796875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    43.0,
+                    102.0,
+                    1.0
+                  ],
+                  [
+                    48.0,
+                    108.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    59.0,
+                    147.0,
+                    1.0
+                  ],
+                  [
+                    52.0,
+                    146.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    67.0,
+                    179.0,
+                    1.0
+                  ],
+                  [
+                    58.0,
+                    169.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 258,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 254
+            },
+            {
+              "game": 10,
+              "map": 5,
+              "seat": 0,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "win",
+              "prediction_sums": [
+                1457.1927490234375,
+                51.0,
+                61.458675384521484,
+                34.07610321044922,
+                3273.73828125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    54.0,
+                    125.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    120.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    64.0,
+                    165.0,
+                    1.0
+                  ],
+                  [
+                    58.0,
+                    154.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    66.0,
+                    178.0,
+                    1.0
+                  ],
+                  [
+                    71.0,
+                    172.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 256,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 250
+            },
+            {
+              "game": 11,
+              "map": 5,
+              "seat": 1,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "loss",
+              "prediction_sums": [
+                1087.6844482421875,
+                91.0,
+                36.27645492553711,
+                39.531829833984375,
+                731.0225830078125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    51.0,
+                    117.0,
+                    1.0
+                  ],
+                  [
+                    46.0,
+                    112.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    64.0,
+                    154.0,
+                    1.0
+                  ],
+                  [
+                    58.0,
+                    143.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    59.0,
+                    194.0,
+                    1.0
+                  ],
+                  [
+                    67.0,
+                    191.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 291,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 285
+            },
+            {
+              "game": 12,
+              "map": 6,
+              "seat": 0,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "loss",
+              "prediction_sums": [
+                1311.3563232421875,
+                71.0,
+                62.8297004699707,
+                40.52432632446289,
+                2936.0517578125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    17.0,
+                    43.0,
+                    1.0
+                  ],
+                  [
+                    18.0,
+                    44.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    43.0,
+                    101.0,
+                    1.0
+                  ],
+                  [
+                    39.0,
+                    98.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    56.0,
+                    157.0,
+                    1.0
+                  ],
+                  [
+                    60.0,
+                    158.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    84.0,
+                    213.0,
+                    1.0
+                  ],
+                  [
+                    60.0,
+                    190.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 264,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 259
+            },
+            {
+              "game": 13,
+              "map": 6,
+              "seat": 1,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "loss",
+              "prediction_sums": [
+                1405.35693359375,
+                78.0,
+                64.08635711669922,
+                50.359981536865234,
+                2204.719970703125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    20.0,
+                    46.0,
+                    1.0
+                  ],
+                  [
+                    17.0,
+                    43.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    44.0,
+                    115.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    115.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    53.0,
+                    168.0,
+                    1.0
+                  ],
+                  [
+                    68.0,
+                    183.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    68.0,
+                    215.0,
+                    1.0
+                  ],
+                  [
+                    66.0,
+                    228.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 304,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 299
+            },
+            {
+              "game": 14,
+              "map": 7,
+              "seat": 0,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "win",
+              "prediction_sums": [
+                1891.5501708984375,
+                90.0,
+                83.77162170410156,
+                69.22224426269531,
+                2234.21142578125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    54.0,
+                    125.0,
+                    1.0
+                  ],
+                  [
+                    53.0,
+                    125.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    56.0,
+                    156.0,
+                    1.0
+                  ],
+                  [
+                    64.0,
+                    164.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    66.0,
+                    168.0,
+                    1.0
+                  ],
+                  [
+                    66.0,
+                    176.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 358,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 355
+            },
+            {
+              "game": 15,
+              "map": 7,
+              "seat": 1,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "loss",
+              "prediction_sums": [
+                1959.1307373046875,
+                118.0,
+                106.57298278808594,
+                100.31432342529297,
+                1478.7933349609375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    53.0,
+                    124.0,
+                    1.0
+                  ],
+                  [
+                    52.0,
+                    123.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    61.0,
+                    189.0,
+                    1.0
+                  ],
+                  [
+                    80.0,
+                    207.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    68.0,
+                    209.0,
+                    1.0
+                  ],
+                  [
+                    85.0,
+                    244.0,
+                    1.0
+                  ]
+                ],
+                "400": [
+                  [
+                    81.0,
+                    277.0,
+                    1.0
+                  ],
+                  [
+                    80.0,
+                    331.0,
+                    1.0
+                  ]
+                ]
+              },
+              "ticks": 405,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 399
+            }
+          ]
+        },
+        "diagnostic": {
+          "records": [
+            {
+              "case": "batch1-map15-contact",
+              "map_group": "51cc2ca3b7bf75622ca6827b79c450d89db6186a0bdf901351a5735278aacd04",
+              "kind": "contact",
+              "seat": 1,
+              "steps": 128,
+              "start_tick": 155,
+              "end_tick": 283,
+              "outcome": "unresolved",
+              "army_before": 177,
+              "army_after": 180,
+              "all_commands_legal": true
+            },
+            {
+              "case": "batch1-map14-contact",
+              "map_group": "a0bf6ecf1fddc890df3c1f0c4667ac74dfb4929d0b849fa06570aeaeda5c706d",
+              "kind": "contact",
+              "seat": 0,
+              "steps": 102,
+              "start_tick": 187,
+              "end_tick": 289,
+              "outcome": "win",
+              "army_before": 181,
+              "army_after": 305,
+              "all_commands_legal": true
+            }
+          ],
+          "wins": 1,
+          "losses": 0,
+          "unresolved": 1,
+          "survival_is_not_win": true
+        }
+      },
+      {
+        "role": "threat",
+        "seed": 101426,
+        "development_wins": 8,
+        "confirmation": {
+          "opponent": "fixed ordinary opponent",
+          "seed": 101431,
+          "side": 24,
+          "distance": 17,
+          "horizon": 1024,
+          "selection": "argmax",
+          "opponent_selection": "argmax",
+          "games": 16,
+          "map_pairs": 8,
+          "wins": 7,
+          "losses": 9,
+          "draws": 0,
+          "truncated": 0,
+          "win_rate": 0.4375,
+          "net_win_rate": -0.125,
+          "win_rate_ci95": [
+            0.0,
+            0.9176613956599604
+          ],
+          "net_win_rate_ci95": [
+            -1.0,
+            0.8353227913199207
+          ],
+          "interval": "map-paired Hoeffding, fixed-look; unresolved games score zero",
+          "mean_ticks": 227.625,
+          "pass_fraction": 0.0214168039538715,
+          "optional_pass_fraction": 0.0,
+          "movable_samples": 3564,
+          "opponent_action_nll": 5.937592474462435,
+          "opponent_action_accuracy": 0.18094453596924767,
+          "hidden_owner_nll": 0.21673577123785465,
+          "hidden_army_conditional_nll": 0.14620464336472772,
+          "general_nll": 9.540283404229305,
+          "economy": {
+            "50": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  21.9375,
+                  47.9375,
+                  1.0
+                ],
+                [
+                  21.6875,
+                  47.6875,
+                  1.0
+                ]
+              ]
+            },
+            "100": {
+              "ongoing_games": 16,
+              "learner_opponent_land_army_production": [
+                [
+                  42.8125,
+                  111.5625,
+                  1.0
+                ],
+                [
+                  47.75,
+                  116.25,
+                  1.0
+                ]
+              ]
+            },
+            "150": {
+              "ongoing_games": 14,
+              "learner_opponent_land_army_production": [
+                [
+                  52.0,
+                  154.92857142857142,
+                  1.0
+                ],
+                [
+                  57.285714285714285,
+                  164.64285714285714,
+                  1.0
+                ]
+              ]
+            },
+            "200": {
+              "ongoing_games": 11,
+              "learner_opponent_land_army_production": [
+                [
+                  65.81818181818181,
+                  188.8181818181818,
+                  1.0
+                ],
+                [
+                  61.18181818181818,
+                  193.27272727272728,
+                  1.0
+                ]
+              ]
+            },
+            "400": {
+              "ongoing_games": 0,
+              "learner_opponent_land_army_production": null
+            }
+          },
+          "seconds": 12.282147557940334,
+          "records": [
+            {
+              "game": 0,
+              "map": 0,
+              "seat": 0,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "loss",
+              "prediction_sums": [
+                1008.7246704101562,
+                42.0,
+                32.721214294433594,
+                21.71136474609375,
+                1738.3280029296875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    41.0,
+                    112.0,
+                    1.0
+                  ],
+                  [
+                    40.0,
+                    111.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    49.0,
+                    123.0,
+                    1.0
+                  ],
+                  [
+                    51.0,
+                    124.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 184,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 181
+            },
+            {
+              "game": 1,
+              "map": 0,
+              "seat": 1,
+              "map_sha256": "a07ffb3b7fbcd85cb55d22829a0d8847b55ccf6ff81eb41db61df60d0cab8329",
+              "outcome": "win",
+              "prediction_sums": [
+                1442.6307373046875,
+                37.0,
+                57.1555061340332,
+                40.66261291503906,
+                2390.222900390625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    50.0,
+                    122.0,
+                    1.0
+                  ],
+                  [
+                    55.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    51.0,
+                    171.0,
+                    1.0
+                  ],
+                  [
+                    69.0,
+                    194.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    89.0,
+                    227.0,
+                    1.0
+                  ],
+                  [
+                    57.0,
+                    218.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 252,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 248
+            },
+            {
+              "game": 2,
+              "map": 1,
+              "seat": 0,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "win",
+              "prediction_sums": [
+                1245.8275146484375,
+                9.0,
+                41.419883728027344,
+                20.339998245239258,
+                2125.595458984375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    41.0,
+                    113.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    43.0,
+                    162.0,
+                    1.0
+                  ],
+                  [
+                    62.0,
+                    195.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 166,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 161
+            },
+            {
+              "game": 3,
+              "map": 1,
+              "seat": 1,
+              "map_sha256": "5cb1ba2317e363faab2b52c65883fcdbf3ed10d32e479e577e95b37d790abb63",
+              "outcome": "loss",
+              "prediction_sums": [
+                1457.5958251953125,
+                63.0,
+                43.72334289550781,
+                29.734996795654297,
+                3318.088623046875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    21.0,
+                    47.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    41.0,
+                    103.0,
+                    1.0
+                  ],
+                  [
+                    38.0,
+                    99.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    52.0,
+                    135.0,
+                    1.0
+                  ],
+                  [
+                    46.0,
+                    125.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    50.0,
+                    151.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    145.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 249,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 244
+            },
+            {
+              "game": 4,
+              "map": 2,
+              "seat": 0,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "win",
+              "prediction_sums": [
+                1023.4418334960938,
+                16.0,
+                35.04485321044922,
+                21.65981674194336,
+                1164.209716796875
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    50.0,
+                    124.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    120.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    57.0,
+                    176.0,
+                    1.0
+                  ],
+                  [
+                    63.0,
+                    178.0,
+                    1.0
+                  ]
+                ],
+                "200": null,
+                "400": null
+              },
+              "ticks": 156,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 151
+            },
+            {
+              "game": 5,
+              "map": 2,
+              "seat": 1,
+              "map_sha256": "59f37d589e57bdffc948e3621c32b2c94fc66f2f33e98a4117f8b6b413489159",
+              "outcome": "win",
+              "prediction_sums": [
+                1317.3466796875,
+                36.0,
+                55.417640686035156,
+                44.91844940185547,
+                703.74462890625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    33.0,
+                    106.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    128.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    59.0,
+                    168.0,
+                    1.0
+                  ],
+                  [
+                    72.0,
+                    203.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    64.0,
+                    179.0,
+                    1.0
+                  ],
+                  [
+                    72.0,
+                    222.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 241,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 237
+            },
+            {
+              "game": 6,
+              "map": 3,
+              "seat": 0,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "win",
+              "prediction_sums": [
+                1367.6353759765625,
+                5.0,
+                38.21803283691406,
+                9.355700492858887,
+                2544.08203125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    49.0,
+                    121.0,
+                    1.0
+                  ],
+                  [
+                    44.0,
+                    115.0,
+                    1.0
+                  ]
+                ],
+                "150": null,
+                "200": null,
+                "400": null
+              },
+              "ticks": 102,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 96
+            },
+            {
+              "game": 7,
+              "map": 3,
+              "seat": 1,
+              "map_sha256": "e4df18973678f2bcc7bb5db4e791e2fe339690c6e120fa45ede2d00c89b11a7e",
+              "outcome": "loss",
+              "prediction_sums": [
+                1910.161376953125,
+                81.0,
+                76.00491333007812,
+                47.027042388916016,
+                4200.3837890625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    24.0,
+                    50.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    35.0,
+                    80.0,
+                    1.0
+                  ],
+                  [
+                    40.0,
+                    86.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    45.0,
+                    108.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    118.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    57.0,
+                    153.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    153.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 311,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 305
+            },
+            {
+              "game": 8,
+              "map": 4,
+              "seat": 0,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "loss",
+              "prediction_sums": [
+                815.150146484375,
+                10.0,
+                22.45680046081543,
+                16.139892578125,
+                1953.140380859375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    31.0,
+                    105.0,
+                    1.0
+                  ],
+                  [
+                    51.0,
+                    124.0,
+                    1.0
+                  ]
+                ],
+                "150": null,
+                "200": null,
+                "400": null
+              },
+              "ticks": 134,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 129
+            },
+            {
+              "game": 9,
+              "map": 4,
+              "seat": 1,
+              "map_sha256": "c683d496757c96d6d59fe224097732cf536e7692f8caa127e679a464cc9cbea8",
+              "outcome": "loss",
+              "prediction_sums": [
+                1354.3505859375,
+                51.0,
+                46.462921142578125,
+                48.20301818847656,
+                1571.761962890625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    43.0,
+                    101.0,
+                    1.0
+                  ],
+                  [
+                    46.0,
+                    104.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    49.0,
+                    160.0,
+                    1.0
+                  ],
+                  [
+                    65.0,
+                    179.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    88.0,
+                    239.0,
+                    1.0
+                  ],
+                  [
+                    64.0,
+                    234.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 261,
+              "passes": 4,
+              "optional_passes": 0,
+              "movable": 257
+            },
+            {
+              "game": 10,
+              "map": 5,
+              "seat": 0,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "win",
+              "prediction_sums": [
+                1431.3603515625,
+                36.0,
+                58.87409973144531,
+                27.16795539855957,
+                1416.8228759765625
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    34.0,
+                    107.0,
+                    1.0
+                  ],
+                  [
+                    50.0,
+                    124.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    49.0,
+                    120.0,
+                    1.0
+                  ],
+                  [
+                    49.0,
+                    137.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    64.0,
+                    157.0,
+                    1.0
+                  ],
+                  [
+                    62.0,
+                    172.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 241,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 235
+            },
+            {
+              "game": 11,
+              "map": 5,
+              "seat": 1,
+              "map_sha256": "8d42f4c1dd1c12b4e5411ff66f2c16a2518f1d906661f5f9c8f81458d6181cee",
+              "outcome": "loss",
+              "prediction_sums": [
+                1365.9822998046875,
+                31.0,
+                53.29054260253906,
+                28.520986557006836,
+                2520.268798828125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    54.0,
+                    128.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    120.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    67.0,
+                    220.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    192.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    54.0,
+                    203.0,
+                    1.0
+                  ],
+                  [
+                    67.0,
+                    188.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 234,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 228
+            },
+            {
+              "game": 12,
+              "map": 6,
+              "seat": 0,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "loss",
+              "prediction_sums": [
+                1456.8304443359375,
+                95.0,
+                53.31673049926758,
+                45.3571662902832,
+                1374.523193359375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    18.0,
+                    44.0,
+                    1.0
+                  ],
+                  [
+                    18.0,
+                    44.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    38.0,
+                    102.0,
+                    1.0
+                  ],
+                  [
+                    44.0,
+                    108.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    43.0,
+                    117.0,
+                    1.0
+                  ],
+                  [
+                    46.0,
+                    126.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    59.0,
+                    184.0,
+                    1.0
+                  ],
+                  [
+                    42.0,
+                    176.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 324,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 319
+            },
+            {
+              "game": 13,
+              "map": 6,
+              "seat": 1,
+              "map_sha256": "175e9418b2791a64faf1c494ace5f0e199db9e2b3b8dc40bef74ee90730bf2ef",
+              "outcome": "loss",
+              "prediction_sums": [
+                1223.6239013671875,
+                51.0,
+                46.195682525634766,
+                35.853416442871094,
+                1785.75537109375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    20.0,
+                    46.0,
+                    1.0
+                  ],
+                  [
+                    17.0,
+                    43.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    44.0,
+                    115.0,
+                    1.0
+                  ],
+                  [
+                    47.0,
+                    115.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    60.0,
+                    185.0,
+                    1.0
+                  ],
+                  [
+                    57.0,
+                    182.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    63.0,
+                    179.0,
+                    1.0
+                  ],
+                  [
+                    56.0,
+                    169.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 259,
+              "passes": 5,
+              "optional_passes": 0,
+              "movable": 254
+            },
+            {
+              "game": 14,
+              "map": 7,
+              "seat": 0,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "loss",
+              "prediction_sums": [
+                1504.435546875,
+                60.0,
+                66.31559753417969,
+                58.13550567626953,
+                2940.007080078125
+              ],
+              "economy": {
+                "50": [
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ],
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    51.0,
+                    123.0,
+                    1.0
+                  ],
+                  [
+                    54.0,
+                    127.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    46.0,
+                    146.0,
+                    1.0
+                  ],
+                  [
+                    67.0,
+                    171.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    67.0,
+                    212.0,
+                    1.0
+                  ],
+                  [
+                    76.0,
+                    246.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 282,
+              "passes": 3,
+              "optional_passes": 0,
+              "movable": 279
+            },
+            {
+              "game": 15,
+              "map": 7,
+              "seat": 1,
+              "map_sha256": "1e700d3c89d45f1f1fbcb0b808555ba06615a391767bad4fce2e9de19a3be19e",
+              "outcome": "win",
+              "prediction_sums": [
+                1699.614501953125,
+                36.0,
+                62.733917236328125,
+                37.689388275146484,
+                2998.77734375
+              ],
+              "economy": {
+                "50": [
+                  [
+                    23.0,
+                    49.0,
+                    1.0
+                  ],
+                  [
+                    22.0,
+                    48.0,
+                    1.0
+                  ]
+                ],
+                "100": [
+                  [
+                    50.0,
+                    123.0,
+                    1.0
+                  ],
+                  [
+                    53.0,
+                    125.0,
+                    1.0
+                  ]
+                ],
+                "150": [
+                  [
+                    58.0,
+                    178.0,
+                    1.0
+                  ],
+                  [
+                    59.0,
+                    181.0,
+                    1.0
+                  ]
+                ],
+                "200": [
+                  [
+                    69.0,
+                    193.0,
+                    1.0
+                  ],
+                  [
+                    76.0,
+                    203.0,
+                    1.0
+                  ]
+                ],
+                "400": null
+              },
+              "ticks": 246,
+              "passes": 6,
+              "optional_passes": 0,
+              "movable": 240
+            }
+          ]
+        },
+        "diagnostic": {
+          "records": [
+            {
+              "case": "batch1-map15-contact",
+              "map_group": "51cc2ca3b7bf75622ca6827b79c450d89db6186a0bdf901351a5735278aacd04",
+              "kind": "contact",
+              "seat": 1,
+              "steps": 122,
+              "start_tick": 155,
+              "end_tick": 277,
+              "outcome": "win",
+              "army_before": 177,
+              "army_after": 284,
+              "all_commands_legal": true
+            },
+            {
+              "case": "batch1-map14-contact",
+              "map_group": "a0bf6ecf1fddc890df3c1f0c4667ac74dfb4929d0b849fa06570aeaeda5c706d",
+              "kind": "contact",
+              "seat": 0,
+              "steps": 128,
+              "start_tick": 187,
+              "end_tick": 315,
+              "outcome": "unresolved",
+              "army_before": 181,
+              "army_after": 269,
+              "all_commands_legal": true
+            }
+          ],
+          "wins": 1,
+          "losses": 0,
+          "unresolved": 1,
+          "survival_is_not_win": true
+        }
+      }
+    ],
+    "comparisons": [
+      {
+        "seed": 101425,
+        "vs_original": {
+          "better_maps": 2,
+          "worse_maps": 3,
+          "same_maps": 3,
+          "delta_by_map": {
+            "0": 1,
+            "1": 0,
+            "2": -1,
+            "3": 1,
+            "4": 0,
+            "5": 0,
+            "6": -1,
+            "7": -1
+          }
+        },
+        "vs_paired_control": {
+          "better_maps": 2,
+          "worse_maps": 2,
+          "same_maps": 4,
+          "delta_by_map": {
+            "0": 0,
+            "1": 0,
+            "2": -1,
+            "3": 0,
+            "4": 1,
+            "5": 0,
+            "6": -2,
+            "7": 1
+          }
+        }
+      },
+      {
+        "seed": 101426,
+        "vs_original": {
+          "better_maps": 2,
+          "worse_maps": 3,
+          "same_maps": 3,
+          "delta_by_map": {
+            "0": 1,
+            "1": 0,
+            "2": 1,
+            "3": 0,
+            "4": -1,
+            "5": 0,
+            "6": -1,
+            "7": -1
+          }
+        },
+        "vs_paired_control": {
+          "better_maps": 2,
+          "worse_maps": 1,
+          "same_maps": 5,
+          "delta_by_map": {
+            "0": 1,
+            "1": 0,
+            "2": 1,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": -2,
+            "7": 0
+          }
+        }
+      }
+    ],
+    "limits": [
+      "Only8 fresh independent maps, shared across all5 models",
+      "Only2 diagnostic contact maps; no separate home-defense generalization estimate",
+      "Short-window survival is not a win; lower KL is not greater strength"
+    ],
+    "all_stages_exit0": true
+  }
+}

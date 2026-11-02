@@ -1,0 +1,2422 @@
+{
+  "source": "runs/b4-probe-20261030-01/metrics.json",
+  "source_sha256": "fc633b99224f305b528c9aea54033faca20cee9cef7d1c66a44f00151ee1319a",
+  "export_kind": "selected_fields_no_retraining",
+  "data": {
+    "status": "NO_USEFUL_SIGNAL_UNDER_PROTOCOL",
+    "data_sufficiency": {
+      "train": {
+        "positive_source_maps": 11,
+        "negative_source_maps": 12,
+        "complete_wins": 10,
+        "samples": 928,
+        "censored_samples": 0,
+        "passed": true
+      },
+      "validation": {
+        "positive_source_maps": 4,
+        "negative_source_maps": 6,
+        "complete_wins": 6,
+        "samples": 411,
+        "censored_samples": 0,
+        "passed": true
+      },
+      "test": {
+        "positive_source_maps": 4,
+        "negative_source_maps": 6,
+        "complete_wins": 8,
+        "samples": 376,
+        "censored_samples": 0,
+        "passed": true
+      }
+    },
+    "metrics": {
+      "C0": {
+        "train": {
+          "AP": 0.13964955927613304,
+          "AUROC": 0.5000000000000002,
+          "Brier": 0.12014755987011527,
+          "log_loss": 0.40432682317436686,
+          "positive_rate": 0.13964955927613365,
+          "natural_sample_AP": 0.12068965517241188,
+          "FPR": 0.0,
+          "recall": 0.0,
+          "samples": 928,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.1,
+              "count": 928,
+              "predicted": 0.13964955927613368,
+              "observed": 0.13964955927613365
+            },
+            {
+              "lower": 0.2,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.4,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.5,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.8,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 0,
+              "AP": 0.1688888888888891,
+              "AUROC": 0.4999999999999996,
+              "Brier": 0.14122037049496886,
+              "log_loss": 0.4574898792627333,
+              "positive_rate": 0.16888888888888898,
+              "samples": 95
+            },
+            {
+              "map": 3,
+              "AP": 0.15714285714285733,
+              "AUROC": 0.4999999999999992,
+              "Brier": 0.13275499506209062,
+              "log_loss": 0.43613320136346945,
+              "positive_rate": 0.15714285714285714,
+              "samples": 110
+            },
+            {
+              "map": 4,
+              "AP": 0.0727272727272729,
+              "AUROC": 0.499999999999999,
+              "Brier": 0.07191660896585346,
+              "log_loss": 0.28264847690315875,
+              "positive_rate": 0.07272727272727272,
+              "samples": 104
+            },
+            {
+              "map": 6,
+              "AP": 0.12500000000000014,
+              "AUROC": 0.4999999999999994,
+              "Brier": 0.10958960958698495,
+              "log_loss": 0.37769094089588967,
+              "positive_rate": 0.125,
+              "samples": 83
+            },
+            {
+              "map": 7,
+              "AP": 0.22222222222222207,
+              "AUROC": 0.5,
+              "Brier": 0.17965775083884788,
+              "log_loss": 0.5544607410756066,
+              "positive_rate": 0.22222222222222218,
+              "samples": 47
+            },
+            {
+              "map": 12,
+              "AP": 0.12121212121212127,
+              "AUROC": 0.49999999999999983,
+              "Brier": 0.10685968200574354,
+              "log_loss": 0.37080380582395256,
+              "positive_rate": 0.12121212121212122,
+              "samples": 50
+            },
+            {
+              "map": 14,
+              "AP": 0.13793103448275854,
+              "AUROC": 0.5000000000000006,
+              "Brier": 0.11890901753674014,
+              "log_loss": 0.40120219510698496,
+              "positive_rate": 0.13793103448275865,
+              "samples": 69
+            },
+            {
+              "map": 15,
+              "AP": 0.13333333333333316,
+              "AUROC": 0.5000000000000007,
+              "Brier": 0.11559545026571608,
+              "log_loss": 0.3928426380541511,
+              "positive_rate": 0.13333333333333333,
+              "samples": 94
+            },
+            {
+              "map": 17,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.01950199940601835,
+              "log_loss": 0.15041548352196787,
+              "positive_rate": 0.0,
+              "samples": 95
+            },
+            {
+              "map": 19,
+              "AP": 0.09302325581395354,
+              "AUROC": 0.5,
+              "Brier": 0.08654394186627257,
+              "log_loss": 0.3195507076141887,
+              "positive_rate": 0.0930232558139535,
+              "samples": 62
+            },
+            {
+              "map": 22,
+              "AP": 0.11764705882352958,
+              "AUROC": 0.49999999999999933,
+              "Brier": 0.10429033839986931,
+              "log_loss": 0.3643217963444825,
+              "positive_rate": 0.11764705882352944,
+              "samples": 70
+            },
+            {
+              "map": 23,
+              "AP": 0.32666666666666655,
+              "AUROC": 0.5000000000000001,
+              "Brier": 0.2549309540122777,
+              "log_loss": 0.7443620121258167,
+              "positive_rate": 0.32666666666666666,
+              "samples": 49
+            }
+          ]
+        },
+        "validation": {
+          "AP": 0.1226566060667445,
+          "AUROC": 0.49999999999999994,
+          "Brier": 0.10790072351370834,
+          "log_loss": 0.37343017347198604,
+          "positive_rate": 0.12265660606674433,
+          "natural_sample_AP": 0.11678832116788315,
+          "FPR": 0.0,
+          "recall": 0.0,
+          "samples": 411,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.1,
+              "count": 411,
+              "predicted": 0.1396495592761337,
+              "observed": 0.12265660606674433
+            },
+            {
+              "lower": 0.2,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.4,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.5,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.8,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 2,
+              "AP": 0.09523809523809536,
+              "AUROC": 0.4999999999999994,
+              "Brier": 0.08814017859151674,
+              "log_loss": 0.3235777367592417,
+              "positive_rate": 0.09523809523809525,
+              "samples": 82
+            },
+            {
+              "map": 5,
+              "AP": 0.21066491112574048,
+              "AUROC": 0.4999999999999999,
+              "Brier": 0.17132838654444793,
+              "log_loss": 0.533447195751882,
+              "positive_rate": 0.2106649111257406,
+              "samples": 80
+            },
+            {
+              "map": 9,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.019501999406018364,
+              "log_loss": 0.15041548352196799,
+              "positive_rate": 0.0,
+              "samples": 77
+            },
+            {
+              "map": 11,
+              "AP": 0.287179487179487,
+              "AUROC": 0.5000000000000001,
+              "Brier": 0.2264725089499826,
+              "log_loss": 0.6725662778989778,
+              "positive_rate": 0.28717948717948716,
+              "samples": 56
+            },
+            {
+              "map": 16,
+              "AP": 0.1428571428571428,
+              "AUROC": 0.4999999999999999,
+              "Brier": 0.12245926818426593,
+              "log_loss": 0.41015886337787855,
+              "positive_rate": 0.14285714285714285,
+              "samples": 46
+            },
+            {
+              "map": 18,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.019501999406018385,
+              "log_loss": 0.15041548352196793,
+              "positive_rate": 0.0,
+              "samples": 70
+            }
+          ]
+        },
+        "test": {
+          "AP": 0.08479874163104018,
+          "AUROC": 0.49999999999999745,
+          "Brier": 0.08061652724516727,
+          "log_loss": 0.3045968658333885,
+          "positive_rate": 0.08479874163103977,
+          "natural_sample_AP": 0.08510638297872382,
+          "FPR": 0.0,
+          "recall": 0.0,
+          "samples": 376,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.1,
+              "count": 376,
+              "predicted": 0.13964955927613365,
+              "observed": 0.08479874163103977
+            },
+            {
+              "lower": 0.2,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.4,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.5,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.8,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 1,
+              "AP": 0.17391304347826098,
+              "AUROC": 0.4999999999999999,
+              "Brier": 0.14484128313605882,
+              "log_loss": 0.46662481552046775,
+              "positive_rate": 0.17391304347826092,
+              "samples": 51
+            },
+            {
+              "map": 8,
+              "AP": 0.07142857142857156,
+              "AUROC": 0.4999999999999992,
+              "Brier": 0.07098063379514215,
+              "log_loss": 0.2802871734499234,
+              "positive_rate": 0.07142857142857147,
+              "samples": 87
+            },
+            {
+              "map": 10,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.019501999406018364,
+              "log_loss": 0.15041548352196787,
+              "positive_rate": 0.0,
+              "samples": 68
+            },
+            {
+              "map": 13,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.019501999406018367,
+              "log_loss": 0.15041548352196796,
+              "positive_rate": 0.0,
+              "samples": 57
+            },
+            {
+              "map": 20,
+              "AP": 0.18181818181818182,
+              "AUROC": 0.5000000000000004,
+              "Brier": 0.15053852330560613,
+              "log_loss": 0.48099796697494485,
+              "positive_rate": 0.18181818181818182,
+              "samples": 43
+            },
+            {
+              "map": 21,
+              "AP": 0.08163265306122443,
+              "AUROC": 0.5000000000000003,
+              "Brier": 0.07833472442215982,
+              "log_loss": 0.2988402720110597,
+              "positive_rate": 0.08163265306122448,
+              "samples": 70
+            }
+          ],
+          "capture_events": [
+            {
+              "episode": 3,
+              "map": 1,
+              "end_tick": 180,
+              "eligible": true,
+              "warned": false,
+              "earliest_lead": null
+            },
+            {
+              "episode": 17,
+              "map": 8,
+              "end_tick": 443,
+              "eligible": true,
+              "warned": false,
+              "earliest_lead": null
+            },
+            {
+              "episode": 40,
+              "map": 20,
+              "end_tick": 169,
+              "eligible": true,
+              "warned": false,
+              "earliest_lead": null
+            },
+            {
+              "episode": 43,
+              "map": 21,
+              "end_tick": 389,
+              "eligible": true,
+              "warned": false,
+              "earliest_lead": null
+            }
+          ],
+          "warning_16_to_64_recall_all_losses": 0.0,
+          "eligible_capture_events": 4,
+          "winning_episodes": [
+            {
+              "episode": 2,
+              "map": 1,
+              "end_tick": 224,
+              "alarm_samples": 0,
+              "samples": 28,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 16,
+              "map": 8,
+              "end_tick": 242,
+              "alarm_samples": 0,
+              "samples": 31,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 20,
+              "map": 10,
+              "end_tick": 315,
+              "alarm_samples": 0,
+              "samples": 40,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 21,
+              "map": 10,
+              "end_tick": 217,
+              "alarm_samples": 0,
+              "samples": 28,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 26,
+              "map": 13,
+              "end_tick": 285,
+              "alarm_samples": 0,
+              "samples": 36,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 27,
+              "map": 13,
+              "end_tick": 166,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 41,
+              "map": 20,
+              "end_tick": 164,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 42,
+              "map": 21,
+              "end_tick": 168,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            }
+          ],
+          "winning_episode_mean_alarm_fraction": 0.0,
+          "winning_episodes_with_any_alarm": 0
+        },
+        "threshold": 1.0000000000000002
+      },
+      "C1": {
+        "train": {
+          "AP": 0.36167411991579357,
+          "AUROC": 0.810996026470086,
+          "Brier": 0.1027770528552942,
+          "log_loss": 0.32697733131756895,
+          "positive_rate": 0.13964955927613365,
+          "natural_sample_AP": 0.3297225093546626,
+          "FPR": 0.10565308167899093,
+          "recall": 0.4862655752670495,
+          "samples": 928,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 359,
+              "predicted": 0.03394634764721642,
+              "observed": 0.02337622973124802
+            },
+            {
+              "lower": 0.1,
+              "count": 247,
+              "predicted": 0.14910331686546596,
+              "observed": 0.1481322627161686
+            },
+            {
+              "lower": 0.2,
+              "count": 198,
+              "predicted": 0.24661392268613352,
+              "observed": 0.2303227250313815
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 102,
+              "predicted": 0.3417702038049065,
+              "observed": 0.41657251414755125
+            },
+            {
+              "lower": 0.4,
+              "count": 22,
+              "predicted": 0.44103210290187334,
+              "observed": 0.5125411237202349
+            },
+            {
+              "lower": 0.5,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.8,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 0,
+              "AP": 0.7435317295916019,
+              "AUROC": 0.9277811004784688,
+              "Brier": 0.10820888401391648,
+              "log_loss": 0.33808587062370216,
+              "positive_rate": 0.16888888888888898,
+              "samples": 95
+            },
+            {
+              "map": 3,
+              "AP": 0.7884692283091864,
+              "AUROC": 0.9535824345146363,
+              "Brier": 0.096685701897094,
+              "log_loss": 0.31747773568995585,
+              "positive_rate": 0.15714285714285714,
+              "samples": 110
+            },
+            {
+              "map": 4,
+              "AP": 0.7514104216418382,
+              "AUROC": 0.9528561424569821,
+              "Brier": 0.05560030933293142,
+              "log_loss": 0.21322612941628993,
+              "positive_rate": 0.07272727272727272,
+              "samples": 104
+            },
+            {
+              "map": 6,
+              "AP": 0.3571955928578622,
+              "AUROC": 0.8613445378151259,
+              "Brier": 0.09716653911674425,
+              "log_loss": 0.31587821858614695,
+              "positive_rate": 0.125,
+              "samples": 83
+            },
+            {
+              "map": 7,
+              "AP": 0.49032708802348407,
+              "AUROC": 0.808805418719212,
+              "Brier": 0.17643233830868957,
+              "log_loss": 0.5376770563469968,
+              "positive_rate": 0.22222222222222218,
+              "samples": 47
+            },
+            {
+              "map": 12,
+              "AP": 0.959375,
+              "AUROC": 0.9935344827586206,
+              "Brier": 0.06950124648766942,
+              "log_loss": 0.21748282985412531,
+              "positive_rate": 0.12121212121212122,
+              "samples": 50
+            },
+            {
+              "map": 14,
+              "AP": 0.22070889861638726,
+              "AUROC": 0.7094999999999998,
+              "Brier": 0.1177369983482671,
+              "log_loss": 0.3651967516094531,
+              "positive_rate": 0.13793103448275865,
+              "samples": 69
+            },
+            {
+              "map": 15,
+              "AP": 0.22633155639813787,
+              "AUROC": 0.7185246394230778,
+              "Brier": 0.10960307778222166,
+              "log_loss": 0.34873565694975855,
+              "positive_rate": 0.13333333333333333,
+              "samples": 94
+            },
+            {
+              "map": 17,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.05301528848315047,
+              "log_loss": 0.2221311919809268,
+              "positive_rate": 0.0,
+              "samples": 95
+            },
+            {
+              "map": 19,
+              "AP": 0.5474702380952382,
+              "AUROC": 0.9551282051282055,
+              "Brier": 0.06263626040011218,
+              "log_loss": 0.2152888252933728,
+              "positive_rate": 0.0930232558139535,
+              "samples": 62
+            },
+            {
+              "map": 22,
+              "AP": 0.6669726141637005,
+              "AUROC": 0.9444444444444433,
+              "Brier": 0.07541923690622551,
+              "log_loss": 0.25469453830344196,
+              "positive_rate": 0.11764705882352944,
+              "samples": 70
+            },
+            {
+              "map": 23,
+              "AP": 0.945930047420761,
+              "AUROC": 0.966192665184886,
+              "Brier": 0.21131875318650853,
+              "log_loss": 0.5778531711566571,
+              "positive_rate": 0.32666666666666666,
+              "samples": 49
+            }
+          ]
+        },
+        "validation": {
+          "AP": 0.30078488675591925,
+          "AUROC": 0.8415543184239362,
+          "Brier": 0.09254098776385579,
+          "log_loss": 0.2923092184349123,
+          "positive_rate": 0.12265660606674433,
+          "natural_sample_AP": 0.25691297234085697,
+          "FPR": 0.08632199259293875,
+          "recall": 0.17545036676162562,
+          "samples": 411,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 171,
+              "predicted": 0.0304382565502052,
+              "observed": 0.0
+            },
+            {
+              "lower": 0.1,
+              "count": 121,
+              "predicted": 0.14557560069182424,
+              "observed": 0.11219796413685391
+            },
+            {
+              "lower": 0.2,
+              "count": 90,
+              "predicted": 0.24213534121493016,
+              "observed": 0.3825532579137412
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 21,
+              "predicted": 0.3328600236264912,
+              "observed": 0.16810500212318583
+            },
+            {
+              "lower": 0.4,
+              "count": 8,
+              "predicted": 0.43956432134050427,
+              "observed": 0.36705461056401073
+            },
+            {
+              "lower": 0.5,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.8,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 2,
+              "AP": 0.4149115269627466,
+              "AUROC": 0.8880756578947355,
+              "Brier": 0.0777185571865537,
+              "log_loss": 0.272137683769971,
+              "positive_rate": 0.09523809523809525,
+              "samples": 82
+            },
+            {
+              "map": 5,
+              "AP": 0.5453339952249499,
+              "AUROC": 0.8880121455379488,
+              "Brier": 0.14587316399204125,
+              "log_loss": 0.42102041862139705,
+              "positive_rate": 0.2106649111257406,
+              "samples": 80
+            },
+            {
+              "map": 9,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.04081915653592424,
+              "log_loss": 0.18751523178098983,
+              "positive_rate": 0.0,
+              "samples": 77
+            },
+            {
+              "map": 11,
+              "AP": 0.9678383715865545,
+              "AUROC": 0.9847282887975338,
+              "Brier": 0.17724289142336977,
+              "log_loss": 0.4790974638361173,
+              "positive_rate": 0.28717948717948716,
+              "samples": 56
+            },
+            {
+              "map": 16,
+              "AP": 0.9437022900763357,
+              "AUROC": 0.982928240740741,
+              "Brier": 0.09273450574839243,
+              "log_loss": 0.27328228638086544,
+              "positive_rate": 0.14285714285714285,
+              "samples": 46
+            },
+            {
+              "map": 18,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.020857651696853254,
+              "log_loss": 0.12080222622013313,
+              "positive_rate": 0.0,
+              "samples": 70
+            }
+          ]
+        },
+        "test": {
+          "AP": 0.23656284410514955,
+          "AUROC": 0.7661579330120776,
+          "Brier": 0.07417947038873893,
+          "log_loss": 0.2546932816763184,
+          "positive_rate": 0.08479874163103977,
+          "natural_sample_AP": 0.30406001888515355,
+          "FPR": 0.0858365443552237,
+          "recall": 0.2030618311533888,
+          "samples": 376,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 197,
+              "predicted": 0.039378711254035394,
+              "observed": 0.037213664925268335
+            },
+            {
+              "lower": 0.1,
+              "count": 86,
+              "predicted": 0.14262190728602625,
+              "observed": 0.15082261716720402
+            },
+            {
+              "lower": 0.2,
+              "count": 60,
+              "predicted": 0.24616433873130358,
+              "observed": 0.1114179311493593
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 27,
+              "predicted": 0.3400519314692875,
+              "observed": 0.16429567642956763
+            },
+            {
+              "lower": 0.4,
+              "count": 6,
+              "predicted": 0.4434156276998239,
+              "observed": 0.78125
+            },
+            {
+              "lower": 0.5,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.8,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 1,
+              "AP": 0.4182430643440046,
+              "AUROC": 0.8169642857142861,
+              "Brier": 0.13739623130752157,
+              "log_loss": 0.4185690323266656,
+              "positive_rate": 0.17391304347826092,
+              "samples": 51
+            },
+            {
+              "map": 8,
+              "AP": 0.7837320103351298,
+              "AUROC": 0.9497130893300244,
+              "Brier": 0.06376632340000903,
+              "log_loss": 0.24242977244406272,
+              "positive_rate": 0.07142857142857147,
+              "samples": 87
+            },
+            {
+              "map": 10,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.03588448148168957,
+              "log_loss": 0.1686195613542369,
+              "positive_rate": 0.0,
+              "samples": 68
+            },
+            {
+              "map": 13,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.010590068943734548,
+              "log_loss": 0.08581359799072204,
+              "positive_rate": 0.0,
+              "samples": 57
+            },
+            {
+              "map": 20,
+              "AP": 0.8042038593397272,
+              "AUROC": 0.9492394179894185,
+              "Brier": 0.14171668731512987,
+              "log_loss": 0.4201469211875987,
+              "positive_rate": 0.18181818181818182,
+              "samples": 43
+            },
+            {
+              "map": 21,
+              "AP": 0.7188492063492063,
+              "AUROC": 0.9597222222222231,
+              "Brier": 0.05572302988434894,
+              "log_loss": 0.19258080475462452,
+              "positive_rate": 0.08163265306122448,
+              "samples": 70
+            }
+          ],
+          "capture_events": [
+            {
+              "episode": 3,
+              "map": 1,
+              "end_tick": 180,
+              "eligible": true,
+              "warned": false,
+              "earliest_lead": null
+            },
+            {
+              "episode": 17,
+              "map": 8,
+              "end_tick": 443,
+              "eligible": true,
+              "warned": true,
+              "earliest_lead": 51
+            },
+            {
+              "episode": 40,
+              "map": 20,
+              "end_tick": 169,
+              "eligible": true,
+              "warned": false,
+              "earliest_lead": null
+            },
+            {
+              "episode": 43,
+              "map": 21,
+              "end_tick": 389,
+              "eligible": true,
+              "warned": true,
+              "earliest_lead": 37
+            }
+          ],
+          "warning_16_to_64_recall_all_losses": 0.5,
+          "eligible_capture_events": 4,
+          "winning_episodes": [
+            {
+              "episode": 2,
+              "map": 1,
+              "end_tick": 224,
+              "alarm_samples": 0,
+              "samples": 28,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 16,
+              "map": 8,
+              "end_tick": 242,
+              "alarm_samples": 3,
+              "samples": 31,
+              "alarm_fraction": 0.0967741935483871,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 20,
+              "map": 10,
+              "end_tick": 315,
+              "alarm_samples": 17,
+              "samples": 40,
+              "alarm_fraction": 0.425,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 21,
+              "map": 10,
+              "end_tick": 217,
+              "alarm_samples": 0,
+              "samples": 28,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 26,
+              "map": 13,
+              "end_tick": 285,
+              "alarm_samples": 0,
+              "samples": 36,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 27,
+              "map": 13,
+              "end_tick": 166,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 41,
+              "map": 20,
+              "end_tick": 164,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 42,
+              "map": 21,
+              "end_tick": 168,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            }
+          ],
+          "winning_episode_mean_alarm_fraction": 0.06522177419354838,
+          "winning_episodes_with_any_alarm": 2
+        },
+        "threshold": 0.26674720030619403
+      },
+      "C2": {
+        "train": {
+          "AP": 0.5696899323006338,
+          "AUROC": 0.8634995184931639,
+          "Brier": 0.08691608029215761,
+          "log_loss": 0.28551382632939926,
+          "positive_rate": 0.13964955927613365,
+          "natural_sample_AP": 0.5578593284076883,
+          "FPR": 0.030512281064353896,
+          "recall": 0.41337783310135695,
+          "samples": 928,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 450,
+              "predicted": 0.0360916750668535,
+              "observed": 0.03255825980135817
+            },
+            {
+              "lower": 0.1,
+              "count": 230,
+              "predicted": 0.14041893330952296,
+              "observed": 0.11587483049480095
+            },
+            {
+              "lower": 0.2,
+              "count": 121,
+              "predicted": 0.24212310411244492,
+              "observed": 0.1871591727589654
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 59,
+              "predicted": 0.33634650487750406,
+              "observed": 0.37291303941786025
+            },
+            {
+              "lower": 0.4,
+              "count": 31,
+              "predicted": 0.4510372102949419,
+              "observed": 0.7220115842036428
+            },
+            {
+              "lower": 0.5,
+              "count": 10,
+              "predicted": 0.541999330332302,
+              "observed": 0.5316509507594291
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 15,
+              "predicted": 0.6453263882584279,
+              "observed": 0.7287486241095554
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 7,
+              "predicted": 0.7430455402182061,
+              "observed": 0.7842686599198709
+            },
+            {
+              "lower": 0.8,
+              "count": 5,
+              "predicted": 0.8432274470392649,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 0,
+              "AP": 0.8339383574365622,
+              "AUROC": 0.9709576414297779,
+              "Brier": 0.08751059565618553,
+              "log_loss": 0.27629848561686937,
+              "positive_rate": 0.16888888888888898,
+              "samples": 95
+            },
+            {
+              "map": 3,
+              "AP": 0.793723331099865,
+              "AUROC": 0.9631404083204913,
+              "Brier": 0.07575682767179769,
+              "log_loss": 0.2618015519963361,
+              "positive_rate": 0.15714285714285714,
+              "samples": 110
+            },
+            {
+              "map": 4,
+              "AP": 0.6041333962803662,
+              "AUROC": 0.9476540616246495,
+              "Brier": 0.05248946293030512,
+              "log_loss": 0.1974396336967813,
+              "positive_rate": 0.07272727272727272,
+              "samples": 104
+            },
+            {
+              "map": 6,
+              "AP": 0.5569633821905777,
+              "AUROC": 0.8771446078431367,
+              "Brier": 0.08189199159907327,
+              "log_loss": 0.2740083435688866,
+              "positive_rate": 0.125,
+              "samples": 83
+            },
+            {
+              "map": 7,
+              "AP": 0.7568093485875951,
+              "AUROC": 0.8891625615763548,
+              "Brier": 0.14295945863451157,
+              "log_loss": 0.4528186778865136,
+              "positive_rate": 0.22222222222222218,
+              "samples": 47
+            },
+            {
+              "map": 12,
+              "AP": 0.7941964285714287,
+              "AUROC": 0.9741379310344827,
+              "Brier": 0.05692461123277791,
+              "log_loss": 0.18840771796071315,
+              "positive_rate": 0.12121212121212122,
+              "samples": 50
+            },
+            {
+              "map": 14,
+              "AP": 0.2100668245695127,
+              "AUROC": 0.6886249999999998,
+              "Brier": 0.13518472228962025,
+              "log_loss": 0.4265747242162992,
+              "positive_rate": 0.13793103448275865,
+              "samples": 69
+            },
+            {
+              "map": 15,
+              "AP": 0.589714212865815,
+              "AUROC": 0.8579477163461546,
+              "Brier": 0.09571963525610931,
+              "log_loss": 0.30819833404132535,
+              "positive_rate": 0.13333333333333333,
+              "samples": 94
+            },
+            {
+              "map": 17,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.03137128127508334,
+              "log_loss": 0.1663892676461288,
+              "positive_rate": 0.0,
+              "samples": 95
+            },
+            {
+              "map": 19,
+              "AP": 0.45690706863959923,
+              "AUROC": 0.9080634278002705,
+              "Brier": 0.06949504907498899,
+              "log_loss": 0.23503381152670322,
+              "positive_rate": 0.0930232558139535,
+              "samples": 62
+            },
+            {
+              "map": 22,
+              "AP": 0.7690797852095416,
+              "AUROC": 0.962847222222221,
+              "Brier": 0.06404875027521557,
+              "log_loss": 0.22806173458005816,
+              "positive_rate": 0.11764705882352944,
+              "samples": 70
+            },
+            {
+              "map": 23,
+              "AP": 0.9963206436420722,
+              "AUROC": 0.9981056779147305,
+              "Brier": 0.1496405776102229,
+              "log_loss": 0.4111336332161763,
+              "positive_rate": 0.32666666666666666,
+              "samples": 49
+            }
+          ]
+        },
+        "validation": {
+          "AP": 0.4539817797232144,
+          "AUROC": 0.8769489749855635,
+          "Brier": 0.08384917881432002,
+          "log_loss": 0.267014147229653,
+          "positive_rate": 0.12265660606674433,
+          "natural_sample_AP": 0.3924507664457237,
+          "FPR": 0.09544928876573354,
+          "recall": 0.4365036767910308,
+          "samples": 411,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 206,
+              "predicted": 0.03355072109852134,
+              "observed": 0.005157243570644953
+            },
+            {
+              "lower": 0.1,
+              "count": 79,
+              "predicted": 0.1424662001301899,
+              "observed": 0.09514448396226935
+            },
+            {
+              "lower": 0.2,
+              "count": 46,
+              "predicted": 0.24362812466671602,
+              "observed": 0.2974161249354168
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 40,
+              "predicted": 0.3562654262340243,
+              "observed": 0.3422259490932403
+            },
+            {
+              "lower": 0.4,
+              "count": 18,
+              "predicted": 0.4344951404186333,
+              "observed": 0.4380369376151449
+            },
+            {
+              "lower": 0.5,
+              "count": 10,
+              "predicted": 0.5498299160880036,
+              "observed": 0.2420948179163922
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 7,
+              "predicted": 0.6587030007407966,
+              "observed": 0.4995018886721182
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 3,
+              "predicted": 0.768498938404774,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.8,
+              "count": 2,
+              "predicted": 0.8307665170215697,
+              "observed": 0.4878048780487804
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 2,
+              "AP": 0.35530512064659225,
+              "AUROC": 0.853207236842104,
+              "Brier": 0.08321818768465095,
+              "log_loss": 0.2747792144049094,
+              "positive_rate": 0.09523809523809525,
+              "samples": 82
+            },
+            {
+              "map": 5,
+              "AP": 0.7889425212410102,
+              "AUROC": 0.9264921288573814,
+              "Brier": 0.1096312662183737,
+              "log_loss": 0.3340308955647364,
+              "positive_rate": 0.2106649111257406,
+              "samples": 80
+            },
+            {
+              "map": 9,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.09804725317745643,
+              "log_loss": 0.31762879298713964,
+              "positive_rate": 0.0,
+              "samples": 77
+            },
+            {
+              "map": 11,
+              "AP": 0.9426179802639153,
+              "AUROC": 0.9685813848920868,
+              "Brier": 0.12153247680566258,
+              "log_loss": 0.35391027111985207,
+              "positive_rate": 0.28717948717948716,
+              "samples": 56
+            },
+            {
+              "map": 16,
+              "AP": 0.9526289682539681,
+              "AUROC": 0.9921875000000003,
+              "Brier": 0.07117856110524848,
+              "log_loss": 0.21349983205580073,
+              "positive_rate": 0.14285714285714285,
+              "samples": 46
+            },
+            {
+              "map": 18,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.019487327894527885,
+              "log_loss": 0.10823587724547955,
+              "positive_rate": 0.0,
+              "samples": 70
+            }
+          ]
+        },
+        "test": {
+          "AP": 0.46405412442949695,
+          "AUROC": 0.8679543288550637,
+          "Brier": 0.06050159953851139,
+          "log_loss": 0.21305766139638593,
+          "positive_rate": 0.08479874163103977,
+          "natural_sample_AP": 0.46056810710924545,
+          "FPR": 0.021788077767739753,
+          "recall": 0.35073325406262384,
+          "samples": 376,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 214,
+              "predicted": 0.035549382269363924,
+              "observed": 0.017618541268654236
+            },
+            {
+              "lower": 0.1,
+              "count": 77,
+              "predicted": 0.14274588980908728,
+              "observed": 0.10847367257342132
+            },
+            {
+              "lower": 0.2,
+              "count": 42,
+              "predicted": 0.24144131319153467,
+              "observed": 0.15237588984740014
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 22,
+              "predicted": 0.34092393328164655,
+              "observed": 0.35526328377569855
+            },
+            {
+              "lower": 0.4,
+              "count": 9,
+              "predicted": 0.44537173866253643,
+              "observed": 0.3191489361702128
+            },
+            {
+              "lower": 0.5,
+              "count": 8,
+              "predicted": 0.530230485238547,
+              "observed": 0.8201939184730188
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 3,
+              "predicted": 0.6250542925634285,
+              "observed": 0.5490196078431372
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.8,
+              "count": 1,
+              "predicted": 0.8081652130774551,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 1,
+              "AP": 0.7901168710085327,
+              "AUROC": 0.9337406015037596,
+              "Brier": 0.10146300125360619,
+              "log_loss": 0.3125774667019169,
+              "positive_rate": 0.17391304347826092,
+              "samples": 51
+            },
+            {
+              "map": 8,
+              "AP": 0.5737373737373737,
+              "AUROC": 0.9579326923076917,
+              "Brier": 0.06022799238659285,
+              "log_loss": 0.22154941756752344,
+              "positive_rate": 0.07142857142857147,
+              "samples": 87
+            },
+            {
+              "map": 10,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.027870557235887362,
+              "log_loss": 0.14455197173755313,
+              "positive_rate": 0.0,
+              "samples": 68
+            },
+            {
+              "map": 13,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.011128000337645005,
+              "log_loss": 0.08139517678031097,
+              "positive_rate": 0.0,
+              "samples": 57
+            },
+            {
+              "map": 20,
+              "AP": 0.8944102954612795,
+              "AUROC": 0.9565145502645507,
+              "Brier": 0.1152019466867595,
+              "log_loss": 0.3466332442982153,
+              "positive_rate": 0.18181818181818182,
+              "samples": 43
+            },
+            {
+              "map": 21,
+              "AP": 0.8322916666666668,
+              "AUROC": 0.9731481481481491,
+              "Brier": 0.047118099330577465,
+              "log_loss": 0.17163869129279585,
+              "positive_rate": 0.08163265306122448,
+              "samples": 70
+            }
+          ],
+          "capture_events": [
+            {
+              "episode": 3,
+              "map": 1,
+              "end_tick": 180,
+              "eligible": true,
+              "warned": false,
+              "earliest_lead": null
+            },
+            {
+              "episode": 17,
+              "map": 8,
+              "end_tick": 443,
+              "eligible": true,
+              "warned": true,
+              "earliest_lead": 59
+            },
+            {
+              "episode": 40,
+              "map": 20,
+              "end_tick": 169,
+              "eligible": true,
+              "warned": false,
+              "earliest_lead": null
+            },
+            {
+              "episode": 43,
+              "map": 21,
+              "end_tick": 389,
+              "eligible": true,
+              "warned": true,
+              "earliest_lead": 61
+            }
+          ],
+          "warning_16_to_64_recall_all_losses": 0.5,
+          "eligible_capture_events": 4,
+          "winning_episodes": [
+            {
+              "episode": 2,
+              "map": 1,
+              "end_tick": 224,
+              "alarm_samples": 0,
+              "samples": 28,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 16,
+              "map": 8,
+              "end_tick": 242,
+              "alarm_samples": 0,
+              "samples": 31,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 20,
+              "map": 10,
+              "end_tick": 315,
+              "alarm_samples": 1,
+              "samples": 40,
+              "alarm_fraction": 0.025,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 21,
+              "map": 10,
+              "end_tick": 217,
+              "alarm_samples": 0,
+              "samples": 28,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 26,
+              "map": 13,
+              "end_tick": 285,
+              "alarm_samples": 0,
+              "samples": 36,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 27,
+              "map": 13,
+              "end_tick": 166,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 41,
+              "map": 20,
+              "end_tick": 164,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 42,
+              "map": 21,
+              "end_tick": 168,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            }
+          ],
+          "winning_episode_mean_alarm_fraction": 0.003125,
+          "winning_episodes_with_any_alarm": 1
+        },
+        "threshold": 0.3607702415387846
+      },
+      "P": {
+        "train": {
+          "AP": 0.6894764482694459,
+          "AUROC": 0.8940817396235425,
+          "Brier": 0.08367054249133862,
+          "log_loss": 0.2795248465622716,
+          "positive_rate": 0.13964955927613365,
+          "natural_sample_AP": 0.6692911035852936,
+          "FPR": 0.08217606238799555,
+          "recall": 0.6962648631457328,
+          "samples": 928,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 425,
+              "predicted": 0.04439680327727382,
+              "observed": 0.014420643140802783
+            },
+            {
+              "lower": 0.1,
+              "count": 284,
+              "predicted": 0.1491238613337179,
+              "observed": 0.10432858361617152
+            },
+            {
+              "lower": 0.2,
+              "count": 121,
+              "predicted": 0.24238589691845341,
+              "observed": 0.1899889287656192
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 60,
+              "predicted": 0.34142518350378215,
+              "observed": 0.550078539290743
+            },
+            {
+              "lower": 0.4,
+              "count": 26,
+              "predicted": 0.4416072948740917,
+              "observed": 0.8421182061807604
+            },
+            {
+              "lower": 0.5,
+              "count": 7,
+              "predicted": 0.5466664090108826,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 3,
+              "predicted": 0.6285475879492163,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 1,
+              "predicted": 0.7261809671413353,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.8,
+              "count": 1,
+              "predicted": 0.8290553148718867,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 0,
+              "AP": 0.6792344693440151,
+              "AUROC": 0.9148958626512805,
+              "Brier": 0.10246277266011784,
+              "log_loss": 0.3230312947450377,
+              "positive_rate": 0.16888888888888898,
+              "samples": 95
+            },
+            {
+              "map": 3,
+              "AP": 0.4370398086664465,
+              "AUROC": 0.7697900616332803,
+              "Brier": 0.11403841866020392,
+              "log_loss": 0.361452966405613,
+              "positive_rate": 0.15714285714285714,
+              "samples": 110
+            },
+            {
+              "map": 4,
+              "AP": 0.5034084275967783,
+              "AUROC": 0.8799269707883153,
+              "Brier": 0.056582031518768866,
+              "log_loss": 0.22149363812473843,
+              "positive_rate": 0.07272727272727272,
+              "samples": 104
+            },
+            {
+              "map": 6,
+              "AP": 0.9381313131313131,
+              "AUROC": 0.9888392857142851,
+              "Brier": 0.06677111004035817,
+              "log_loss": 0.2507387341950632,
+              "positive_rate": 0.125,
+              "samples": 83
+            },
+            {
+              "map": 7,
+              "AP": 0.7970477872245648,
+              "AUROC": 0.9262623152709358,
+              "Brier": 0.148069565866544,
+              "log_loss": 0.46299563103563324,
+              "positive_rate": 0.22222222222222218,
+              "samples": 47
+            },
+            {
+              "map": 12,
+              "AP": 1.0,
+              "AUROC": 1.0,
+              "Brier": 0.0595264151506395,
+              "log_loss": 0.20819998550968893,
+              "positive_rate": 0.12121212121212122,
+              "samples": 50
+            },
+            {
+              "map": 14,
+              "AP": 0.46345936472133853,
+              "AUROC": 0.9018124999999994,
+              "Brier": 0.10195322392589175,
+              "log_loss": 0.3056363903292067,
+              "positive_rate": 0.13793103448275865,
+              "samples": 69
+            },
+            {
+              "map": 15,
+              "AP": 0.9427083333333334,
+              "AUROC": 0.9879807692307696,
+              "Brier": 0.07570356085881087,
+              "log_loss": 0.2368784830048459,
+              "positive_rate": 0.13333333333333333,
+              "samples": 94
+            },
+            {
+              "map": 17,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.023619362956370075,
+              "log_loss": 0.14663508887804685,
+              "positive_rate": 0.0,
+              "samples": 95
+            },
+            {
+              "map": 19,
+              "AP": 0.8197781385281386,
+              "AUROC": 0.9807692307692311,
+              "Brier": 0.05417394742928042,
+              "log_loss": 0.2045939769510226,
+              "positive_rate": 0.0930232558139535,
+              "samples": 62
+            },
+            {
+              "map": 22,
+              "AP": 0.9186507936507936,
+              "AUROC": 0.9833333333333321,
+              "Brier": 0.058974374542626086,
+              "log_loss": 0.21375736489460856,
+              "positive_rate": 0.11764705882352944,
+              "samples": 70
+            },
+            {
+              "map": 23,
+              "AP": 0.9025509874207598,
+              "AUROC": 0.9448846989290768,
+              "Brier": 0.142171726286452,
+              "log_loss": 0.41888460467375377,
+              "positive_rate": 0.32666666666666666,
+              "samples": 49
+            }
+          ]
+        },
+        "validation": {
+          "AP": 0.5511659742714872,
+          "AUROC": 0.8819780031782087,
+          "Brier": 0.08077914458975796,
+          "log_loss": 0.27073065759111004,
+          "positive_rate": 0.12265660606674433,
+          "natural_sample_AP": 0.531530390478133,
+          "FPR": 0.0908488378917289,
+          "recall": 0.6489748335925207,
+          "samples": 411,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 182,
+              "predicted": 0.047178466577197486,
+              "observed": 0.0
+            },
+            {
+              "lower": 0.1,
+              "count": 138,
+              "predicted": 0.1455892359125871,
+              "observed": 0.12181218034841328
+            },
+            {
+              "lower": 0.2,
+              "count": 47,
+              "predicted": 0.24529701784161434,
+              "observed": 0.3404671179953801
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 29,
+              "predicted": 0.3399508107045662,
+              "observed": 0.26693271815750236
+            },
+            {
+              "lower": 0.4,
+              "count": 9,
+              "predicted": 0.4540526697193576,
+              "observed": 0.7868852459016396
+            },
+            {
+              "lower": 0.5,
+              "count": 4,
+              "predicted": 0.5655199183114717,
+              "observed": 0.7335555165760393
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 2,
+              "predicted": 0.6066468140362122,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.8,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 2,
+              "AP": 0.45487157610204504,
+              "AUROC": 0.878536184210525,
+              "Brier": 0.07201582577397896,
+              "log_loss": 0.2495679632644358,
+              "positive_rate": 0.09523809523809525,
+              "samples": 82
+            },
+            {
+              "map": 5,
+              "AP": 0.8587935975414799,
+              "AUROC": 0.9390390429524609,
+              "Brier": 0.10082971408176322,
+              "log_loss": 0.33117609965024475,
+              "positive_rate": 0.2106649111257406,
+              "samples": 80
+            },
+            {
+              "map": 9,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.03852484525318556,
+              "log_loss": 0.1802392927486586,
+              "positive_rate": 0.0,
+              "samples": 77
+            },
+            {
+              "map": 11,
+              "AP": 0.9763498495902466,
+              "AUROC": 0.9873699254881811,
+              "Brier": 0.15077478534055483,
+              "log_loss": 0.4188494882136222,
+              "positive_rate": 0.28717948717948716,
+              "samples": 56
+            },
+            {
+              "map": 16,
+              "AP": 0.5690219921245911,
+              "AUROC": 0.8859953703703709,
+              "Brier": 0.10844092351161543,
+              "log_loss": 0.33812500717006777,
+              "positive_rate": 0.14285714285714285,
+              "samples": 46
+            },
+            {
+              "map": 18,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.014088773577449722,
+              "log_loss": 0.10642609449963081,
+              "positive_rate": 0.0,
+              "samples": 70
+            }
+          ]
+        },
+        "test": {
+          "AP": 0.5857368810518575,
+          "AUROC": 0.908351001788668,
+          "Brier": 0.05506065888597349,
+          "log_loss": 0.19867503440509296,
+          "positive_rate": 0.08479874163103977,
+          "natural_sample_AP": 0.48609515680185744,
+          "FPR": 0.04011211980991413,
+          "recall": 0.5326991676575504,
+          "samples": 376,
+          "calibration": [
+            {
+              "lower": 0.0,
+              "count": 229,
+              "predicted": 0.04616281976310309,
+              "observed": 0.02131448044060772
+            },
+            {
+              "lower": 0.1,
+              "count": 89,
+              "predicted": 0.13402229391461828,
+              "observed": 0.0512430913675616
+            },
+            {
+              "lower": 0.2,
+              "count": 27,
+              "predicted": 0.23379695613568005,
+              "observed": 0.29875422946785607
+            },
+            {
+              "lower": 0.30000000000000004,
+              "count": 19,
+              "predicted": 0.36002416744735277,
+              "observed": 0.5418844022169438
+            },
+            {
+              "lower": 0.4,
+              "count": 9,
+              "predicted": 0.42848064785341994,
+              "observed": 0.566675538993878
+            },
+            {
+              "lower": 0.5,
+              "count": 1,
+              "predicted": 0.5604180715152479,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.6000000000000001,
+              "count": 1,
+              "predicted": 0.6577482858967262,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.7000000000000001,
+              "count": 1,
+              "predicted": 0.7936188674493075,
+              "observed": 1.0
+            },
+            {
+              "lower": 0.8,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            },
+            {
+              "lower": 0.9,
+              "count": 0,
+              "predicted": null,
+              "observed": null
+            }
+          ],
+          "by_map": [
+            {
+              "map": 1,
+              "AP": 0.8051948051948051,
+              "AUROC": 0.9605263157894741,
+              "Brier": 0.09008842027951235,
+              "log_loss": 0.2826058777155692,
+              "positive_rate": 0.17391304347826092,
+              "samples": 51
+            },
+            {
+              "map": 8,
+              "AP": 0.4562251984126984,
+              "AUROC": 0.9266826923076917,
+              "Brier": 0.05493294785228729,
+              "log_loss": 0.20415647149634622,
+              "positive_rate": 0.07142857142857147,
+              "samples": 87
+            },
+            {
+              "map": 10,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.016190480480753517,
+              "log_loss": 0.11419712632913814,
+              "positive_rate": 0.0,
+              "samples": 68
+            },
+            {
+              "map": 13,
+              "AP": null,
+              "AUROC": null,
+              "Brier": 0.0014276193847998135,
+              "log_loss": 0.03295438857964601,
+              "positive_rate": 0.0,
+              "samples": 57
+            },
+            {
+              "map": 20,
+              "AP": 0.9580039525691701,
+              "AUROC": 0.9859457671957679,
+              "Brier": 0.09422095273374988,
+              "log_loss": 0.28999273998168734,
+              "positive_rate": 0.18181818181818182,
+              "samples": 43
+            },
+            {
+              "map": 21,
+              "AP": 0.21924227336863858,
+              "AUROC": 0.6152777777777785,
+              "Brier": 0.07350353258473814,
+              "log_loss": 0.268143602328171,
+              "positive_rate": 0.08163265306122448,
+              "samples": 70
+            }
+          ],
+          "capture_events": [
+            {
+              "episode": 3,
+              "map": 1,
+              "end_tick": 180,
+              "eligible": true,
+              "warned": true,
+              "earliest_lead": 44
+            },
+            {
+              "episode": 17,
+              "map": 8,
+              "end_tick": 443,
+              "eligible": true,
+              "warned": true,
+              "earliest_lead": 59
+            },
+            {
+              "episode": 40,
+              "map": 20,
+              "end_tick": 169,
+              "eligible": true,
+              "warned": true,
+              "earliest_lead": 25
+            },
+            {
+              "episode": 43,
+              "map": 21,
+              "end_tick": 389,
+              "eligible": true,
+              "warned": false,
+              "earliest_lead": null
+            }
+          ],
+          "warning_16_to_64_recall_all_losses": 0.75,
+          "eligible_capture_events": 4,
+          "winning_episodes": [
+            {
+              "episode": 2,
+              "map": 1,
+              "end_tick": 224,
+              "alarm_samples": 0,
+              "samples": 28,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 16,
+              "map": 8,
+              "end_tick": 242,
+              "alarm_samples": 0,
+              "samples": 31,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 20,
+              "map": 10,
+              "end_tick": 315,
+              "alarm_samples": 2,
+              "samples": 40,
+              "alarm_fraction": 0.05,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 21,
+              "map": 10,
+              "end_tick": 217,
+              "alarm_samples": 0,
+              "samples": 28,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 26,
+              "map": 13,
+              "end_tick": 285,
+              "alarm_samples": 0,
+              "samples": 36,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 27,
+              "map": 13,
+              "end_tick": 166,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 41,
+              "map": 20,
+              "end_tick": 164,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            },
+            {
+              "episode": 42,
+              "map": 21,
+              "end_tick": 168,
+              "alarm_samples": 0,
+              "samples": 21,
+              "alarm_fraction": 0.0,
+              "quick_capture_description": "end_tick recorded; no posthoc fast-attack threshold assigned"
+            }
+          ],
+          "winning_episode_mean_alarm_fraction": 0.00625,
+          "winning_episodes_with_any_alarm": 1
+        },
+        "threshold": 0.24930525426677352
+      }
+    },
+    "gates": {
+      "C1": {
+        "conditions": {
+          "AP_lift": true,
+          "Brier_ratio": false,
+          "FPR": true,
+          "recall": false,
+          "early_warning": false,
+          "winning_false_alarm": true
+        },
+        "passed": false
+      },
+      "C2": {
+        "conditions": {
+          "AP_lift": true,
+          "Brier_ratio": true,
+          "FPR": true,
+          "recall": false,
+          "early_warning": false,
+          "winning_false_alarm": true
+        },
+        "passed": false
+      },
+      "P": {
+        "conditions": {
+          "AP_lift": true,
+          "Brier_ratio": true,
+          "FPR": true,
+          "recall": false,
+          "early_warning": true,
+          "winning_false_alarm": true
+        },
+        "passed": false
+      }
+    },
+    "bootstrap": {
+      "C0": {
+        "valid_resamples": 1996,
+        "intervals": {
+          "AP": [
+            0.02551020408163281,
+            0.1457879594525559
+          ],
+          "Brier": [
+            0.03788722597356259,
+            0.12457151028794163
+          ],
+          "AP_delta_C0": [
+            0.0,
+            0.0
+          ],
+          "Brier_delta_C0": [
+            0.0,
+            0.0
+          ],
+          "AP_delta_C_star": [
+            -0.6096467664123781,
+            -0.3072497241672774
+          ],
+          "Brier_delta_C_star": [
+            0.00623320814496138,
+            0.034177007737693416
+          ]
+        }
+      },
+      "C1": {
+        "valid_resamples": 1996,
+        "intervals": {
+          "AP": [
+            0.08422134123529641,
+            0.5317206422864921
+          ],
+          "Brier": [
+            0.035783742473837504,
+            0.11429308067422014
+          ],
+          "AP_delta_C0": [
+            0.03527223244399392,
+            0.4789995538511178
+          ],
+          "Brier_delta_C0": [
+            -0.015219380304596561,
+            0.004018212484552142
+          ],
+          "AP_delta_C_star": [
+            -0.3966575578648636,
+            0.006795719043195647
+          ],
+          "Brier_delta_C_star": [
+            0.00441737349383365,
+            0.025001019468866514
+          ]
+        }
+      },
+      "C2": {
+        "valid_resamples": 1996,
+        "intervals": {
+          "AP": [
+            0.3643949082174873,
+            0.7303804353045196
+          ],
+          "Brier": [
+            0.030890534477372503,
+            0.09158604656751133
+          ],
+          "AP_delta_C0": [
+            0.3072497241672774,
+            0.6096467664123781
+          ],
+          "Brier_delta_C0": [
+            -0.034177007737693416,
+            -0.00623320814496138
+          ],
+          "AP_delta_C_star": [
+            0.0,
+            0.0
+          ],
+          "Brier_delta_C_star": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "P": {
+        "valid_resamples": 1996,
+        "intervals": {
+          "AP": [
+            0.19408405045290852,
+            0.8256366746645293
+          ],
+          "Brier": [
+            0.025452923784779265,
+            0.08252945757900985
+          ],
+          "AP_delta_C0": [
+            0.15496840419440502,
+            0.7074774996765341
+          ],
+          "Brier_delta_C0": [
+            -0.04307124451137909,
+            -0.008654526733600551
+          ],
+          "AP_delta_C_star": [
+            -0.34685811544956696,
+            0.31664333479617734
+          ],
+          "Brier_delta_C_star": [
+            -0.014936414016885571,
+            0.008467766249824787
+          ]
+        }
+      }
+    },
+    "test_unsealed": true,
+    "probe_fits": 12,
+    "policy_updates": 0,
+    "limitations": [
+      "6 independent test maps; wide intervals expected",
+      "linear probe failure does not prove no nonlinear risk information",
+      "frozen-policy conditional labels, no causal action evaluation",
+      "diagnostic prediction is not an improvement in win rate"
+    ]
+  }
+}

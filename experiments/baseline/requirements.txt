@@ -1,0 +1,7 @@
+# CPU versions used for the archived evaluation; Python 3.12.
+numpy==2.5.4
+jax==0.11.2
+jaxlib==0.11.2
+equinox==0.13.8
+optax==0.2.8
+generals-bots @ git+https://github.com/strakam/generals-bots.git@2e9b00a4dd3a0489a7091c144548243f3d6d7b15

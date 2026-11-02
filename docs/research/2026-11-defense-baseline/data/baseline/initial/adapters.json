@@ -1,0 +1,17 @@
+{
+  "purpose": "plan_section_2.2_random_self_play_fallback_check",
+  "seed": 930001,
+  "requested_ticks": 200,
+  "final_tick": 200,
+  "side": 24,
+  "history": 8,
+  "active_action_samples": 400,
+  "attempted_moves": 373,
+  "fallback_count": 0,
+  "fallback_rate": 0.0,
+  "post_fallback_illegal_count": 0,
+  "adapter_action_mismatches": 0,
+  "threshold": 0.05,
+  "passed": true,
+  "note": "Diagnostic only, no strength conclusion. Terminal trajectories fail the full-200-tick check."
+}
