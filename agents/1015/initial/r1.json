@@ -1,0 +1,42 @@
+{
+  "lossy": true,
+  "source": "1014-33",
+  "source_sha256": "e8025d2f4395b5c936867547cbfcf5ef5013c43ccf1cb5b520a46d0446106d34",
+  "source_iteration": 33,
+  "copied_fields": [
+    "blocks",
+    "pool",
+    "action_hidden",
+    "action_out",
+    "pass_head",
+    "value_head",
+    "state_head",
+    "final_norm",
+    "belief_hidden",
+    "belief_out",
+    "enemy_move",
+    "enemy_pass",
+    "economy_hidden",
+    "economy_out"
+  ],
+  "fitted_fields": [
+    "spatial",
+    "history"
+  ],
+  "random_fields": [
+    "gathering_head"
+  ],
+  "updates": 500,
+  "selected_update": 500,
+  "side": 24,
+  "train_maps": 2,
+  "validation_maps": 1,
+  "train_samples": 104,
+  "validation_samples": 70,
+  "validation_embedding_mse_before": 0.04003036066013224,
+  "validation_embedding_mse_after": 0.0006624616362387314,
+  "validation_top1_agreement": 0.9285714285714286,
+  "validation_teacher_kl": 0.23236670314633687,
+  "finite_logits": true,
+  "validation_scope": "teacher trajectories on one held-out map, not a strength estimate"
+}
