@@ -1,0 +1,244 @@
+{
+  "source": "experiments/evidence/b1-adaptive-summary.json",
+  "source_sha256": "49f1c1c7b9d1ec3d4ef88c7ebc5e340994fdfa75e078c34b3c4a0b6b51924eba",
+  "export_kind": "selected_fields_no_retraining",
+  "data": {
+    "date": "2026-10-19",
+    "arms": [
+      {
+        "name": "original",
+        "end_tick": 385,
+        "outcome": "loss",
+        "extra_ticks_vs_original": 0,
+        "override_count": 0,
+        "decision_counts": {
+          "model": 102
+        },
+        "checkpoints": {
+          "300": {
+            "home_army_before": 5,
+            "land_after": [
+              81,
+              71
+            ],
+            "army_after": [
+              261,
+              207
+            ]
+          },
+          "350": {
+            "home_army_before": 21,
+            "land_after": [
+              79,
+              94
+            ],
+            "army_after": [
+              307,
+              269
+            ]
+          },
+          "384": {
+            "home_army_before": 7,
+            "land_after": [
+              180,
+              0
+            ],
+            "army_after": [
+              359,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "name": "hold_only",
+        "end_tick": 393,
+        "outcome": "loss",
+        "extra_ticks_vs_original": 8,
+        "override_count": 79,
+        "decision_counts": {
+          "model": 31,
+          "hold": 79
+        },
+        "checkpoints": {
+          "300": {
+            "home_army_before": 5,
+            "land_after": [
+              81,
+              71
+            ],
+            "army_after": [
+              261,
+              207
+            ]
+          },
+          "350": {
+            "home_army_before": 45,
+            "land_after": [
+              89,
+              70
+            ],
+            "army_after": [
+              331,
+              259
+            ]
+          },
+          "384": {
+            "home_army_before": 62,
+            "land_after": [
+              93,
+              68
+            ],
+            "army_after": [
+              342,
+              270
+            ]
+          }
+        }
+      },
+      {
+        "name": "adaptive_rally",
+        "end_tick": 416,
+        "outcome": "loss",
+        "extra_ticks_vs_original": 31,
+        "override_count": 94,
+        "decision_counts": {
+          "rally": 30,
+          "hold": 87,
+          "model": 16
+        },
+        "checkpoints": {
+          "300": {
+            "home_army_before": 5,
+            "land_after": [
+              89,
+              60
+            ],
+            "army_after": [
+              293,
+              221
+            ]
+          },
+          "350": {
+            "home_army_before": 103,
+            "land_after": [
+              110,
+              40
+            ],
+            "army_after": [
+              376,
+              234
+            ]
+          },
+          "384": {
+            "home_army_before": 123,
+            "land_after": [
+              119,
+              40
+            ],
+            "army_after": [
+              393,
+              251
+            ]
+          },
+          "399": {
+            "home_army_before": 130,
+            "land_after": [
+              123,
+              40
+            ],
+            "army_after": [
+              524,
+              299
+            ]
+          },
+          "400": {
+            "home_army_before": 132,
+            "land_after": [
+              122,
+              41
+            ],
+            "army_after": [
+              520,
+              295
+            ]
+          }
+        }
+      },
+      {
+        "name": "adaptive_intercept",
+        "end_tick": 415,
+        "outcome": "loss",
+        "extra_ticks_vs_original": 30,
+        "override_count": 91,
+        "decision_counts": {
+          "rally": 33,
+          "intercept": 3,
+          "hold": 81,
+          "model": 15
+        },
+        "checkpoints": {
+          "300": {
+            "home_army_before": 5,
+            "land_after": [
+              89,
+              60
+            ],
+            "army_after": [
+              293,
+              221
+            ]
+          },
+          "350": {
+            "home_army_before": 115,
+            "land_after": [
+              110,
+              40
+            ],
+            "army_after": [
+              377,
+              235
+            ]
+          },
+          "384": {
+            "home_army_before": 135,
+            "land_after": [
+              120,
+              40
+            ],
+            "army_after": [
+              394,
+              252
+            ]
+          },
+          "399": {
+            "home_army_before": 142,
+            "land_after": [
+              123,
+              40
+            ],
+            "army_after": [
+              525,
+              300
+            ]
+          },
+          "400": {
+            "home_army_before": 144,
+            "land_after": [
+              122,
+              41
+            ],
+            "army_after": [
+              521,
+              296
+            ]
+          }
+        }
+      }
+    ],
+    "all_actions_legal": true,
+    "original_replay_verified": true,
+    "formal_policy_changed": false,
+    "training_started": false
+  }
+}

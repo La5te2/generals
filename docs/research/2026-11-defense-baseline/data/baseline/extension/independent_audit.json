@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "audited_at": "2026-11-02T14:10:03.968025+08:00",
+  "source_hashes_checked": 133,
+  "P2_total_games": 600,
+  "P2_total_unique_maps": 300,
+  "P6_games": 200,
+  "checks": [
+    "protocol registered before start",
+    "frozen source and original evidence unchanged",
+    "accepted outputs match hashes",
+    "correct checkpoint identities and parameters",
+    "all complete map/color pairs",
+    "200 unique new P2 maps disjoint from original 100",
+    "P6 maps exactly match original P2",
+    "merged records exactly equal namespaced original batches",
+    "win totals and Hoeffding intervals recomputed",
+    "economy recomputed from records",
+    "summary matches raw results"
+  ]
+}

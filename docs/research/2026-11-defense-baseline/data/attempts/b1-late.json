@@ -1,0 +1,74 @@
+{
+  "source": "experiments/evidence/local-branch-summary.json",
+  "source_sha256": "5915f0ad8f9abd6c41e3c8f5388736a249b16cc0a3651517a74956bdffac1a23",
+  "export_kind": "selected_fields_no_retraining",
+  "data": {
+    "date": "2026-10-18",
+    "start_tick": 373,
+    "rows": [
+      {
+        "branch": "original",
+        "terminal_tick": 385,
+        "result": "loss",
+        "home_army_before_capture": 7,
+        "enemy_command_source": [
+          23,
+          2
+        ],
+        "enemy_adjacent_visible": true,
+        "intervention_count": 0
+      },
+      {
+        "branch": "pass_once",
+        "terminal_tick": 385,
+        "result": "loss",
+        "home_army_before_capture": 6,
+        "enemy_command_source": [
+          22,
+          1
+        ],
+        "enemy_adjacent_visible": true,
+        "intervention_count": 1
+      },
+      {
+        "branch": "half_once",
+        "terminal_tick": 385,
+        "result": "loss",
+        "home_army_before_capture": 5,
+        "enemy_command_source": [
+          23,
+          2
+        ],
+        "enemy_adjacent_visible": true,
+        "intervention_count": 1
+      },
+      {
+        "branch": "hold_home",
+        "terminal_tick": 385,
+        "result": "loss",
+        "home_army_before_capture": 38,
+        "enemy_command_source": [
+          22,
+          1
+        ],
+        "enemy_adjacent_visible": true,
+        "intervention_count": 4
+      },
+      {
+        "branch": "return_then_hold",
+        "terminal_tick": 385,
+        "result": "loss",
+        "home_army_before_capture": 39,
+        "enemy_command_source": [
+          22,
+          1
+        ],
+        "enemy_adjacent_visible": true,
+        "intervention_count": 3
+      }
+    ],
+    "original_commands_terminal_land_army_reproduced": true,
+    "policy_changed": false,
+    "training_started": false
+  }
+}

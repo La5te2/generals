@@ -1,0 +1,142 @@
+{
+  "date": "2026-11-02",
+  "scope": "PR packaging validation; not a rerun of the 1600-game formal panel",
+  "commands": [
+    "python3 experiments/baseline/verify.py",
+    "python3 -m unittest discover -s experiments/baseline -p 'test_*.py' -v",
+    "JAX_PLATFORMS=cpu python experiments/baseline/run.py --pair <P2 or P5> --models-dir <team snapshots> --games 2 --lanes 2 --seed 930001 --output <new file>",
+    "JAX_PLATFORMS=cpu python experiments/baseline/check_adapter.py --output <new file>"
+  ],
+  "offline_games_recounted": 1600,
+  "archive_files_sha_checked": 20,
+  "unittest_passed": 8,
+  "smoke_parity": [
+    {
+      "pair": "P2",
+      "games": 2,
+      "seed": 930001,
+      "lanes": 2,
+      "historical_lanes": 8,
+      "full_natural_terminations": true,
+      "compared_fields": [
+        "game",
+        "map",
+        "seat",
+        "map_sha256",
+        "outcome",
+        "ticks",
+        "passes",
+        "optional_passes",
+        "movable",
+        "economy"
+      ],
+      "matched": true,
+      "records": [
+        {
+          "game": 0,
+          "map": 0,
+          "seat": 0,
+          "map_sha256": "2da07bfd883e6897a49321befbc3d3be21579407247b66c45b219200d7415f46",
+          "outcome": "win",
+          "ticks": 240,
+          "passes": 4,
+          "optional_passes": 0,
+          "movable": 236
+        },
+        {
+          "game": 1,
+          "map": 0,
+          "seat": 1,
+          "map_sha256": "2da07bfd883e6897a49321befbc3d3be21579407247b66c45b219200d7415f46",
+          "outcome": "loss",
+          "ticks": 264,
+          "passes": 4,
+          "optional_passes": 0,
+          "movable": 260
+        }
+      ]
+    },
+    {
+      "pair": "P5",
+      "games": 2,
+      "seed": 930001,
+      "lanes": 2,
+      "historical_lanes": 8,
+      "full_natural_terminations": true,
+      "compared_fields": [
+        "game",
+        "map",
+        "seat",
+        "map_sha256",
+        "outcome",
+        "ticks",
+        "passes",
+        "optional_passes",
+        "movable",
+        "economy"
+      ],
+      "matched": true,
+      "records": [
+        {
+          "game": 0,
+          "map": 0,
+          "seat": 0,
+          "map_sha256": "2da07bfd883e6897a49321befbc3d3be21579407247b66c45b219200d7415f46",
+          "outcome": "win",
+          "ticks": 159,
+          "passes": 4,
+          "optional_passes": 0,
+          "movable": 155
+        },
+        {
+          "game": 1,
+          "map": 0,
+          "seat": 1,
+          "map_sha256": "2da07bfd883e6897a49321befbc3d3be21579407247b66c45b219200d7415f46",
+          "outcome": "win",
+          "ticks": 359,
+          "passes": 4,
+          "optional_passes": 0,
+          "movable": 355
+        }
+      ]
+    }
+  ],
+  "adapter": {
+    "purpose": "random_self_play_fallback_check",
+    "seed": 930001,
+    "requested_ticks": 200,
+    "final_tick": 200,
+    "side": 24,
+    "history": 8,
+    "active_action_samples": 400,
+    "attempted_moves": 373,
+    "fallback_count": 0,
+    "fallback_rate": 0.0,
+    "post_fallback_illegal_count": 0,
+    "adapter_action_mismatches": 0,
+    "threshold": 0.05,
+    "passed": true,
+    "note": "Diagnostic only, no strength conclusion. Terminal trajectories fail the full-200-tick check."
+  },
+  "cli_negative_checks": [
+    "odd games rejected",
+    "missing weights rejected",
+    "wrong snapshot hash rejected",
+    "existing output preserved"
+  ],
+  "tool_source_sha256": {
+    "check_adapter.py": "8b154aa7b6eb45af512247863b04f977d85047468595edd655984e9e4e9023f4",
+    "rule_agents.py": "9c2c4aa333fb82202f7011ca3eff98431e160ae2d2eadc7ceb5b4fc809883d69",
+    "run.py": "6832691f608b03be4836bbc23641c8e67da7f5d9b21f07d4062eca850c12858a",
+    "test_verify.py": "4e0aeece127f06c21a229c8bc817080aa0b8719a905c96e937816230f721ab33",
+    "verify.py": "29b59f0d6baf4f73ec92ca980d1b6bb14dd545c422355edfc3c87994750df4ed"
+  },
+  "environment": "Existing local CPU environment with the archived core package versions; a fresh dependency install was not repeated.",
+  "not_run": [
+    "full 1600-game panel",
+    "four-direction training and probe fits",
+    "GPU training",
+    "application C++ build (no application changes)"
+  ]
+}
